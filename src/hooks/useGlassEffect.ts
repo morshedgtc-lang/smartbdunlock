@@ -10,8 +10,8 @@ interface GlassEffectOptions {
 }
 
 interface GlassEffectReturn {
-  containerRef: React.RefObject<HTMLDivElement>
-  glowRef: React.RefObject<HTMLDivElement>
+  containerRef: React.RefObject<HTMLDivElement | null>
+  glowRef: React.RefObject<HTMLDivElement | null>
   handlers: {
     onMouseMove: (e: React.MouseEvent) => void
     onMouseLeave: () => void
@@ -44,10 +44,10 @@ export function useGlassEffect(options: GlassEffectOptions = {}): GlassEffectRet
   const updateSVGFilters = useCallback((x: number, y: number, distance: number) => {
     if (!enableDistortion || isMobileRef.current) return
 
-    const turbulence = document.getElementById('dynamicTurbulence') as SVGFE turbulenceElement | null
-    const displacement = document.getElementById('dynamicDisplacement') as SVGFEDisplacementMapElement | null
-    const blur = document.getElementById('dynamicBlur') as SVGFEGaussianBlurElement | null
-    const light = document.getElementById('specularLight') as SVGFEPointLightElement | null
+    const turbulence = document.getElementById('dynamicTurbulence') as (SVGElement & { setAttribute: (n: string, v: string) => void }) | null
+    const displacement = document.getElementById('dynamicDisplacement') as (SVGElement & { setAttribute: (n: string, v: string) => void }) | null
+    const blur = document.getElementById('dynamicBlur') as (SVGElement & { setAttribute: (n: string, v: string) => void }) | null
+    const light = document.getElementById('specularLight') as (SVGElement & { setAttribute: (n: string, v: string) => void }) | null
 
     if (turbulence) {
       const baseFreq = 0.008 + (x * 0.008) + (y * 0.008)
