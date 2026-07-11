@@ -10,7 +10,10 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const { searchParams } = new URL(req.url)
+    const limit = Math.min(200, Math.max(1, parseInt(searchParams.get('limit') || '200') || 200))
     const categories = await prisma.serviceCategory.findMany({
+      take: limit,
       include: { _count: { select: { services: true } } },
       orderBy: { name: 'asc' },
     })

@@ -17,16 +17,20 @@ interface UseApiResult<T> {
   refetch: () => void
 }
 
-export function useApi<T = any>({ url, method = 'GET', body, enabled = true, initialData }: UseApiOptions<T>): UseApiResult<T> {
+export function useApi<T = any>({ url, method = 'GET', body, enabled, initialData }: UseApiOptions<T>): UseApiResult<T> {
+  // Never auto-fire non-GET requests on mount — mutations must be triggered
+  // explicitly via refetch() or a dedicated action. Defaults to enabled for
+  // GET, disabled otherwise.
+  const shouldFetch = enabled ?? method === 'GET'
   const [data, setData] = useState<T | null>(initialData ?? null)
-  const [loading, setLoading] = useState(enabled)
+  const [loading, setLoading] = useState(shouldFetch)
   const [error, setError] = useState<string | null>(null)
   const [trigger, setTrigger] = useState(0)
 
   const refetch = useCallback(() => setTrigger(t => t + 1), [])
 
   useEffect(() => {
-    if (!enabled) {
+    if (!shouldFetch) {
       setLoading(false)
       return
     }
@@ -60,7 +64,7 @@ export function useApi<T = any>({ url, method = 'GET', body, enabled = true, ini
 
     fetchData()
     return () => { cancelled = true }
-  }, [url, method, trigger, enabled])
+  }, [url, method, trigger, shouldFetch])
 
   return { data, loading, error, refetch }
 }

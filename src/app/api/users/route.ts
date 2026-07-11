@@ -12,7 +12,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json()
-    const { email, password, name, phone, role } = body
+    const { email, password, name, phone, role, resellerId } = body
 
     if (!email || !password || !name) {
       return NextResponse.json({ error: 'Email, password, and name are required' }, { status: 400 })
@@ -31,8 +31,9 @@ export async function POST(req: Request) {
         name,
         phone,
         role: role || 'reseller',
+        resellerId: resellerId || undefined,
       },
-      select: { id: true, email: true, name: true, role: true, status: true, walletBalance: true },
+      select: { id: true, email: true, name: true, role: true, status: true, walletBalance: true, resellerId: true },
     })
 
     return NextResponse.json(user, { status: 201 })
@@ -56,6 +57,7 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url)
     const search = searchParams.get('search') || ''
     const role = searchParams.get('role') || ''
+    const limit = Math.min(1000, Math.max(1, parseInt(searchParams.get('limit') || '500') || 500))
 
     const where: any = {}
 
@@ -81,6 +83,7 @@ export async function GET(req: Request) {
         phone: true,
         status: true,
         walletBalance: true,
+        resellerId: true,
         createdAt: true,
         _count: {
           select: {
@@ -90,6 +93,7 @@ export async function GET(req: Request) {
         },
       },
       orderBy: { createdAt: 'desc' },
+      take: limit,
     })
 
     return NextResponse.json({ users })
@@ -111,10 +115,17 @@ export async function PATCH(req: Request) {
     }
 
     const body = await req.json()
-    const { id, ...data } = body
+    const { id, walletBalance, password, email, ...rest } = body
 
     if (!id) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
+    }
+
+    // Allowlist updatable fields. Block direct walletBalance mutation (must go
+    // through the ledger) and email changes (uniqueness/identity concerns).
+    const data: Record<string, unknown> = { ...rest }
+    if (typeof password === 'string' && password.length > 0) {
+      data.password = await bcrypt.hash(password, 12)
     }
 
     const user = await prisma.user.update({
@@ -128,6 +139,7 @@ export async function PATCH(req: Request) {
         phone: true,
         status: true,
         walletBalance: true,
+        resellerId: true,
       },
     })
 

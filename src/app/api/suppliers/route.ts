@@ -14,6 +14,7 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url)
     const search = searchParams.get('search') || ''
     const status = searchParams.get('status') || ''
+    const limit = Math.min(500, Math.max(1, parseInt(searchParams.get('limit') || '500') || 500))
 
     const where: any = {}
 
@@ -30,7 +31,21 @@ export async function GET(req: Request) {
 
     const suppliers = await prisma.supplier.findMany({
       where,
-      include: {
+      take: limit,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        website: true,
+        type: true,
+        status: true,
+        successRate: true,
+        totalOrders: true,
+        priority: true,
+        config: true,
+        createdAt: true,
+        updatedAt: true,
         _count: {
           select: {
             services: true,

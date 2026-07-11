@@ -16,6 +16,7 @@ export async function GET(req: Request) {
     const type = searchParams.get('type') || ''
     const status = searchParams.get('status') || ''
     const categoryId = searchParams.get('categoryId') || ''
+    const limit = Math.min(500, Math.max(1, parseInt(searchParams.get('limit') || '500') || 500))
 
     const where: any = {}
 
@@ -59,6 +60,7 @@ export async function GET(req: Request) {
         },
       },
       orderBy: { createdAt: 'desc' },
+      take: limit,
     })
 
     return NextResponse.json({ services })

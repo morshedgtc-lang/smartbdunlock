@@ -40,4 +40,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# databases & logs (contain secrets / local state — never commit)
+*.db
+*.db-journal
+*.log
+
 /src/generated/prisma

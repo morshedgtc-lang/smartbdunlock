@@ -2,6 +2,14 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { applyBalance } from '@/lib/wallet'
+
+const ALLOWED_TYPES = ['deposit', 'withdraw', 'transfer'] as const
+type WalletType = (typeof ALLOWED_TYPES)[number]
+
+function isWalletType(value: unknown): value is WalletType {
+  return typeof value === 'string' && (ALLOWED_TYPES as readonly string[]).includes(value)
+}
 
 export async function GET(req: Request) {
   try {
@@ -50,53 +58,40 @@ export async function POST(req: Request) {
     const body = await req.json()
     const { type, amount, description, targetUserId } = body
 
-    if (!type || amount === undefined) {
+    if (!isWalletType(type)) {
       return NextResponse.json(
-        { error: 'Type and amount are required' },
+        { error: 'Invalid transaction type' },
         { status: 400 }
       )
     }
 
-    if (amount <= 0) {
+    if (typeof amount !== 'number' || !Number.isFinite(amount) || amount <= 0) {
       return NextResponse.json(
-        { error: 'Amount must be positive' },
+        { error: 'Amount must be a positive number' },
         { status: 400 }
       )
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-    })
+    const role = session.user.role
 
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
-    // Only admin can deposit funds directly
-    if (type === 'deposit' && session.user.role !== 'admin') {
+    // Only admin can deposit / withdraw
+    if ((type === 'deposit' || type === 'withdraw') && role !== 'admin') {
       return NextResponse.json(
-        { error: 'Only admin can deposit funds' },
+        { error: 'Only admin can deposit or withdraw funds' },
         { status: 403 }
       )
     }
 
-    // Only admin can process withdrawals
-    if (type === 'withdraw' && session.user.role !== 'admin') {
+    // Only admin or reseller can transfer
+    if (type === 'transfer' && role !== 'admin' && role !== 'reseller') {
       return NextResponse.json(
-        { error: 'Only admin can process withdrawals' },
+        { error: 'Only admins or resellers can transfer funds' },
         { status: 403 }
       )
     }
 
-    // Reseller can transfer to their own customers
+    // Transfers
     if (type === 'transfer') {
-      if (session.user.role !== 'reseller' && session.user.role !== 'admin') {
-        return NextResponse.json(
-          { error: 'Only resellers or admin can transfer funds' },
-          { status: 403 }
-        )
-      }
-
       if (!targetUserId) {
         return NextResponse.json(
           { error: 'Target user ID is required for transfers' },
@@ -104,105 +99,88 @@ export async function POST(req: Request) {
         )
       }
 
-      // Verify target user exists
-      if (session.user.role === 'reseller') {
-        const targetUser = await prisma.user.findUnique({
-          where: { id: targetUserId },
-        })
-        if (!targetUser) {
-          return NextResponse.json(
-            { error: 'Target user not found' },
-            { status: 404 }
-          )
-        }
-      }
-
-      if (user.walletBalance < amount) {
+      if (targetUserId === session.user.id) {
         return NextResponse.json(
-          { error: 'Insufficient balance' },
+          { error: 'Cannot transfer funds to yourself' },
           { status: 400 }
         )
       }
+
+      const result = await prisma.$transaction(async (tx) => {
+        const targetUser = await tx.user.findUnique({
+          where: { id: targetUserId },
+          select: { id: true, resellerId: true },
+        })
+        if (!targetUser) {
+          throw new Error('TARGET_NOT_FOUND')
+        }
+
+        // Resellers can only transfer to users assigned to them
+        if (role === 'reseller' && targetUser.resellerId !== session.user.id) {
+          throw new Error('TRANSFER_NOT_ALLOWED')
+        }
+
+        // Atomic debit of sender (throws INSUFFICIENT_BALANCE if too low)
+        await applyBalance(tx, session.user.id, -amount, {
+          type: 'transfer',
+          description: description || 'Transfer to user',
+          targetUserId,
+        })
+
+        // Atomic credit of target
+        await applyBalance(tx, targetUserId, amount, {
+          type: 'deposit',
+          description: description || 'Transfer from reseller',
+        })
+
+        return { success: true }
+      }).catch((e: unknown) => {
+        if (e instanceof Error && e.message === 'TARGET_NOT_FOUND') {
+          return { __error: 'Target user not found', __status: 404 }
+        }
+        if (e instanceof Error && e.message === 'TRANSFER_NOT_ALLOWED') {
+          return { __error: 'You can only transfer to your assigned users', __status: 403 }
+        }
+        if (e instanceof Error && e.message === 'INSUFFICIENT_BALANCE') {
+          return { __error: 'Insufficient balance', __status: 400 }
+        }
+        throw e
+      })
+
+      if (result && '__error' in result) {
+        return NextResponse.json(
+          { error: result.__error },
+          { status: (result as { __status: number }).__status }
+        )
+      }
+
+      return NextResponse.json({ success: true }, { status: 201 })
     }
 
-    // Check balance for admin withdrawals
-    if (type === 'withdraw' && user.walletBalance < amount) {
+    // Deposit / withdraw (admin only, enforced above)
+    const result = await prisma
+      .$transaction(async (tx) => {
+        await applyBalance(tx, session.user.id, type === 'deposit' ? amount : -amount, {
+          type,
+          description,
+        })
+        return { success: true }
+      })
+      .catch((e: unknown) => {
+        if (e instanceof Error && e.message === 'INSUFFICIENT_BALANCE') {
+          return { __error: 'Insufficient balance', __status: 400 }
+        }
+        throw e
+      })
+
+    if (result && '__error' in result) {
       return NextResponse.json(
-        { error: 'Insufficient balance' },
-        { status: 400 }
+        { error: result.__error },
+        { status: (result as { __status: number }).__status }
       )
     }
 
-    // Handle transfers between users
-    if (type === 'transfer') {
-      const result = await prisma.$transaction(async (tx) => {
-        // Deduct from sender
-        const senderTransaction = await tx.transaction.create({
-          data: {
-            userId: session.user.id,
-            type: 'transfer',
-            amount: -amount,
-            balanceAfter: user.walletBalance - amount,
-            description: description || `Transfer to user`,
-          },
-        })
-
-        await tx.user.update({
-          where: { id: session.user.id },
-          data: { walletBalance: user.walletBalance - amount },
-        })
-
-        // Credit to target
-        const targetUser = await tx.user.findUnique({
-          where: { id: targetUserId },
-        })
-
-        await tx.transaction.create({
-          data: {
-            userId: targetUserId,
-            type: 'deposit',
-            amount: amount,
-            balanceAfter: (targetUser?.walletBalance || 0) + amount,
-            description: description || `Transfer from reseller`,
-          },
-        })
-
-        await tx.user.update({
-          where: { id: targetUserId },
-          data: { walletBalance: (targetUser?.walletBalance || 0) + amount },
-        })
-
-        return senderTransaction
-      })
-
-      return NextResponse.json(result, { status: 201 })
-    }
-
-    // Standard deposit/withdraw (admin only)
-    const newBalance = type === 'deposit' || type === 'order_refund'
-      ? user.walletBalance + amount
-      : user.walletBalance - amount
-
-    const result = await prisma.$transaction(async (tx) => {
-      const transaction = await tx.transaction.create({
-        data: {
-          userId: session.user.id,
-          type,
-          amount: type === 'deposit' || type === 'order_refund' ? amount : -amount,
-          balanceAfter: newBalance,
-          description,
-        },
-      })
-
-      await tx.user.update({
-        where: { id: session.user.id },
-        data: { walletBalance: newBalance },
-      })
-
-      return transaction
-    })
-
-    return NextResponse.json(result, { status: 201 })
+    return NextResponse.json({ success: true }, { status: 201 })
   } catch (error) {
     console.error('Wallet transaction error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

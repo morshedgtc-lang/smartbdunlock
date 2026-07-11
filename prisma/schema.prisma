@@ -16,20 +16,16 @@ model User {
   phone         String?
   status        String    @default("active") // active, suspended, banned
   walletBalance Float     @default(0)
+  resellerId    String?   // admin or reseller this user is assigned to
+  reseller      User?     @relation("ResellerAssignment", fields: [resellerId], references: [id])
+  clients       User[]    @relation("ResellerAssignment")
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   orders        Order[]
   transactions  Transaction[]
-  sessions      Session[]
-}
 
-model Session {
-  id        String   @id @default(cuid())
-  userId    String
-  token     String   @unique
-  expiresAt DateTime
-  user      User     @relation(fields: [userId], references: [id])
-  createdAt DateTime @default(now())
+  @@index([email])
+  @@index([role])
 }
 
 model ServiceCategory {
@@ -57,6 +53,8 @@ model Service {
   customFields   ServiceCustomField[]
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
+
+  @@index([supplierId, status])
 }
 
 model ServiceCustomField {
@@ -116,6 +114,9 @@ model Order {
   customValues  OrderCustomFieldValue[]
   createdAt     DateTime               @default(now())
   updatedAt     DateTime               @updatedAt
+
+  @@index([userId, status, createdAt])
+  @@index([status])
 }
 
 model OrderCustomFieldValue {
@@ -141,4 +142,6 @@ model Transaction {
   user          User     @relation(fields: [userId], references: [id])
   order         Order?   @relation(fields: [orderId], references: [id])
   createdAt     DateTime @default(now())
+
+  @@index([userId, type, createdAt])
 }

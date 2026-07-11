@@ -13,25 +13,23 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          throw new Error('Email and password are required')
+          throw new Error('Invalid credentials')
         }
 
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
         })
 
-        if (!user) {
-          throw new Error('No user found with this email')
-        }
-
-        if (user.status !== 'active') {
-          throw new Error('Account is suspended')
+        // Generic error for both not-found and bad-password to avoid leaking
+        // which emails are registered (user enumeration).
+        if (!user || user.status !== 'active') {
+          throw new Error('Invalid credentials')
         }
 
         const isPasswordValid = await bcrypt.compare(credentials.password, user.password)
 
         if (!isPasswordValid) {
-          throw new Error('Invalid password')
+          throw new Error('Invalid credentials')
         }
 
         return {
