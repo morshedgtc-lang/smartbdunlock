@@ -1,0 +1,144 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  name          String
+  role          String    @default("reseller") // admin, reseller
+  phone         String?
+  status        String    @default("active") // active, suspended, banned
+  walletBalance Float     @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  orders        Order[]
+  transactions  Transaction[]
+  sessions      Session[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model ServiceCategory {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  services  Service[]
+}
+
+model Service {
+  id             String              @id @default(cuid())
+  name           String
+  description    String?
+  type           String              // unlock, flash, repair, imei (kept for backward compat)
+  cost           Float
+  sellingPrice   Float
+  processingTime String?
+  status         String              @default("active") // active, inactive
+  categoryId     String?
+  category       ServiceCategory?    @relation(fields: [categoryId], references: [id])
+  supplierId     String?
+  supplier       Supplier?           @relation(fields: [supplierId], references: [id])
+  orders         Order[]
+  customFields   ServiceCustomField[]
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+}
+
+model ServiceCustomField {
+  id              String   @id @default(cuid())
+  serviceId       String
+  service         Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  fieldType       String   // text, textarea, number, select, multiselect, checkbox, file, image, imei_single, imei_multi, serial_single, serial_multi
+  label           String
+  placeholder     String?
+  options         String?  // JSON array for select/multiselect: ["Option 1","Option 2"]
+  required        Boolean  @default(false)
+  visibleToClient Boolean  @default(true)
+  order           Int      @default(0)
+  customValues    OrderCustomFieldValue[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Supplier {
+  id          String    @id @default(cuid())
+  name        String
+  email       String?
+  phone       String?
+  website     String?
+  type        String    // api, manual, reseller
+  status      String    @default("active") // active, inactive
+  successRate Float     @default(100)
+  totalOrders Int       @default(0)
+  priority    Int       @default(1) // 1=highest
+  apiKey      String?
+  config      String?   // JSON config for supplier
+  services    Service[]
+  orders      Order[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Order {
+  id            String                 @id @default(cuid())
+  orderNumber   String                 @unique
+  userId        String
+  serviceId     String
+  supplierId    String?
+  imei          String?
+  deviceInfo    String?
+  status        String                 @default("pending") // pending, processing, completed, failed, cancelled
+  cost          Float
+  sellingPrice  Float
+  profit        Float                  @default(0)
+  notes         String?
+  result        String?                // JSON result from supplier
+  completedAt   DateTime?
+  user          User                   @relation(fields: [userId], references: [id])
+  service       Service                @relation(fields: [serviceId], references: [id])
+  supplier      Supplier?              @relation(fields: [supplierId], references: [id])
+  transactions  Transaction[]
+  customValues  OrderCustomFieldValue[]
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+}
+
+model OrderCustomFieldValue {
+  id             String            @id @default(cuid())
+  orderId        String
+  order          Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  customFieldId  String
+  customField    ServiceCustomField @relation(fields: [customFieldId], references: [id])
+  value          String            // text value, or JSON for multi-select/files
+  createdAt      DateTime          @default(now())
+}
+
+model Transaction {
+  id            String   @id @default(cuid())
+  userId        String
+  orderId       String?
+  type          String   // deposit, withdraw, transfer, order_payment, order_refund
+  amount        Float
+  balanceAfter  Float
+  description   String?
+  status        String   @default("completed") // pending, completed, failed
+  reference     String?  // external reference
+  user          User     @relation(fields: [userId], references: [id])
+  order         Order?   @relation(fields: [orderId], references: [id])
+  createdAt     DateTime @default(now())
+}

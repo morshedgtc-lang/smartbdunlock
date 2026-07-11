@@ -1,0 +1,30 @@
+
+> unlockos@0.1.0 dev
+> next dev -p 3001
+
+▲ Next.js 16.2.10 (Turbopack)
+- Local:         http://localhost:3001
+- Network:       http://172.28.144.1:3001
+- Environments: .env
+✓ Ready in 1863ms
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+
+ GET / 200 in 1283ms (next.js: 560ms, application-code: 723ms)
+ GET / 200 in 184ms (next.js: 13ms, application-code: 171ms)
+ GET / 200 in 136ms (next.js: 13ms, application-code: 124ms)
+ GET /login 404 in 2.2s (next.js: 2.0s, application-code: 141ms)
+ GET /register 404 in 162ms (next.js: 65ms, application-code: 97ms)
+ GET /api/auth/signin?callbackUrl=%2Fadmin%2Fdashboard 404 in 283ms (next.js: 21ms, application-code: 261ms)
+ GET /api/auth/signin?callbackUrl=%2Fadmin%2Fusers 404 in 204ms (next.js: 38ms, application-code: 166ms)
+ GET /api/auth/signin?callbackUrl=%2Fadmin%2Fservices 404 in 131ms (next.js: 23ms, application-code: 108ms)
+ GET /api/auth/signin?callbackUrl=%2Fadmin%2Forders 404 in 132ms (next.js: 20ms, application-code: 112ms)
+ GET /api/auth/signin?callbackUrl=%2Fadmin%2Fsuppliers 404 in 153ms (next.js: 19ms, application-code: 135ms)
+ GET /api/auth/signin?callbackUrl=%2Fadmin%2Fwallet 404 in 137ms (next.js: 22ms, application-code: 115ms)
+ GET /api/auth/signin?callbackUrl=%2Fadmin%2Fsettings 404 in 146ms (next.js: 22ms, application-code: 125ms)
+ GET /api/auth/signin?callbackUrl=%2Freseller%2Fdashboard 404 in 124ms (next.js: 22ms, application-code: 102ms)
+ GET /api/auth/signin?callbackUrl=%2Freseller%2Forders 404 in 129ms (next.js: 26ms, application-code: 104ms)
+ GET /api/auth/signin?callbackUrl=%2Freseller%2Fwallet 404 in 116ms (next.js: 18ms, application-code: 97ms)
+ GET /api/auth/signin?callbackUrl=%2Fcustomer%2Fdashboard 404 in 110ms (next.js: 15ms, application-code: 95ms)
+ GET /api/auth/signin?callbackUrl=%2Fcustomer%2Forders 404 in 102ms (next.js: 15ms, application-code: 87ms)
+
+C:\Users\easyp\Desktop\workproject\unlockOS>
