@@ -1,4 +1,4 @@
-# MASTER PLAN — unlockOS
+# MASTER PLAN — SmartBD Unlock
 
 ## GSM Mobile Service Reseller Management Platform
 
@@ -1073,7 +1073,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
-      POSTGRES_DB: unlockos
+      POSTGRES_DB: smartbd_unlock
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${DB_PASSWORD}
 
@@ -1091,7 +1091,7 @@ volumes:
 
 ```bash
 # Database
-DATABASE_URL=postgresql://postgres:password@localhost:5432/unlockos
+DATABASE_URL=postgresql://postgres:password@localhost:5432/smartbd_unlock
 
 # Redis
 REDIS_URL=redis://localhost:6379
@@ -1183,7 +1183,7 @@ STORAGE_PATH=./uploads
 ## File Structure
 
 ```
-unlockos/
+smartbdunlock/
 ├── prisma/
 │   ├── schema.prisma
 │   ├── migrations/
@@ -1293,4 +1293,4 @@ unlockos/
 
 ---
 
-*This document is the source of truth for the unlockOS project architecture and implementation plan.*
+*This document is the source of truth for the SmartBD Unlock project architecture and implementation plan.*

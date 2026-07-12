@@ -45,4 +45,8 @@ next-env.d.ts
 *.db-journal
 *.log
 
+# deployment artifacts
+deploy.zip
+*.zip
+
 /src/generated/prisma

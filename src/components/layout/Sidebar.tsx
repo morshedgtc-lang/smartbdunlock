@@ -59,7 +59,7 @@ export function Sidebar() {
         </div>
         {!collapsed && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
-            <h1 className="font-bold text-lg text-[var(--foreground)] leading-none">unlockOS</h1>
+            <h1 className="font-bold text-lg text-[var(--foreground)] leading-none">SmartBD Unlock</h1>
             <p className="text-[10px] text-[var(--muted)] uppercase tracking-wider">{userName}</p>
           </motion.div>
         )}

@@ -52,7 +52,7 @@ export default function Home() {
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/30">
             <Smartphone size={20} className="text-white" />
           </div>
-          <span className="text-xl font-bold text-[var(--foreground)]">unlockOS</span>
+          <span className="text-xl font-bold text-[var(--foreground)]">SmartBD Unlock</span>
         </div>
         <div className="flex items-center gap-3">
           <Link href="/login">
@@ -311,7 +311,7 @@ export default function Home() {
               <div className="relative">
                 <h2 className="text-3xl md:text-4xl font-bold text-[var(--foreground)] mb-4">Ready to Get Started?</h2>
                 <p className="text-lg text-[var(--muted)] mb-8 max-w-xl mx-auto">
-                  Join hundreds of resellers using unlockOS for their mobile device unlocking services.
+                  Join hundreds of resellers using SmartBD Unlock for their mobile device unlocking services.
                 </p>
                 <div className="flex items-center justify-center gap-4 flex-wrap">
                   <Link href="/login">
@@ -337,9 +337,9 @@ export default function Home() {
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
               <Smartphone size={16} className="text-white" />
             </div>
-            <span className="font-bold text-[var(--foreground)]">unlockOS</span>
+            <span className="font-bold text-[var(--foreground)]">SmartBD Unlock</span>
           </div>
-          <p className="text-sm text-[var(--muted)]">&copy; 2026 unlockOS. Enterprise GSM Service Platform.</p>
+          <p className="text-sm text-[var(--muted)]">&copy; 2026 SmartBD Unlock. Enterprise GSM Service Platform.</p>
           <div className="flex items-center gap-4 text-sm text-[var(--muted)]">
             <a href="#" className="hover:text-[var(--foreground)] transition-colors">Terms</a>
             <a href="#" className="hover:text-[var(--foreground)] transition-colors">Privacy</a>

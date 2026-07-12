@@ -1,12 +1,12 @@
-# Agent Handoff — unlockOS
+# Agent Handoff — SmartBD Unlock
 
 ## Project Overview
-- **App**: unlockOS — GSM Service Reseller Platform
+- **App**: SmartBD Unlock — GSM Service Reseller Platform
 - **Stack**: Next.js 16.2.10, Prisma 5.22.0 (SQLite), NextAuth 4.x, Tailwind 4, framer-motion, TypeScript
 - **Roles**: Admin + Reseller only (Customer role REMOVED)
 - **Dev Server**: Running on `http://localhost:3000` (may need restart)
 - **Database**: SQLite at `prisma/dev.db`
-- **Login**: Admin `admin@unlockos.com` / `admin123`, Reseller `reseller@unlockos.com` / `reseller123`
+- **Login**: Admin `admin@smartbdunlock.com` / `admin123`, Reseller `reseller@smartbdunlock.com` / `reseller123`
 
 ## What's Done (All Complete)
 
@@ -44,7 +44,7 @@
 ## What Might Need Work
 
 ### Potential Next Steps
-1. **Commit & push** all changes to `https://github.com/morshedgtc-lang/unlockOS.git`
+1. **Commit & push** all changes to `https://github.com/morshedgtc-lang/smartbdunlock.git`
 2. **Test end-to-end**: Create service → Create order → Update status → Check wallet balance
 3. **Reseller order creation**: The modal in `/reseller/orders` may need testing with real services
 4. **Order result field**: PATCH supports `result` but UI doesn't have input for it yet

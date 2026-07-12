@@ -88,7 +88,7 @@ export default function LoginPage() {
             <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent" />
             <Smartphone size={28} className="text-white relative z-10" strokeWidth={1.8} />
           </div>
-          <h1 className="text-3xl font-bold text-[var(--foreground)]">unlockOS</h1>
+          <h1 className="text-3xl font-bold text-[var(--foreground)]">SmartBD Unlock</h1>
           <p className="text-[var(--muted)] mt-1">GSM Service Reseller Platform</p>
         </motion.div>
 

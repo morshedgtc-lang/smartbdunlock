@@ -1,4 +1,4 @@
-# Project Analysis — unlockOS
+# Project Analysis — SmartBD Unlock
 
 **Analysis Date:** 2026-07-10  
 **Status:** GREENFIELD PROJECT

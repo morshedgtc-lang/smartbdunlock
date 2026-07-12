@@ -19,8 +19,8 @@ export default function SettingsPage() {
               <h3 className="font-bold text-[var(--foreground)]">General</h3>
             </div>
             <div className="space-y-4">
-              <GlassInput label="Platform Name" defaultValue="unlockOS" />
-              <GlassInput label="Support Email" defaultValue="support@unlockos.com" />
+              <GlassInput label="Platform Name" defaultValue="SmartBD Unlock" />
+              <GlassInput label="Support Email" defaultValue="support@smartbdunlock.com" />
               <GlassInput label="Default Currency" defaultValue="USD" />
             </div>
           </GlassCard>

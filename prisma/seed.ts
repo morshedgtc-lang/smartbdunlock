@@ -9,10 +9,10 @@ async function main() {
   // Create admin user
   const adminPassword = await bcrypt.hash('admin123', 12)
   const admin = await prisma.user.upsert({
-    where: { email: 'admin@unlockos.com' },
+    where: { email: 'admin@smartbdunlock.com' },
     update: {},
     create: {
-      email: 'admin@unlockos.com',
+      email: 'admin@smartbdunlock.com',
       password: adminPassword,
       name: 'Admin User',
       role: 'admin',
@@ -24,10 +24,10 @@ async function main() {
   // Create reseller user
   const resellerPassword = await bcrypt.hash('reseller123', 12)
   const reseller = await prisma.user.upsert({
-    where: { email: 'reseller@unlockos.com' },
+    where: { email: 'reseller@smartbdunlock.com' },
     update: {},
     create: {
-      email: 'reseller@unlockos.com',
+      email: 'reseller@smartbdunlock.com',
       password: resellerPassword,
       name: 'Reseller User',
       role: 'reseller',
@@ -359,8 +359,8 @@ async function main() {
 
   console.log('Database seeded successfully!')
   console.log('Users created:')
-  console.log('  Admin: admin@unlockos.com / admin123')
-  console.log('  Reseller: reseller@unlockos.com / reseller123')
+  console.log('  Admin: admin@smartbdunlock.com / admin123')
+  console.log('  Reseller: reseller@smartbdunlock.com / reseller123')
   console.log(`Categories: ${categoryNames.join(', ')}`)
   console.log(`Services: ${servicesData.map(s => s.name).join(', ')}`)
 }

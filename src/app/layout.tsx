@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "unlockOS — GSM Service Platform",
+  title: "SmartBD Unlock — GSM Service Platform",
   description: "Professional GSM mobile service reseller management platform",
 };
 

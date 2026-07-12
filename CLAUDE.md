@@ -1,9 +1,3 @@
-<!-- BEGIN:nextjs-agent-rules -->
-# This is NOT the Next.js you know
-
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
-<!-- END:nextjs-agent-rules -->
-
 # SmartBD Unlock — Agent Instructions
 
 ## Project State: Phase 1-6 COMPLETE
@@ -28,3 +22,18 @@ All core features are built and working. Dev server running on localhost:3000.
 
 ## Files to Know
 See `AGENT_HANDOFF.md` for full details on what's done and what might need work.
+
+## Deploy Configuration (configured by /setup-deploy)
+- Platform: manual (public_html)
+- Production URL: https://smartbdunlock.com
+- Deploy workflow: manual deployment
+- Deploy status command: HTTP health check
+- Merge method: merge
+- Project type: web app
+- Post-deploy health check: https://smartbdunlock.com
+
+### Custom deploy hooks
+- Pre-merge: npm run build
+- Deploy trigger: manual (upload to public_html)
+- Deploy status: HTTP health check at production URL
+- Health check: https://smartbdunlock.com

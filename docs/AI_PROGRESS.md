@@ -1,4 +1,4 @@
-# AI Progress Journal — unlockOS
+# AI Progress Journal — SmartBD Unlock
 
 **Started:** 2026-07-10  
 **Current Phase:** PLANNING
