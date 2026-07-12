@@ -237,27 +237,7 @@ export default function LoginPage() {
           </div>
         </motion.div>
 
-        {/* Quick Access */}
-        <motion.div
-          className="mt-4 liquid-glass-card-sm"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.6, duration: 0.6 }}
-        >
-          <p className="text-xs text-[var(--muted)] text-center mb-3">Quick Demo Access</p>
-          <div className="grid grid-cols-2 gap-2">
-            {[
-              { href: '/admin/dashboard', label: 'Admin', color: 'indigo' },
-              { href: '/reseller/dashboard', label: 'Reseller', color: 'purple' },
-            ].map(({ href, label, color }) => (
-              <Link key={href} href={href}>
-                <button className={`liquid-demo-btn liquid-demo-btn-${color}`}>
-                  {label}
-                </button>
-              </Link>
-            ))}
-          </div>
-        </motion.div>
+
       </motion.div>
 
       <style jsx>{`
@@ -519,65 +499,7 @@ export default function LoginPage() {
           50% { background-position: 100% 50%; }
         }
 
-        /* Demo Buttons */
-        .liquid-demo-btn {
-          width: 100%;
-          padding: 10px 12px;
-          border-radius: 12px;
-          font-size: 12px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-          border: 1px solid transparent;
-          position: relative;
-          overflow: hidden;
-          backdrop-filter: blur(8px);
-          -webkit-backdrop-filter: blur(8px);
-        }
 
-        .liquid-demo-btn::before {
-          content: '';
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
-          pointer-events: none;
-        }
-
-        .liquid-demo-btn-indigo {
-          background: rgba(99, 102, 241, 0.12);
-          color: #818cf8;
-          border-color: rgba(99, 102, 241, 0.2);
-        }
-
-        .liquid-demo-btn-indigo:hover {
-          background: rgba(99, 102, 241, 0.2);
-          box-shadow: 0 4px 16px rgba(99, 102, 241, 0.2);
-          transform: translateY(-1px);
-        }
-
-        .liquid-demo-btn-purple {
-          background: rgba(168, 85, 247, 0.12);
-          color: #c084fc;
-          border-color: rgba(168, 85, 247, 0.2);
-        }
-
-        .liquid-demo-btn-purple:hover {
-          background: rgba(168, 85, 247, 0.2);
-          box-shadow: 0 4px 16px rgba(168, 85, 247, 0.2);
-          transform: translateY(-1px);
-        }
-
-        .liquid-demo-btn-emerald {
-          background: rgba(16, 185, 129, 0.12);
-          color: #34d399;
-          border-color: rgba(16, 185, 129, 0.2);
-        }
-
-        .liquid-demo-btn-emerald:hover {
-          background: rgba(16, 185, 129, 0.2);
-          box-shadow: 0 4px 16px rgba(16, 185, 129, 0.2);
-          transform: translateY(-1px);
-        }
 
         .liquid-glass-card-sm {
           background: rgba(255, 255, 255, 0.05);

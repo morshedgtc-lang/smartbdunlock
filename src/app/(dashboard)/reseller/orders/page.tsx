@@ -465,7 +465,7 @@ function CustomFieldInput({ field, value, onChange, onImeiMultiChange, imeiCount
           </label>
           <textarea
             className="glass-input w-full h-24 resize-none font-mono text-sm"
-            placeholder={"359123456789012\n359123456789013\n359123456789014"}
+            placeholder={"Enter IMEI numbers\nOne per line"}
             value={value}
             onChange={e => onImeiMultiChange(e.target.value)}
           />

@@ -8,13 +8,6 @@ import {
   CheckCircle, Lock, Headphones, BarChart3, Clock, Star
 } from 'lucide-react';
 
-const stats = [
-  { value: '10K+', label: 'Orders Processed' },
-  { value: '500+', label: 'Active Resellers' },
-  { value: '99.9%', label: 'Uptime' },
-  { value: '<24h', label: 'Avg Processing' },
-];
-
 const features = [
   { icon: Shield, title: 'Dynamic Services', desc: 'Admin creates any service with custom fields — IMEI, photo uploads, custom forms', color: 'from-blue-500 to-cyan-500' },
   { icon: Zap, title: 'Instant Orders', desc: 'Reseller submits orders with auto-generated service-specific forms', color: 'from-purple-500 to-fuchsia-500' },
@@ -37,12 +30,6 @@ const steps = [
   { num: '04', title: 'Track Results', desc: 'Monitor order status in real-time and download results securely' },
 ];
 
-const testimonials = [
-  { name: 'Ahmed K.', role: 'Master Reseller', text: 'Best GSM platform I have used. Orders process fast and the wallet system is seamless.' },
-  { name: 'Sarah M.', role: 'Reseller', text: 'Dynamic service fields mean I can offer any unlock service without coding. Game changer.' },
-  { name: 'Carlos R.', role: 'Reseller', text: 'Simple, fast, and reliable. Got my Samsung unlocked in under 6 hours.' },
-];
-
 export default function Home() {
   return (
     <div className="min-h-screen flex flex-col bg-[var(--background)]">
@@ -62,15 +49,6 @@ export default function Home() {
               whileTap={{ scale: 0.97 }}
             >
               Sign In
-            </motion.button>
-          </Link>
-          <Link href="/login">
-            <motion.button
-              className="glass-btn px-5 py-2.5 text-sm cursor-pointer"
-              whileHover={{ scale: 1.03, y: -1 }}
-              whileTap={{ scale: 0.97 }}
-            >
-              Demo Login
             </motion.button>
           </Link>
         </div>
@@ -113,31 +91,7 @@ export default function Home() {
                     Sign In <ArrowRight size={18} />
                   </motion.button>
                 </Link>
-                <Link href="/login">
-                  <motion.button
-                    className="glass-btn glass-btn-secondary px-8 py-3.5 text-base cursor-pointer"
-                    whileHover={{ scale: 1.05, y: -2 }}
-                    whileTap={{ scale: 0.97 }}
-                  >
-                    Demo Login
-                  </motion.button>
-                </Link>
               </div>
-            </motion.div>
-
-            {/* Stats */}
-            <motion.div
-              className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-20"
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4, duration: 0.8 }}
-            >
-              {stats.map((stat, i) => (
-                <div key={i} className="glass-premium p-5 text-center">
-                  <p className="text-3xl font-bold text-[var(--foreground)]">{stat.value}</p>
-                  <p className="text-sm text-[var(--muted)] mt-1">{stat.label}</p>
-                </div>
-              ))}
             </motion.div>
           </div>
         </section>
@@ -252,45 +206,6 @@ export default function Home() {
                         {field}
                       </span>
                     ))}
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Testimonials */}
-        <section className="px-6 py-20 bg-white/3 dark:bg-white/[0.02]">
-          <div className="max-w-6xl mx-auto">
-            <motion.div
-              className="text-center mb-14"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-            >
-              <h2 className="text-3xl md:text-4xl font-bold text-[var(--foreground)] mb-4">Trusted by Resellers</h2>
-              <p className="text-[var(--muted)] max-w-lg mx-auto">See what our users have to say about the platform.</p>
-            </motion.div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {testimonials.map((t, i) => (
-                <motion.div
-                  key={i}
-                  className="glass-premium p-7 text-left"
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.1 }}
-                  whileHover={{ y: -4 }}
-                >
-                  <div className="flex gap-1 mb-4">
-                    {[...Array(5)].map((_, j) => (
-                      <Star key={j} size={14} className="text-amber-500 fill-amber-500" />
-                    ))}
-                  </div>
-                  <p className="text-sm text-[var(--muted)] leading-relaxed mb-5">&ldquo;{t.text}&rdquo;</p>
-                  <div>
-                    <p className="font-bold text-[var(--foreground)] text-sm">{t.name}</p>
-                    <p className="text-xs text-[var(--muted)]">{t.role}</p>
                   </div>
                 </motion.div>
               ))}
