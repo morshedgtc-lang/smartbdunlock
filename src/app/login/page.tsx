@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { signIn } from 'next-auth/react'
 import { motion } from 'framer-motion'
 import { Jellyfish } from '@/components/Jellyfish'
 import { Mail, Lock, Smartphone, ArrowRight, Eye, EyeOff } from 'lucide-react'
@@ -36,21 +35,21 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
 
-    const result = await signIn('credentials', {
-      email,
-      password,
-      redirect: false,
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
     })
 
-    if (result?.error) {
-      setError(result.error)
+    const data = await res.json()
+
+    if (!res.ok) {
+      setError(data.error || 'Login failed')
       setLoading(false)
       return
     }
 
-    const sessionRes = await fetch('/api/auth/session')
-    const session = await sessionRes.json()
-    const role = session?.user?.role
+    const role = data?.user?.role
 
     if (role === 'admin') router.push('/admin/dashboard')
     else if (role === 'reseller') router.push('/reseller/dashboard')

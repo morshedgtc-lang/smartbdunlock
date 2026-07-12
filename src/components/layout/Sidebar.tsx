@@ -1,10 +1,9 @@
 'use client'
 
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
-import { useSession, signOut } from 'next-auth/react'
 import {
   LayoutDashboard,
   Users,
@@ -18,7 +17,7 @@ import {
   ChevronRight,
   Smartphone,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 const adminLinks = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -38,13 +37,27 @@ const resellerLinks = [
 
 export function Sidebar() {
   const pathname = usePathname()
-  const { data: session } = useSession()
+  const router = useRouter()
   const [collapsed, setCollapsed] = useState(false)
+  const [userName, setUserName] = useState('')
 
   const role = pathname.startsWith('/admin') ? 'admin' : 'reseller'
   const links = role === 'admin' ? adminLinks : resellerLinks
   const roleLabel = role === 'admin' ? 'Super Admin' : 'Reseller'
-  const userName = session?.user?.name || roleLabel
+
+  useEffect(() => {
+    fetch('/api/auth/session')
+      .then(r => r.json())
+      .then(data => {
+        setUserName(data?.user?.name || roleLabel)
+      })
+      .catch(() => setUserName(roleLabel))
+  }, [roleLabel])
+
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' })
+    router.push('/login')
+  }
 
   return (
     <motion.aside
@@ -100,19 +113,14 @@ export function Sidebar() {
             {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
           </motion.button>
         </div>
-        <Link href="/login">
-          <motion.div
-            className="flex items-center gap-3 px-3 py-2 rounded-2xl text-sm text-red-400 hover:bg-red-500/10 hover:border hover:border-red-500/20 cursor-pointer transition-all"
-            whileHover={{ x: 3 }}
-            onClick={(e) => {
-              e.preventDefault()
-              signOut({ callbackUrl: '/login' })
-            }}
-          >
-            <LogOut size={18} />
-            {!collapsed && <span>Logout</span>}
-          </motion.div>
-        </Link>
+        <motion.div
+          className="flex items-center gap-3 px-3 py-2 rounded-2xl text-sm text-red-400 hover:bg-red-500/10 hover:border hover:border-red-500/20 cursor-pointer transition-all"
+          whileHover={{ x: 3 }}
+          onClick={handleLogout}
+        >
+          <LogOut size={18} />
+          {!collapsed && <span>Logout</span>}
+        </motion.div>
       </div>
     </motion.aside>
   )
