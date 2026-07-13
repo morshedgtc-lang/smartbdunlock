@@ -83,10 +83,10 @@ export async function GET() {
       })),
     })
   } catch (error: any) {
-    console.error('Dashboard error:', error)
     if (error.message === 'Unauthorized' || error.message === 'Forbidden') {
       return NextResponse.json({ error: error.message }, { status: error.message === 'Unauthorized' ? 401 : 403 })
     }
+    console.error('Dashboard error:', error)
     return NextResponse.json({ error: 'Failed to load dashboard' }, { status: 500 })
   }
 }
