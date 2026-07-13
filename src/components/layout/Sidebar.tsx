@@ -17,7 +17,8 @@ import {
   ChevronRight,
   Smartphone,
 } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import { useAuth } from '@/lib/api'
 
 const adminLinks = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -38,21 +39,12 @@ const resellerLinks = [
 export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
+  const { user } = useAuth()
   const [collapsed, setCollapsed] = useState(false)
-  const [userName, setUserName] = useState('')
 
   const role = pathname.startsWith('/admin') ? 'admin' : 'reseller'
   const links = role === 'admin' ? adminLinks : resellerLinks
-  const roleLabel = role === 'admin' ? 'Super Admin' : 'Reseller'
-
-  useEffect(() => {
-    fetch('/api/auth/session', { credentials: 'same-origin' })
-      .then(r => r.json())
-      .then(data => {
-        setUserName(data?.user?.name || roleLabel)
-      })
-      .catch(() => setUserName(roleLabel))
-  }, [roleLabel])
+  const userName = user?.name || (role === 'admin' ? 'Super Admin' : 'Reseller')
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' })
