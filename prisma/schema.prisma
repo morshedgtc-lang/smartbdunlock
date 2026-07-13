@@ -40,9 +40,9 @@ model Service {
   id             String              @id @default(cuid())
   name           String
   description    String?
-  type           String              // unlock, flash, repair, imei (kept for backward compat)
-  cost           Float
-  sellingPrice   Float
+  type           String              @default("unlock") // unlock, flash, repair, imei (kept for backward compat)
+  cost           Float               @default(0)
+  sellingPrice   Float               @default(0)
   processingTime String?
   status         String              @default("active") // active, inactive
   categoryId     String?
