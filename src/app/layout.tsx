@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/ThemeProvider";
-import { Providers } from "@/components/Providers";
 import { GradientMesh } from "@/components/GradientMesh";
 import { WaterDrops } from "@/components/WaterDrops";
 import { ToastProvider } from "@/components/ui/Toast";
@@ -34,7 +33,6 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
-        <Providers>
           <ThemeProvider>
             <ToastProvider>
               {/* SVG Filters for Liquid Glass Effect */}
@@ -147,7 +145,6 @@ export default function RootLayout({
               {children}
             </ToastProvider>
           </ThemeProvider>
-        </Providers>
       </body>
     </html>
   );

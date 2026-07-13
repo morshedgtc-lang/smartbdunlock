@@ -4,8 +4,7 @@ import { Header } from '@/components/layout/Header'
 import { StatCard } from '@/components/ui/StatCard'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { StatusBadge } from '@/components/ui/StatusBadge'
-import { useToast } from '@/components/ui/Toast'
-import { useApi } from '@/lib/useApi'
+import { useApi } from '@/hooks/useApi'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import {
@@ -27,9 +26,9 @@ const container = { animate: { transition: { staggerChildren: 0.08 } } }
 const item = { initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 } }
 
 export default function AdminDashboard() {
-  const { toast } = useToast()
   const { data: stats, loading: statsLoading, error: statsError } = useApi<any>({ url: '/api/dashboard' })
   const { data: ordersRes, loading: ordersLoading } = useApi<any>({ url: '/api/orders?limit=6' })
+  const { data: suppliersRes } = useApi<any>({ url: '/api/suppliers' })
 
   const s = stats || { totalUsers: 0, totalOrders: 0, revenueToday: 0, pendingOrders: 0, completedToday: 0, failedOrders: 0, revenueThisMonth: 0, walletBalance: 0 }
   const recentOrders = ordersRes?.orders || []
@@ -198,29 +197,21 @@ export default function AdminDashboard() {
             </GlassCard>
 
             <GlassCard>
-              <h3 className="text-lg font-bold text-[var(--foreground)] mb-3">System Status</h3>
+              <h3 className="text-lg font-bold text-[var(--foreground)] mb-3">Suppliers</h3>
               <div className="space-y-2">
-                {[
-                  { name: 'Supplier Alpha', status: 'Online' },
-                  { name: 'Supplier Beta', status: 'Online' },
-                  { name: 'Supplier Gamma', status: 'Online' },
-                  { name: 'Supplier Delta', status: 'Offline' },
-                ].map(s => (
-                  <div key={s.name} className="flex items-center justify-between text-sm">
-                    <span className="text-[var(--muted)]">{s.name}</span>
-                    <span className={`flex items-center gap-1.5 ${s.status === 'Online' ? 'text-emerald-500' : 'text-red-500'}`}>
-                      <span className={`w-2 h-2 rounded-full ${s.status === 'Online' ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
-                      {s.status}
+                {(suppliersRes?.suppliers || []).length === 0 && (
+                  <p className="text-sm text-[var(--muted)]">No suppliers configured</p>
+                )}
+                {(suppliersRes?.suppliers || []).slice(0, 5).map((supplier: any) => (
+                  <div key={supplier.id} className="flex items-center justify-between text-sm">
+                    <span className="text-[var(--muted)]">{supplier.name}</span>
+                    <span className={`flex items-center gap-1.5 ${supplier.status === 'active' ? 'text-emerald-500' : 'text-red-500'}`}>
+                      <span className={`w-2 h-2 rounded-full ${supplier.status === 'active' ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
+                      {supplier.status === 'active' ? 'Online' : 'Offline'}
                     </span>
                   </div>
                 ))}
               </div>
-              <button
-                className="mt-3 w-full py-2 rounded-lg bg-indigo-500/10 text-indigo-500 text-xs font-medium hover:bg-indigo-500/20 transition-colors cursor-pointer"
-                onClick={() => toast('success', 'System check completed — all services operational')}
-              >
-                Run System Check
-              </button>
             </GlassCard>
           </motion.div>
         </div>

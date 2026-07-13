@@ -3,7 +3,7 @@
 import { Header } from '@/components/layout/Header'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { StatusBadge } from '@/components/ui/StatusBadge'
-import { useApi } from '@/lib/useApi'
+import { useApi } from '@/hooks/useApi'
 import { motion } from 'framer-motion'
 import { Loader2, Wallet } from 'lucide-react'
 import Link from 'next/link'

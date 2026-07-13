@@ -15,9 +15,10 @@ All core features are built and working. Dev server running on localhost:3000.
 
 3. Login: Reseller `reseller@smartbdunlock.com` / `reseller123`
 ## Stack
-- Next.js 16.2.10, Prisma 5.22.0 (SQLite), NextAuth 4.x, Tailwind 4, framer-motion, TypeScript
+- Next.js 16.2.10, Prisma 5.22.0 (PostgreSQL), Tailwind 4, framer-motion, TypeScript
+- JWT auth via `jose` (httpOnly cookie `sb_session`)
 - 2 roles only: Admin + Reseller (Customer REMOVED)
-- 6 DB models: User, Session, Service, Supplier, Order, Transaction
+- 7 DB models: User, Service, ServiceCategory, ServiceCustomField, Supplier, Order, Transaction
 
 ## Key Conventions
 - Windows PowerShell: use `;` not `&&` for chaining commands

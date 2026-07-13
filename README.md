@@ -43,9 +43,9 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 - TypeScript
 - Tailwind CSS
 - Prisma (Database ORM)
-- NextAuth.js (Authentication)
+- PostgreSQL (Database)
+- jose (JWT Authentication)
 - bcryptjs (Password Hashing)
-- jsonwebtoken (JWT Tokens)
 - Framer Motion (Animations)
 
 ## Project Structure

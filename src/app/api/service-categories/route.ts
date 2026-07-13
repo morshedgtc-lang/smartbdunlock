@@ -43,6 +43,7 @@ export async function POST(request: Request) {
     const category = await prisma.serviceCategory.create({ data: { name } })
     return NextResponse.json(category, { status: 201 })
   } catch (error: any) {
+    if (error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
     if (error.message === 'Forbidden') return NextResponse.json({ error: error.message }, { status: 403 })
     console.error('Categories POST error:', error)
     return NextResponse.json({ error: 'Failed to create category' }, { status: 500 })
@@ -67,6 +68,7 @@ export async function PATCH(request: Request) {
     const category = await prisma.serviceCategory.update({ where: { id }, data: { name } })
     return NextResponse.json(category)
   } catch (error: any) {
+    if (error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
     if (error.message === 'Forbidden') return NextResponse.json({ error: error.message }, { status: 403 })
     console.error('Categories PATCH error:', error)
     return NextResponse.json({ error: 'Failed to update category' }, { status: 500 })
@@ -91,6 +93,7 @@ export async function DELETE(request: Request) {
     await prisma.serviceCategory.delete({ where: { id } })
     return NextResponse.json({ message: 'Category deleted successfully' })
   } catch (error: any) {
+    if (error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
     if (error.message === 'Forbidden') return NextResponse.json({ error: error.message }, { status: 403 })
     console.error('Categories DELETE error:', error)
     return NextResponse.json({ error: 'Failed to delete category' }, { status: 500 })

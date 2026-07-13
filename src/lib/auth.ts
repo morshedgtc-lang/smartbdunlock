@@ -1,7 +1,23 @@
 import { SignJWT, jwtVerify } from 'jose'
 import { cookies } from 'next/headers'
 
-const SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'fallback-secret-change-me')
+let _secret: Uint8Array | null = null
+
+function getSecret(): Uint8Array {
+  if (_secret) return _secret
+  const secret = process.env.JWT_SECRET
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production' && typeof window === 'undefined') {
+      throw new Error('JWT_SECRET environment variable is required in production')
+    }
+    console.warn('⚠️ JWT_SECRET not set — using insecure fallback for development only')
+    _secret = new TextEncoder().encode('dev-only-insecure-fallback-do-not-deploy')
+    return _secret
+  }
+  _secret = new TextEncoder().encode(secret)
+  return _secret
+}
+
 const COOKIE_NAME = 'sb_session'
 
 export interface SessionUser {
@@ -16,7 +32,7 @@ export async function createSession(user: SessionUser) {
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('7d')
-    .sign(SECRET)
+    .sign(getSecret())
 
   const cookieStore = await cookies()
   cookieStore.set(COOKIE_NAME, token, {
@@ -34,7 +50,7 @@ export async function getSession(): Promise<SessionUser | null> {
     const token = cookieStore.get(COOKIE_NAME)?.value
     if (!token) return null
 
-    const { payload } = await jwtVerify(token, SECRET)
+    const { payload } = await jwtVerify(token, getSecret())
     return payload.user as SessionUser
   } catch {
     return null

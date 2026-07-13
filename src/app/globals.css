@@ -501,105 +501,6 @@ input[type="number"].glass-input:hover::-webkit-outer-spin-button {
 }
 
 /* ============================================
-   SMOOTH ANIMATIONS
-   ============================================ */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(24px) scale(0.98);
-    filter: blur(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-    filter: blur(0);
-  }
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    filter: blur(2px);
-  }
-  to {
-    opacity: 1;
-    filter: blur(0);
-  }
-}
-
-@keyframes slideInLeft {
-  from {
-    opacity: 0;
-    transform: translateX(-24px) scale(0.98);
-    filter: blur(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0) scale(1);
-    filter: blur(0);
-  }
-}
-
-@keyframes scaleIn {
-  from {
-    opacity: 0;
-    transform: scale(0.9);
-    filter: blur(4px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-    filter: blur(0);
-  }
-}
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-12px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-.animate-fade-in-up {
-  animation: fadeInUp 0.6s var(--ease-out) forwards;
-}
-
-.animate-fade-in {
-  animation: fadeIn 0.5s var(--ease-out) forwards;
-}
-
-.animate-slide-in-left {
-  animation: slideInLeft 0.5s var(--ease-out) forwards;
-}
-
-.animate-scale-in {
-  animation: scaleIn 0.5s var(--ease-spring) forwards;
-}
-
-.animate-slide-down {
-  animation: slideDown 0.4s var(--ease-out) forwards;
-}
-
-/* Staggered children */
-.stagger > * {
-  opacity: 0;
-  animation: fadeInUp 0.5s var(--ease-out) forwards;
-}
-
-.stagger > *:nth-child(1) { animation-delay: 0ms; }
-.stagger > *:nth-child(2) { animation-delay: 60ms; }
-.stagger > *:nth-child(3) { animation-delay: 120ms; }
-.stagger > *:nth-child(4) { animation-delay: 180ms; }
-.stagger > *:nth-child(5) { animation-delay: 240ms; }
-.stagger > *:nth-child(6) { animation-delay: 300ms; }
-.stagger > *:nth-child(7) { animation-delay: 360ms; }
-.stagger > *:nth-child(8) { animation-delay: 420ms; }
-
-/* ============================================
    STATUS BADGES — Smooth
    ============================================ */
 .badge {
@@ -751,37 +652,6 @@ input[type="number"].glass-input:hover::-webkit-outer-spin-button {
 }
 
 /* ============================================
-   TOOLTIP — Smooth Appear
-   ============================================ */
-[data-tooltip] {
-  position: relative;
-}
-
-[data-tooltip]::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%) translateY(4px);
-  padding: 6px 12px;
-  background: var(--surface);
-  border: 1px solid var(--card-border);
-  border-radius: 8px;
-  font-size: 12px;
-  color: var(--foreground);
-  white-space: nowrap;
-  pointer-events: none;
-  opacity: 0;
-  transition: all 0.25s var(--ease-smooth);
-  box-shadow: 0 4px 16px var(--shadow-color);
-}
-
-[data-tooltip]:hover::after {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-}
-
-/* ============================================
    LINK SMOOTH HOVER
    ============================================ */
 a {
@@ -856,13 +726,6 @@ img[loading="lazy"]:not([src=""]) {
 
 .dark .glass-premium:hover {
   box-shadow: 0 16px 48px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.12);
-}
-
-/* Glass premium with mouse tracking */
-.glass-premium-content {
-  position: relative;
-  z-index: 5;
-  padding: 20px;
 }
 
 /* ============================================
@@ -1141,83 +1004,6 @@ img[loading="lazy"]:not([src=""]) {
 }
 
 /* ============================================
-   LIQUID TOGGLE — Premium SVG
-   ============================================ */
-.liquid-toggle {
-  cursor: pointer;
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.liquid-toggle:hover {
-  transform: scale(1.05);
-}
-
-.liquid-toggle:active {
-  transform: scale(0.95);
-}
-
-.liquid-toggle-track {
-  transition: fill 0.3s ease;
-}
-
-.liquid-toggle-thumb {
-  transition: cx 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.liquid-toggle.on .liquid-toggle-track {
-  fill: var(--accent);
-}
-
-.liquid-toggle.on .liquid-toggle-thumb {
-  cx: 38;
-}
-
-/* ============================================
-   WATER RIPPLE EFFECT
-   ============================================ */
-.water-ripple-container {
-  position: relative;
-  overflow: hidden;
-}
-
-.water-ripple-ring {
-  position: absolute;
-  width: 200px;
-  height: 200px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%);
-  transform: translate(-50%, -50%) scale(0);
-  pointer-events: none;
-  z-index: 4;
-  opacity: 0;
-  transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.4s;
-}
-
-.water-ripple-container:hover .water-ripple-ring {
-  transform: translate(-50%, -50%) scale(1);
-  opacity: 1;
-}
-
-.water-glow {
-  position: absolute;
-  width: 300px;
-  height: 300px;
-  border-radius: 50%;
-  background: radial-gradient(circle, var(--accent-glow) 0%, transparent 60%);
-  transform: translate(-50%, -50%) scale(0);
-  pointer-events: none;
-  z-index: 3;
-  opacity: 0;
-  transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.3s;
-  filter: blur(20px);
-}
-
-.water-ripple-container:hover .water-glow {
-  transform: translate(-50%, -50%) scale(1);
-  opacity: 1;
-}
-
-/* ============================================
    GPU OPTIMIZATION
    ============================================ */
 .glass,
@@ -1297,7 +1083,6 @@ img[loading="lazy"]:not([src=""]) {
 }
 
 .glass-search-results {
-  position: relative;
   overflow: hidden;
 }
 
@@ -1361,15 +1146,6 @@ img[loading="lazy"]:not([src=""]) {
   color: var(--foreground);
   border-radius: 2px;
   padding: 0 2px;
-}
-
-/* ============================================
-   WATER RIPPLE ANIMATION
-   ============================================ */
-@keyframes ripplePulse {
-  0% { transform: scale(0); opacity: 0; }
-  50% { transform: scale(1); opacity: 0.5; }
-  100% { transform: scale(0); opacity: 0; }
 }
 
 /* ============================================

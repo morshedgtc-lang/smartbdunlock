@@ -53,32 +53,38 @@ export async function POST(request: Request) {
           throw new Error('You can only transfer to your assigned users')
         }
 
-        const senderBefore = await tx.user.findUnique({ where: { id: user.id } })
-        if (!senderBefore || senderBefore.walletBalance < amount) throw new Error('Insufficient balance')
+        const senderUpdated = await tx.user.updateMany({
+          where: { id: user.id, walletBalance: { gte: amount } },
+          data: { walletBalance: { decrement: amount } },
+        })
+        if (senderUpdated.count === 0) throw new Error('Insufficient balance')
 
-        const senderNewBalance = senderBefore.walletBalance - amount
-        await tx.user.update({ where: { id: user.id }, data: { walletBalance: senderNewBalance } })
+        const senderAfter = await tx.user.findUnique({ where: { id: user.id }, select: { walletBalance: true } })
         await tx.transaction.create({
           data: {
             id: crypto.randomUUID(),
             userId: user.id,
             type: 'transfer',
             amount: -amount,
-            balanceAfter: senderNewBalance,
+            balanceAfter: senderAfter!.walletBalance,
             description: description || 'Transfer to user',
           },
         })
 
-        const targetBefore = await tx.user.findUnique({ where: { id: targetUserId } })
-        const targetNewBalance = (targetBefore?.walletBalance || 0) + amount
-        await tx.user.update({ where: { id: targetUserId }, data: { walletBalance: targetNewBalance } })
+        const targetUpdated = await tx.user.updateMany({
+          where: { id: targetUserId },
+          data: { walletBalance: { increment: amount } },
+        })
+        if (targetUpdated.count === 0) throw new Error('Target user not found')
+
+        const targetAfter = await tx.user.findUnique({ where: { id: targetUserId }, select: { walletBalance: true } })
         await tx.transaction.create({
           data: {
             id: crypto.randomUUID(),
             userId: targetUserId,
             type: 'deposit',
             amount,
-            balanceAfter: targetNewBalance,
+            balanceAfter: targetAfter!.walletBalance,
             description: description || 'Transfer from reseller',
           },
         })
@@ -89,20 +95,26 @@ export async function POST(request: Request) {
       const delta = type === 'deposit' ? amount : -amount
 
       if (delta < 0) {
-        const before = await tx.user.findUnique({ where: { id: user.id } })
-        if (!before || before.walletBalance < amount) throw new Error('Insufficient balance')
+        const updated = await tx.user.updateMany({
+          where: { id: user.id, walletBalance: { gte: amount } },
+          data: { walletBalance: { decrement: amount } },
+        })
+        if (updated.count === 0) throw new Error('Insufficient balance')
+      } else {
+        await tx.user.updateMany({
+          where: { id: user.id },
+          data: { walletBalance: { increment: amount } },
+        })
       }
 
-      const before = await tx.user.findUnique({ where: { id: user.id } })
-      const newBalance = (before?.walletBalance || 0) + delta
-      await tx.user.update({ where: { id: user.id }, data: { walletBalance: newBalance } })
+      const after = await tx.user.findUnique({ where: { id: user.id }, select: { walletBalance: true } })
       await tx.transaction.create({
         data: {
           id: crypto.randomUUID(),
           userId: user.id,
           type,
           amount: delta,
-          balanceAfter: newBalance,
+          balanceAfter: after!.walletBalance,
           description,
         },
       })

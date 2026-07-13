@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useCallback, useEffect, useState } from 'react'
+import { useRef, useCallback, useEffect } from 'react'
 
 interface GlassEffectOptions {
   enableTilt?: boolean
@@ -18,8 +18,6 @@ interface GlassEffectReturn {
     onTouchMove: (e: React.TouchEvent) => void
     onTouchEnd: () => void
   }
-  isHovered: boolean
-  mousePosition: { x: number; y: number }
 }
 
 export function useGlassEffect(options: GlassEffectOptions = {}): GlassEffectReturn {
@@ -32,8 +30,6 @@ export function useGlassEffect(options: GlassEffectOptions = {}): GlassEffectRet
 
   const containerRef = useRef<HTMLDivElement>(null)
   const glowRef = useRef<HTMLDivElement>(null)
-  const [isHovered, setIsHovered] = useState(false)
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
   const animFrameRef = useRef<number>(0)
   const isMobileRef = useRef(false)
 
@@ -102,8 +98,6 @@ export function useGlassEffect(options: GlassEffectOptions = {}): GlassEffectRet
     const centerY = y - 0.5
     const distance = Math.sqrt(centerX * centerX + centerY * centerY)
 
-    setMousePosition({ x, y })
-
     cancelAnimationFrame(animFrameRef.current)
     animFrameRef.current = requestAnimationFrame(() => {
       if (containerRef.current) {
@@ -119,8 +113,6 @@ export function useGlassEffect(options: GlassEffectOptions = {}): GlassEffectRet
   }, [enableGlow, intensity, updateSVGFilters])
 
   const handleMouseLeave = useCallback(() => {
-    setIsHovered(false)
-
     if (glowRef.current) {
       glowRef.current.style.opacity = '0'
     }
@@ -135,8 +127,6 @@ export function useGlassEffect(options: GlassEffectOptions = {}): GlassEffectRet
     const rect = containerRef.current.getBoundingClientRect()
     const x = (touch.clientX - rect.left) / rect.width
     const y = (touch.clientY - rect.top) / rect.height
-
-    setMousePosition({ x, y })
 
     if (enableGlow && glowRef.current) {
       glowRef.current.style.opacity = '0.6'
@@ -166,7 +156,5 @@ export function useGlassEffect(options: GlassEffectOptions = {}): GlassEffectRet
       onTouchMove: handleTouchMove,
       onTouchEnd: handleTouchEnd,
     },
-    isHovered,
-    mousePosition,
   }
 }

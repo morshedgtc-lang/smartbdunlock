@@ -112,12 +112,19 @@ export async function PATCH(request: Request) {
     if (user.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const body = await request.json()
-    const { id, customFields, ...updates } = body
+    const { id, customFields, ...rawUpdates } = body
 
     if (!id) return NextResponse.json({ error: 'Service ID is required' }, { status: 400 })
 
+    const data: any = {}
+    for (const field of ['name', 'description', 'type', 'cost', 'sellingPrice', 'processingTime', 'status', 'categoryId', 'supplierId']) {
+      if (field in rawUpdates) data[field] = rawUpdates[field]
+    }
+
     const service = await prisma.$transaction(async (tx) => {
-      await tx.service.update({ where: { id }, data: updates })
+      if (Object.keys(data).length > 0) {
+        await tx.service.update({ where: { id }, data })
+      }
 
       if (customFields !== undefined) {
         await tx.serviceCustomField.deleteMany({ where: { serviceId: id } })
@@ -146,6 +153,7 @@ export async function PATCH(request: Request) {
 
     return NextResponse.json(service)
   } catch (error: any) {
+    if (error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
     if (error.message === 'Forbidden') return NextResponse.json({ error: error.message }, { status: 403 })
     console.error('Services PATCH error:', error)
     return NextResponse.json({ error: 'Service update failed' }, { status: 500 })
@@ -169,6 +177,7 @@ export async function DELETE(request: Request) {
     await prisma.service.delete({ where: { id } })
     return NextResponse.json({ message: 'Service deleted successfully' })
   } catch (error: any) {
+    if (error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
     if (error.message === 'Forbidden') return NextResponse.json({ error: error.message }, { status: 403 })
     console.error('Services DELETE error:', error)
     return NextResponse.json({ error: 'Failed to delete service' }, { status: 500 })

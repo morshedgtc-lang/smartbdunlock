@@ -2,10 +2,10 @@
 
 ## Project Overview
 - **App**: SmartBD Unlock — GSM Service Reseller Platform
-- **Stack**: Next.js 16.2.10, Prisma 5.22.0 (SQLite), NextAuth 4.x, Tailwind 4, framer-motion, TypeScript
+- **Stack**: Next.js 16.2.10, Prisma 5.22.0 (PostgreSQL), Tailwind 4, framer-motion, TypeScript
+- **Auth**: JWT via `jose` (httpOnly cookie `sb_session`)
 - **Roles**: Admin + Reseller only (Customer role REMOVED)
-- **Dev Server**: Running on `http://localhost:3000` (may need restart)
-- **Database**: SQLite at `prisma/dev.db`
+- **Database**: PostgreSQL on Railway
 - **Login**: Admin `admin@smartbdunlock.com` / `admin123`, Reseller `reseller@smartbdunlock.com` / `reseller123`
 
 ## What's Done (All Complete)
@@ -53,14 +53,14 @@
 
 ### Known Issues
 - Dev server may need manual restart if it crashes
-- Database is SQLite — fine for dev, not production
 - No email/password reset flow
 - No real-time updates (would need WebSocket)
+- Settings page is placeholder (no backend)
 
 ## Key Files
 - `src/app/page.tsx` — Landing page
 - `src/app/login/page.tsx` — Login with demo buttons
-- `src/middleware.ts` — Auth (admin + reseller only)
+- `src/lib/auth.ts` — JWT auth helpers (jose)
 - `src/components/layout/Sidebar.tsx` — Navigation
 - `src/components/layout/DashboardLayout.tsx` — Shared layout
 - `src/components/ui/StatusBadge.tsx` — Case-insensitive badge
@@ -79,7 +79,7 @@
 - `src/app/api/users/route.ts` — CRUD
 - `src/app/api/wallet/route.ts` — GET + POST (deposit/transfer)
 - `src/app/api/dashboard/route.ts` — Stats
-- `prisma/schema.prisma` — 6 models
+- `prisma/schema.prisma` — 7 models
 - `prisma/seed.ts` — Seed data
 
 ## Environment Notes

@@ -18,9 +18,6 @@ interface UseApiResult<T> {
 }
 
 export function useApi<T = any>({ url, method = 'GET', body, enabled, initialData }: UseApiOptions<T>): UseApiResult<T> {
-  // Never auto-fire non-GET requests on mount — mutations must be triggered
-  // explicitly via refetch() or a dedicated action. Defaults to enabled for
-  // GET, disabled otherwise.
   const shouldFetch = enabled ?? method === 'GET'
   const [data, setData] = useState<T | null>(initialData ?? null)
   const [loading, setLoading] = useState(shouldFetch)
@@ -69,4 +66,3 @@ export function useApi<T = any>({ url, method = 'GET', body, enabled, initialDat
 
   return { data, loading, error, refetch }
 }
-

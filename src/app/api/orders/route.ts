@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireAuth } from '@/lib/auth'
+import { requireAuth, requireAdmin } from '@/lib/auth'
 
 export async function GET(request: Request) {
   try {
@@ -102,74 +102,85 @@ export async function POST(request: Request) {
 
     const today = new Date()
     const dateStart = new Date(today.getFullYear(), today.getMonth(), today.getDate())
-    const orderCount = await prisma.order.count({ where: { createdAt: { gte: dateStart } } })
-    const orderNumber = `ORD-${today.toISOString().slice(0, 10).replace(/-/g, '')}-${String(orderCount + 1).padStart(4, '0')}`
+    const datePrefix = today.toISOString().slice(0, 10).replace(/-/g, '')
 
-    const result = await prisma.$transaction(async (tx) => {
-      const userBefore = await tx.user.findUnique({ where: { id: user.id } })
-      if (!userBefore || userBefore.walletBalance < service.sellingPrice) {
-        throw new Error('Insufficient balance')
-      }
+    let result: any = null
+    const MAX_RETRIES = 5
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      try {
+        result = await prisma.$transaction(async (tx) => {
+          const orderCount = await tx.order.count({ where: { createdAt: { gte: dateStart } } })
+          const orderNumber = `ORD-${datePrefix}-${String(orderCount + 1).padStart(4, '0')}`
+          const userBefore = await tx.user.findUnique({ where: { id: user.id } })
+          if (!userBefore || userBefore.walletBalance < service.sellingPrice) {
+            throw new Error('Insufficient balance')
+          }
 
-      const newBalance = userBefore.walletBalance - service.sellingPrice
-      await tx.user.update({ where: { id: user.id }, data: { walletBalance: newBalance } })
+          const newBalance = userBefore.walletBalance - service.sellingPrice
+          await tx.user.update({ where: { id: user.id }, data: { walletBalance: newBalance } })
 
-      await tx.transaction.create({
-        data: {
-          id: crypto.randomUUID(),
-          userId: user.id,
-          type: 'order_payment',
-          amount: -service.sellingPrice,
-          balanceAfter: newBalance,
-          description: `Payment for ${service.name}`,
-        },
-      })
+          await tx.transaction.create({
+            data: {
+              id: crypto.randomUUID(),
+              userId: user.id,
+              type: 'order_payment',
+              amount: -service.sellingPrice,
+              balanceAfter: newBalance,
+              description: `Payment for ${service.name}`,
+            },
+          })
 
-      const profit = service.sellingPrice - service.cost
-      const order = await tx.order.create({
-        data: {
-          id: crypto.randomUUID(),
-          orderNumber,
-          userId: user.id,
-          serviceId,
-          supplierId: service.supplierId,
-          imei: imei || null,
-          deviceInfo: deviceInfo || null,
-          notes: notes || null,
-          cost: service.cost,
-          sellingPrice: service.sellingPrice,
-          profit,
-          status: 'pending',
-        },
-      })
+          const profit = service.sellingPrice - service.cost
+          const order = await tx.order.create({
+            data: {
+              id: crypto.randomUUID(),
+              orderNumber,
+              userId: user.id,
+              serviceId,
+              supplierId: service.supplierId,
+              imei: imei || null,
+              deviceInfo: deviceInfo || null,
+              notes: notes || null,
+              cost: service.cost,
+              sellingPrice: service.sellingPrice,
+              profit,
+              status: 'pending',
+            },
+          })
 
-      for (const field of fields) {
-        const value = customFieldValues[field.id]
-        if (value === undefined || value === null) continue
+          for (const field of fields) {
+            const value = customFieldValues[field.id]
+            if (value === undefined || value === null) continue
 
-        let finalValue = String(value)
-        if (field.fieldType === 'imei_multi') {
-          const uniqueImeis = [...new Set(value.split('\n').map((l: string) => l.replace(/\D/g, '').trim()).filter(Boolean))]
-          finalValue = JSON.stringify(uniqueImeis)
-        } else if (field.fieldType === 'serial_multi') {
-          const uniqueSerials = [...new Set(value.split('\n').map((l: string) => l.trim()).filter(Boolean))]
-          finalValue = JSON.stringify(uniqueSerials)
-        } else if (field.fieldType === 'multiselect' && Array.isArray(value)) {
-          finalValue = JSON.stringify(value)
-        }
+            let finalValue = String(value)
+            if (field.fieldType === 'imei_multi') {
+              const uniqueImeis = [...new Set(value.split('\n').map((l: string) => l.replace(/\D/g, '').trim()).filter(Boolean))]
+              finalValue = JSON.stringify(uniqueImeis)
+            } else if (field.fieldType === 'serial_multi') {
+              const uniqueSerials = [...new Set(value.split('\n').map((l: string) => l.trim()).filter(Boolean))]
+              finalValue = JSON.stringify(uniqueSerials)
+            } else if (field.fieldType === 'multiselect' && Array.isArray(value)) {
+              finalValue = JSON.stringify(value)
+            }
 
-        await tx.orderCustomFieldValue.create({
-          data: {
-            id: crypto.randomUUID(),
-            orderId: order.id,
-            customFieldId: field.id,
-            value: finalValue,
-          },
+            await tx.orderCustomFieldValue.create({
+              data: {
+                id: crypto.randomUUID(),
+                orderId: order.id,
+                customFieldId: field.id,
+                value: finalValue,
+              },
+            })
+          }
+
+          return order
         })
+        break
+      } catch (txError: any) {
+        if (txError.code === 'P2002' && attempt < MAX_RETRIES - 1) continue
+        throw txError
       }
-
-      return order
-    })
+    }
 
     return NextResponse.json(result, { status: 201 })
   } catch (error: any) {
@@ -193,31 +204,43 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const newStatus = status || order.status
-    const completedAt = newStatus === 'completed' ? new Date() : order.completedAt
+    const data: any = {}
+
+    if (notes !== undefined) data.notes = notes
+
+    if (status && status !== order.status) {
+      if (user.role !== 'admin') {
+        return NextResponse.json({ error: 'Only admin can change order status' }, { status: 403 })
+      }
+      data.status = status
+      data.completedAt = status === 'completed' ? new Date() : order.completedAt
+    }
+
+    if (result !== undefined && user.role === 'admin') {
+      data.result = result
+    }
+
+    if (Object.keys(data).length === 0) {
+      return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
+    }
 
     const updated = await prisma.$transaction(async (tx) => {
       await tx.order.update({
         where: { id },
-        data: {
-          status: newStatus,
-          notes: notes ?? order.notes,
-          result: result ?? order.result,
-          completedAt,
-        },
+        data,
       })
 
-      if (newStatus === 'completed' && order.status !== 'completed' && order.supplierId) {
+      if (data.status && data.status === 'completed' && order.status !== 'completed' && order.supplierId) {
         await tx.supplier.update({
           where: { id: order.supplierId },
           data: { totalOrders: { increment: 1 } },
         })
       }
 
-      if (['failed', 'cancelled'].includes(newStatus) && ['pending', 'processing'].includes(order.status)) {
+      if (data.status && ['failed', 'cancelled'].includes(data.status) && ['pending', 'processing'].includes(order.status)) {
         const userBefore = await tx.user.findUnique({ where: { id: order.userId } })
         const newBalance = (userBefore?.walletBalance || 0) + order.sellingPrice
-        await tx.user.update({ where: { id: order.userId }, data: { walletBalance: newBalance } })
+        await tx.user.update({ where: { id: order.userId }, data: { walletBalance: { increment: order.sellingPrice } } })
         await tx.transaction.create({
           data: {
             id: crypto.randomUUID(),

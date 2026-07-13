@@ -5,11 +5,9 @@ import { ReactNode } from 'react'
 
 interface DashboardLayoutProps {
   children: ReactNode
-  title?: string
-  subtitle?: string
 }
 
-export function DashboardLayout({ children, title, subtitle }: DashboardLayoutProps) {
+export function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
     <div className="flex min-h-screen">
       <Sidebar />

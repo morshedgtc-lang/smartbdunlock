@@ -66,6 +66,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(supplier, { status: 201 })
   } catch (error: any) {
+    if (error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
     if (error.message === 'Forbidden') return NextResponse.json({ error: error.message }, { status: 403 })
     console.error('Suppliers POST error:', error)
     return NextResponse.json({ error: 'Failed to create supplier' }, { status: 500 })
@@ -78,13 +79,22 @@ export async function PATCH(request: Request) {
     if (user.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const body = await request.json()
-    const { id, ...updates } = body
+    const { id, ...rawUpdates } = body
 
     if (!id) return NextResponse.json({ error: 'Supplier ID is required' }, { status: 400 })
 
-    const supplier = await prisma.supplier.update({ where: { id }, data: updates })
+    const data: any = {}
+    for (const field of ['name', 'description', 'contact', 'phone', 'email', 'website', 'apiEndpoint', 'apiKey', 'balance', 'status']) {
+      if (field in rawUpdates) data[field] = rawUpdates[field]
+    }
+    if (Object.keys(data).length === 0) {
+      return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
+    }
+
+    const supplier = await prisma.supplier.update({ where: { id }, data })
     return NextResponse.json(supplier)
   } catch (error: any) {
+    if (error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
     if (error.message === 'Forbidden') return NextResponse.json({ error: error.message }, { status: 403 })
     console.error('Suppliers PATCH error:', error)
     return NextResponse.json({ error: 'Failed to update supplier' }, { status: 500 })
@@ -113,6 +123,7 @@ export async function DELETE(request: Request) {
     await prisma.supplier.delete({ where: { id } })
     return NextResponse.json({ message: 'Supplier deleted successfully' })
   } catch (error: any) {
+    if (error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
     if (error.message === 'Forbidden') return NextResponse.json({ error: error.message }, { status: 403 })
     console.error('Suppliers DELETE error:', error)
     return NextResponse.json({ error: 'Failed to delete supplier' }, { status: 500 })

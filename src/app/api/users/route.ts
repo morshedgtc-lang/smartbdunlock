@@ -78,6 +78,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(user, { status: 201 })
   } catch (error: any) {
+    if (error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
     if (error.message === 'Forbidden') return NextResponse.json({ error: error.message }, { status: 403 })
     console.error('Users POST error:', error)
     return NextResponse.json({ error: 'Failed to create user' }, { status: 500 })
@@ -115,6 +116,7 @@ export async function PATCH(request: Request) {
 
     return NextResponse.json(user)
   } catch (error: any) {
+    if (error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
     if (error.message === 'Forbidden') return NextResponse.json({ error: error.message }, { status: 403 })
     console.error('Users PATCH error:', error)
     return NextResponse.json({ error: 'Failed to update user' }, { status: 500 })
@@ -140,6 +142,7 @@ export async function DELETE(request: Request) {
     await prisma.user.delete({ where: { id: userId } })
     return NextResponse.json({ message: 'User deleted successfully' })
   } catch (error: any) {
+    if (error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
     if (error.message === 'Forbidden') return NextResponse.json({ error: error.message }, { status: 403 })
     console.error('Users DELETE error:', error)
     return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 })
