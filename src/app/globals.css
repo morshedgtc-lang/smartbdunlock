@@ -1375,12 +1375,6 @@ img[loading="lazy"]:not([src=""]) {
 /* ============================================
    GLASS CARD CONTENT Z-INDEX
    ============================================ */
-.glass > *,
-.glass-premium > *,
-.glass-tilt > * {
-  position: relative;
-  z-index: 5;
-}
 
 .glass-mouse-glow,
 .search-mouse-glow,

@@ -6,9 +6,10 @@ import { StatusBadge } from '@/components/ui/StatusBadge'
 import { useApi } from '@/lib/useApi'
 import { motion } from 'framer-motion'
 import { Loader2, Wallet } from 'lucide-react'
+import Link from 'next/link'
 
 export default function ResellerWalletPage() {
-  const { data: walletData, loading: walletLoading } = useApi<any>({ url: '/api/wallet' })
+  const { data: walletData, loading: walletLoading, error: walletError } = useApi<any>({ url: '/api/wallet' })
 
   const balance = walletData?.balance ?? 0
   const transactions = walletData?.transactions || []
@@ -19,6 +20,18 @@ export default function ResellerWalletPage() {
         <Header title="My Wallet" subtitle="Loading..." />
         <div className="p-6 flex items-center justify-center py-20">
           <Loader2 size={32} className="animate-spin text-[var(--accent)]" />
+        </div>
+      </div>
+    )
+  }
+
+  if (walletError) {
+    return (
+      <div>
+        <Header title="My Wallet" />
+        <div className="p-6 flex flex-col items-center justify-center py-20 gap-4">
+          <p className="text-red-400 text-sm">{walletError}</p>
+          <Link href="/login" className="text-[var(--accent)] text-sm hover:underline">Go to Login</Link>
         </div>
       </div>
     )

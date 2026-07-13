@@ -13,7 +13,7 @@ const container = { animate: { transition: { staggerChildren: 0.08 } } }
 const item = { initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 } }
 
 export default function ResellerDashboard() {
-  const { data: stats, loading: statsLoading } = useApi<any>({ url: '/api/dashboard' })
+  const { data: stats, loading: statsLoading, error: statsError } = useApi<any>({ url: '/api/dashboard' })
   const { data: ordersRes, loading: ordersLoading } = useApi<any>({ url: '/api/orders?limit=5' })
   const { data: walletData } = useApi<any>({ url: '/api/wallet' })
 
@@ -26,6 +26,18 @@ export default function ResellerDashboard() {
         <Header title="Reseller Dashboard" subtitle="Loading..." />
         <div className="p-6 flex items-center justify-center py-20">
           <Loader2 size={32} className="animate-spin text-[var(--accent)]" />
+        </div>
+      </div>
+    )
+  }
+
+  if (statsError) {
+    return (
+      <div>
+        <Header title="Reseller Dashboard" />
+        <div className="p-6 flex flex-col items-center justify-center py-20 gap-4">
+          <p className="text-red-400 text-sm">{statsError}</p>
+          <Link href="/login" className="text-[var(--accent)] text-sm hover:underline">Go to Login</Link>
         </div>
       </div>
     )

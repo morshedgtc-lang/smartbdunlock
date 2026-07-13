@@ -8,6 +8,7 @@ import { useApi } from '@/lib/useApi'
 import { useToast } from '@/components/ui/Toast'
 import { motion } from 'framer-motion'
 import { Plus, Edit, Trash2, Loader2, X, Plug, Wifi, WifiOff } from 'lucide-react'
+import Link from 'next/link'
 import { useState } from 'react'
 
 const emptySupplier = { name: '', email: '', phone: '', website: '', type: 'api', status: 'active', priority: '1', apiKey: '', config: '' }
@@ -19,7 +20,7 @@ export default function SuppliersPage() {
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState<string | null>(null)
   const { toast } = useToast()
-  const { data, loading, refetch } = useApi<any>({ url: '/api/suppliers' })
+  const { data, loading, error, refetch } = useApi<any>({ url: '/api/suppliers' })
   const suppliers = data?.suppliers || []
 
   const openCreate = () => { setEditing(null); setForm(emptySupplier); setShowModal(true) }
@@ -88,6 +89,18 @@ export default function SuppliersPage() {
         <Header title="Suppliers" subtitle="Loading..." />
         <div className="p-6 flex items-center justify-center py-20">
           <Loader2 size={32} className="animate-spin text-[var(--accent)]" />
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div>
+        <Header title="Suppliers" />
+        <div className="p-6 flex flex-col items-center justify-center py-20 gap-4">
+          <p className="text-red-400 text-sm">{error}</p>
+          <Link href="/login" className="text-[var(--accent)] text-sm hover:underline">Go to Login</Link>
         </div>
       </div>
     )

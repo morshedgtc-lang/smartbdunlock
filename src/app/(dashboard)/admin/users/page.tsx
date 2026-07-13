@@ -8,6 +8,7 @@ import { useToast } from '@/components/ui/Toast'
 import { useApi } from '@/lib/useApi'
 import { motion } from 'framer-motion'
 import { Search, Plus, Edit, Ban, Eye, Users, Loader2, X } from 'lucide-react'
+import Link from 'next/link'
 import { useState } from 'react'
 
 const roleLabels: Record<string, string> = {
@@ -23,7 +24,7 @@ export default function UsersPage() {
   const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', role: 'reseller', status: 'active' })
   const [saving, setSaving] = useState(false)
   const { toast } = useToast()
-  const { data, loading, refetch } = useApi<any>({ url: '/api/users' })
+  const { data, loading, error, refetch } = useApi<any>({ url: '/api/users' })
   const allUsers = data?.users || []
 
   const filtered = allUsers.filter((u: any) => {
@@ -97,6 +98,18 @@ export default function UsersPage() {
         <Header title="User Management" subtitle="Loading..." />
         <div className="p-6 flex items-center justify-center py-20">
           <Loader2 size={32} className="animate-spin text-[var(--accent)]" />
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div>
+        <Header title="User Management" />
+        <div className="p-6 flex flex-col items-center justify-center py-20 gap-4">
+          <p className="text-red-400 text-sm">{error}</p>
+          <Link href="/login" className="text-[var(--accent)] text-sm hover:underline">Go to Login</Link>
         </div>
       </div>
     )

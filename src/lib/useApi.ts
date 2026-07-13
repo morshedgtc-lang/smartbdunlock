@@ -44,6 +44,7 @@ export function useApi<T = any>({ url, method = 'GET', body, enabled, initialDat
         const opts: RequestInit = {
           method,
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
         }
         if (body && method !== 'GET') {
           opts.body = JSON.stringify(body)

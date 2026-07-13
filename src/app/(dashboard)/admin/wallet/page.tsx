@@ -8,6 +8,7 @@ import { useApi } from '@/lib/useApi'
 import { useToast } from '@/components/ui/Toast'
 import { motion } from 'framer-motion'
 import { ArrowDownToLine, ArrowUpFromLine, Send, Loader2, X, Wallet } from 'lucide-react'
+import Link from 'next/link'
 import { useState } from 'react'
 
 export default function AdminWalletPage() {
@@ -17,7 +18,7 @@ export default function AdminWalletPage() {
   const [description, setDescription] = useState('')
   const [saving, setSaving] = useState(false)
   const { toast } = useToast()
-  const { data: walletData, loading: walletLoading, refetch: refetchWallet } = useApi<any>({ url: '/api/wallet' })
+  const { data: walletData, loading: walletLoading, error: walletError, refetch: refetchWallet } = useApi<any>({ url: '/api/wallet' })
   const { data: usersData, refetch: refetchUsers } = useApi<any>({ url: '/api/users' })
 
   const balance = walletData?.balance ?? 0
@@ -67,6 +68,18 @@ export default function AdminWalletPage() {
         <Header title="Wallet" subtitle="Loading..." />
         <div className="p-6 flex items-center justify-center py-20">
           <Loader2 size={32} className="animate-spin text-[var(--accent)]" />
+        </div>
+      </div>
+    )
+  }
+
+  if (walletError) {
+    return (
+      <div>
+        <Header title="Wallet" />
+        <div className="p-6 flex flex-col items-center justify-center py-20 gap-4">
+          <p className="text-red-400 text-sm">{walletError}</p>
+          <Link href="/login" className="text-[var(--accent)] text-sm hover:underline">Go to Login</Link>
         </div>
       </div>
     )

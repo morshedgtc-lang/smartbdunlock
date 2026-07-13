@@ -8,6 +8,7 @@ import { useApi } from '@/lib/useApi'
 import { useToast } from '@/components/ui/Toast'
 import { motion } from 'framer-motion'
 import { Search, Eye, Loader2, X } from 'lucide-react'
+import Link from 'next/link'
 import { useState } from 'react'
 
 function renderCustomValue(value: string, fieldType?: string): string {
@@ -41,7 +42,7 @@ export default function OrdersPage() {
   const [replyText, setReplyText] = useState('')
   const [sendingReply, setSendingReply] = useState(false)
   const { toast } = useToast()
-  const { data, loading, refetch } = useApi<any>({ url: '/api/orders' })
+  const { data, loading, error, refetch } = useApi<any>({ url: '/api/orders' })
   const allOrders = data?.orders || []
 
   const filtered = allOrders.filter((o: any) => {
@@ -98,6 +99,18 @@ export default function OrdersPage() {
         <Header title="Orders" subtitle="Loading..." />
         <div className="p-6 flex items-center justify-center py-20">
           <Loader2 size={32} className="animate-spin text-[var(--accent)]" />
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div>
+        <Header title="Orders" />
+        <div className="p-6 flex flex-col items-center justify-center py-20 gap-4">
+          <p className="text-red-400 text-sm">{error}</p>
+          <Link href="/login" className="text-[var(--accent)] text-sm hover:underline">Go to Login</Link>
         </div>
       </div>
     )
