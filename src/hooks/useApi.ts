@@ -34,9 +34,7 @@ export function useApi<T = any>({ url, method = 'GET', body, enabled, initialDat
 
     let cancelled = false
 
-    const fetchData = async () => {
-      setLoading(true)
-      setError(null)
+    const doFetch = async (retryCount: number): Promise<void> => {
       try {
         const opts: RequestInit = {
           method,
@@ -47,12 +45,22 @@ export function useApi<T = any>({ url, method = 'GET', body, enabled, initialDat
           opts.body = JSON.stringify(body)
         }
         const res = await fetch(url, opts)
+
+        if (res.status === 401 && retryCount === 0) {
+          await new Promise(r => setTimeout(r, 500))
+          if (!cancelled) await doFetch(1)
+          return
+        }
+
         if (!res.ok) {
           const err = await res.json().catch(() => ({ error: 'Request failed' }))
           throw new Error(err.error || `HTTP ${res.status}`)
         }
         const json = await res.json()
-        if (!cancelled) setData(json)
+        if (!cancelled) {
+          setData(json)
+          setError(null)
+        }
       } catch (e: any) {
         if (!cancelled) setError(e.message)
       } finally {
@@ -60,7 +68,10 @@ export function useApi<T = any>({ url, method = 'GET', body, enabled, initialDat
       }
     }
 
-    fetchData()
+    setLoading(true)
+    setError(null)
+    doFetch(0)
+
     return () => { cancelled = true }
   }, [url, method, trigger, shouldFetch])
 
