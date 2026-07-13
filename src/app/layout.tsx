@@ -4,7 +4,6 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { GradientMesh } from "@/components/GradientMesh";
 import { WaterDrops } from "@/components/WaterDrops";
 import { ToastProvider } from "@/components/ui/Toast";
-import { headers } from "next/headers";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -22,14 +21,11 @@ export const metadata: Metadata = {
   description: "Professional GSM mobile service reseller management platform",
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const headerStore = await headers()
-  const nonce = headerStore.get('X-Nonce') || undefined
-
   return (
     <html
       lang="en"
