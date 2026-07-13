@@ -46,7 +46,7 @@ export function Sidebar() {
   const roleLabel = role === 'admin' ? 'Super Admin' : 'Reseller'
 
   useEffect(() => {
-    fetch('/api/auth/session')
+    fetch('/api/auth/session', { credentials: 'same-origin' })
       .then(r => r.json())
       .then(data => {
         setUserName(data?.user?.name || roleLabel)
