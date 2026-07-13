@@ -38,16 +38,24 @@ export default function ResellerDashboard() {
       <div className="p-6 space-y-6">
         <motion.div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" variants={container} initial="initial" animate="animate">
           <motion.div variants={item}>
-            <StatCard title="My Orders" value={s.totalOrders} icon={ShoppingCart} color="indigo" />
+            <Link href="/reseller/orders">
+              <StatCard title="My Orders" value={s.totalOrders} icon={ShoppingCart} color="indigo" />
+            </Link>
           </motion.div>
           <motion.div variants={item}>
-            <StatCard title="Balance" value={`$${balance.toLocaleString()}`} icon={Wallet} color="green" />
+            <Link href="/reseller/wallet">
+              <StatCard title="Balance" value={`$${balance.toLocaleString()}`} icon={Wallet} color="green" />
+            </Link>
           </motion.div>
           <motion.div variants={item}>
-            <StatCard title="Total Spent" value={`$${s.revenueThisMonth.toLocaleString()}`} icon={TrendingUp} color="purple" />
+            <Link href="/reseller/wallet">
+              <StatCard title="Total Spent" value={`$${s.revenueThisMonth.toLocaleString()}`} icon={TrendingUp} color="purple" />
+            </Link>
           </motion.div>
           <motion.div variants={item}>
-            <StatCard title="Pending Orders" value={s.pendingOrders} icon={ShoppingCart} color="amber" />
+            <Link href="/reseller/orders">
+              <StatCard title="Pending Orders" value={s.pendingOrders} icon={ShoppingCart} color="amber" />
+            </Link>
           </motion.div>
         </motion.div>
 
@@ -56,7 +64,7 @@ export default function ResellerDashboard() {
             <GlassCard>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-[var(--foreground)]">Recent Orders</h3>
-                <a href="/reseller/orders" className="text-sm text-[var(--accent)] hover:underline">View all</a>
+                <Link href="/reseller/orders" className="text-sm text-[var(--accent)] hover:underline">View all</Link>
               </div>
               <div className="space-y-3">
                 {recentOrders.map((order: any) => (

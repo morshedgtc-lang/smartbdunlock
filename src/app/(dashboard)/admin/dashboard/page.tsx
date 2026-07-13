@@ -51,16 +51,24 @@ export default function AdminDashboard() {
       <div className="p-6 space-y-6">
         <motion.div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" variants={container} initial="initial" animate="animate">
           <motion.div variants={item}>
-            <StatCard title="Total Users" value={s.totalUsers} icon={Users} color="blue" />
+            <Link href="/admin/users">
+              <StatCard title="Total Users" value={s.totalUsers} icon={Users} color="blue" />
+            </Link>
           </motion.div>
           <motion.div variants={item}>
-            <StatCard title="Total Orders" value={s.totalOrders.toLocaleString()} icon={ShoppingCart} color="purple" />
+            <Link href="/admin/orders">
+              <StatCard title="Total Orders" value={s.totalOrders.toLocaleString()} icon={ShoppingCart} color="purple" />
+            </Link>
           </motion.div>
           <motion.div variants={item}>
-            <StatCard title="Revenue Today" value={`$${s.revenueToday.toLocaleString()}`} icon={DollarSign} color="green" />
+            <Link href="/admin/wallet">
+              <StatCard title="Revenue Today" value={`$${s.revenueToday.toLocaleString()}`} icon={DollarSign} color="green" />
+            </Link>
           </motion.div>
           <motion.div variants={item}>
-            <StatCard title="Pending Orders" value={s.pendingOrders} icon={Clock} color="amber" />
+            <Link href="/admin/orders">
+              <StatCard title="Pending Orders" value={s.pendingOrders} icon={Clock} color="amber" />
+            </Link>
           </motion.div>
         </motion.div>
 
@@ -117,7 +125,7 @@ export default function AdminDashboard() {
             <GlassCard>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-[var(--foreground)]">Recent Orders</h3>
-                <a href="/admin/orders" className="text-sm text-[var(--accent)] hover:underline">View all</a>
+                <Link href="/admin/orders" className="text-sm text-[var(--accent)] hover:underline">View all</Link>
               </div>
               <div className="table-responsive">
                 <table className="w-full text-sm min-w-[600px]">

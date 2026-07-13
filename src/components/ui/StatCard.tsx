@@ -35,7 +35,7 @@ export function StatCard({ title, value, icon: Icon, change, changeType = 'neutr
   return (
     <motion.div
       ref={containerRef}
-      className="glass-premium glass-tilt p-5 relative overflow-hidden group"
+      className="glass-premium glass-tilt p-5 relative overflow-hidden group cursor-pointer"
       whileHover={{ scale: 1.02, y: -3 }}
       transition={{ type: 'spring', stiffness: 400, damping: 25 }}
       {...handlers}
