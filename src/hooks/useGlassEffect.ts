@@ -107,12 +107,6 @@ export function useGlassEffect(options: GlassEffectOptions = {}): GlassEffectRet
     cancelAnimationFrame(animFrameRef.current)
     animFrameRef.current = requestAnimationFrame(() => {
       if (containerRef.current) {
-        if (enableTilt && !isMobileRef.current) {
-          const tiltX = centerY * -8 * intensity
-          const tiltY = centerX * 8 * intensity
-          containerRef.current.style.transform = `perspective(1000px) rotateX(${tiltX}deg) rotateY(${tiltY}deg) translateY(-2px) scale(1.01)`
-        }
-
         if (enableGlow && glowRef.current) {
           glowRef.current.style.opacity = '1'
           glowRef.current.style.left = `${x * 100}%`
@@ -122,14 +116,10 @@ export function useGlassEffect(options: GlassEffectOptions = {}): GlassEffectRet
         updateSVGFilters(x, y, distance)
       }
     })
-  }, [enableTilt, enableGlow, intensity, updateSVGFilters])
+  }, [enableGlow, intensity, updateSVGFilters])
 
   const handleMouseLeave = useCallback(() => {
     setIsHovered(false)
-
-    if (containerRef.current) {
-      containerRef.current.style.transform = ''
-    }
 
     if (glowRef.current) {
       glowRef.current.style.opacity = '0'

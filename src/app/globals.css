@@ -1228,7 +1228,6 @@ img[loading="lazy"]:not([src=""]) {
 .glass-btn,
 .glass-input,
 .glass-input-search {
-  contain: layout style paint;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
 }
@@ -1331,7 +1330,6 @@ img[loading="lazy"]:not([src=""]) {
 }
 
 .glass-dropdown-panel {
-  position: relative;
   overflow: hidden;
 }
 
