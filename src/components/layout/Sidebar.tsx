@@ -109,6 +109,7 @@ export function Sidebar() {
             className="w-8 h-8 rounded-xl flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-bg)] hover:border hover:border-[var(--card-border)] transition-all"
             onClick={() => setCollapsed(!collapsed)}
             whileTap={{ scale: 0.9 }}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
           </motion.button>

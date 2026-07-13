@@ -19,7 +19,7 @@ export function Header({ title, subtitle }: HeaderProps) {
         <div className="hidden md:block">
           <GlassSearch placeholder="⌘K Search..." />
         </div>
-        <button className="relative w-10 h-10 rounded-2xl flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-bg)] hover:border hover:border-[var(--card-border)] transition-all cursor-pointer">
+        <button className="relative w-10 h-10 rounded-2xl flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-bg)] hover:border hover:border-[var(--card-border)] transition-all cursor-pointer" aria-label="Notifications">
           <Bell size={18} />
           <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[var(--background)] animate-pulse" />
         </button>
