@@ -17,6 +17,20 @@ interface UseApiResult<T> {
   refetch: () => void
 }
 
+let sessionChecked = false
+let sessionValid = false
+
+async function checkSession(): Promise<boolean> {
+  try {
+    const res = await fetch('/api/auth/session', { credentials: 'same-origin' })
+    sessionValid = res.ok
+  } catch {
+    sessionValid = false
+  }
+  sessionChecked = true
+  return sessionValid
+}
+
 export function useApi<T = any>({ url, method = 'GET', body, enabled, initialData }: UseApiOptions<T>): UseApiResult<T> {
   const shouldFetch = enabled ?? method === 'GET'
   const [data, setData] = useState<T | null>(initialData ?? null)
@@ -46,10 +60,26 @@ export function useApi<T = any>({ url, method = 'GET', body, enabled, initialDat
         }
         const res = await fetch(url, opts)
 
-        if (res.status === 401 && retryCount === 0) {
-          await new Promise(r => setTimeout(r, 500))
-          if (!cancelled) await doFetch(1)
-          return
+        if (res.status === 401) {
+          if (url === '/api/auth/session') {
+            if (!cancelled) {
+              setError('Unauthorized')
+              setLoading(false)
+            }
+            return
+          }
+
+          if (retryCount === 0) {
+            if (!sessionChecked) await checkSession()
+
+            if (sessionValid) {
+              await new Promise(r => setTimeout(r, 300))
+              if (!cancelled) await doFetch(1)
+              return
+            }
+          }
+
+          throw new Error('Unauthorized')
         }
 
         if (!res.ok) {
