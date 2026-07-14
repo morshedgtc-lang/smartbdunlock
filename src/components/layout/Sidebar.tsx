@@ -16,6 +16,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Smartphone,
+  FileText,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '@/lib/api'
@@ -28,6 +29,7 @@ const adminLinks = [
   { href: '/admin/suppliers', label: 'Suppliers', icon: Plug },
   { href: '/admin/wallet', label: 'Wallet', icon: Wallet },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
+  { href: '/admin/logs', label: 'Logs', icon: FileText },
 ]
 
 const resellerLinks = [

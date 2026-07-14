@@ -23,6 +23,7 @@ model User {
   updatedAt     DateTime  @updatedAt
   orders        Order[]
   transactions  Transaction[]
+  logs          Log[]
 
   @@index([email])
   @@index([role])
@@ -144,4 +145,20 @@ model Transaction {
   createdAt     DateTime @default(now())
 
   @@index([userId, type, createdAt])
+}
+
+model Log {
+  id        String   @id @default(cuid())
+  level     String   // info, warn, error, debug
+  message   String
+  source    String?  // e.g., "auth", "order", "system"
+  details   String?  // JSON stringified extra data
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([level, createdAt])
+  @@index([source])
 }

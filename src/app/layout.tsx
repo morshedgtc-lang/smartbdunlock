@@ -4,6 +4,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { GradientMesh } from "@/components/GradientMesh";
 import { WaterDrops } from "@/components/WaterDrops";
 import { ToastProvider } from "@/components/ui/Toast";
+import { ConsoleInterceptor } from "@/components/ConsoleInterceptor";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -33,6 +34,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
+          <ConsoleInterceptor />
           <ThemeProvider>
             <ToastProvider>
               {/* SVG Filters for Liquid Glass Effect */}
