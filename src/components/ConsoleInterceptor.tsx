@@ -4,8 +4,24 @@ import { useEffect } from 'react'
 
 const INTERCEPTOR_TAG = '[LOG_INTERCEPTOR]'
 
+function safeStringify(a: any): string {
+  if (typeof a === 'string') return a
+  try {
+    const seen = new WeakSet()
+    return JSON.stringify(a, (_key, value) => {
+      if (typeof value === 'object' && value !== null) {
+        if (seen.has(value)) return '[Circular]'
+        seen.add(value)
+      }
+      return value
+    })
+  } catch {
+    return String(a)
+  }
+}
+
 function sendLog(level: string, message: string, source: string) {
-  if (message.includes(INTERCEPTOR_TAG)) return // avoid infinite loops
+  if (message.includes(INTERCEPTOR_TAG)) return
   try {
     fetch('/api/logs', {
       method: 'POST',
@@ -21,15 +37,23 @@ export function ConsoleInterceptor() {
     const origWarn = console.warn
 
     console.error = (...args: any[]) => {
-      origError.apply(console, args)
-      const msg = args.map(a => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ')
-      sendLog('error', msg, 'console')
+      try {
+        origError.apply(console, args)
+        const msg = args.map(safeStringify).join(' ')
+        sendLog('error', msg, 'console')
+      } catch {
+        origError.apply(console, args)
+      }
     }
 
     console.warn = (...args: any[]) => {
-      origWarn.apply(console, args)
-      const msg = args.map(a => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ')
-      sendLog('warn', msg, 'console')
+      try {
+        origWarn.apply(console, args)
+        const msg = args.map(safeStringify).join(' ')
+        sendLog('warn', msg, 'console')
+      } catch {
+        origWarn.apply(console, args)
+      }
     }
 
     return () => {
