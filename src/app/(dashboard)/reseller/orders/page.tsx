@@ -7,7 +7,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge'
 import { useApi } from '@/hooks/useApi'
 import { useToast } from '@/components/ui/Toast'
 import { motion } from 'framer-motion'
-import { Plus, Search, Eye, Loader2, X, Smartphone, Upload, AlertCircle } from 'lucide-react'
+import { Plus, Search, Loader2, X, Smartphone, Upload, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 import { useState, useRef } from 'react'
 

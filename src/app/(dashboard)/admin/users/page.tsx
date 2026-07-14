@@ -7,7 +7,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge'
 import { useToast } from '@/components/ui/Toast'
 import { useApi } from '@/hooks/useApi'
 import { motion } from 'framer-motion'
-import { Search, Plus, Edit, Ban, Eye, Users, Loader2, X } from 'lucide-react'
+import { Search, Plus, Edit, Users, Loader2, X } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
 
@@ -73,19 +73,6 @@ export default function UsersPage() {
       const res = await fetch('/api/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: user.id, status: newStatus }) })
       if (!res.ok) throw new Error('Failed')
       toast('success', `User ${newStatus}`)
-      refetch()
-    } catch (err: any) {
-      toast('error', err.message)
-    }
-  }
-
-  const handleDelete = async (user: any) => {
-    if (!confirm(`Delete user "${user.name}"? This cannot be undone.`)) return
-    try {
-      const res = await fetch(`/api/users?id=${user.id}`, { method: 'DELETE' })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
-      toast('success', 'User deleted')
       refetch()
     } catch (err: any) {
       toast('error', err.message)

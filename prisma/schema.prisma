@@ -162,3 +162,22 @@ model Log {
   @@index([level, createdAt])
   @@index([source])
 }
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  userEmail  String?
+  action     String   // e.g., "user.create", "order.update", "login.success"
+  entityType String   // e.g., "user", "order", "service"
+  entityId   String?
+  oldValues  String?  // JSON stringified
+  newValues  String?  // JSON stringified
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([action])
+  @@index([createdAt])
+}

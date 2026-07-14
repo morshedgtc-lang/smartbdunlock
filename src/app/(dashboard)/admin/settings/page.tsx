@@ -5,7 +5,7 @@ import { GlassCard } from '@/components/ui/GlassCard'
 import { GlassInput } from '@/components/ui/GlassInput'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { motion } from 'framer-motion'
-import { Save, Globe, Shield, Bell, Palette } from 'lucide-react'
+import { Save, Globe, Shield, Bell } from 'lucide-react'
 
 export default function SettingsPage() {
   return (

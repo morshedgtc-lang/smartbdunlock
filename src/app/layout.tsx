@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { AuthProvider } from "@/lib/api";
 import { GradientMesh } from "@/components/GradientMesh";
 import { WaterDrops } from "@/components/WaterDrops";
 import { ToastProvider } from "@/components/ui/Toast";
@@ -36,7 +37,8 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
           <ConsoleInterceptor />
           <ThemeProvider>
-            <ToastProvider>
+            <AuthProvider>
+              <ToastProvider>
               {/* SVG Filters for Liquid Glass Effect */}
               <svg style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden' }}>
                 <defs>
@@ -145,7 +147,8 @@ export default function RootLayout({
               <GradientMesh />
               <WaterDrops />
               {children}
-            </ToastProvider>
+              </ToastProvider>
+            </AuthProvider>
           </ThemeProvider>
       </body>
     </html>

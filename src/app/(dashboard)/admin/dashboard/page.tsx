@@ -19,7 +19,6 @@ import {
   Loader2,
   Plus,
   Package,
-  Plug,
 } from 'lucide-react'
 
 const container = { animate: { transition: { staggerChildren: 0.08 } } }
@@ -27,7 +26,7 @@ const item = { initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 } }
 
 export default function AdminDashboard() {
   const { data: stats, loading: statsLoading, error: statsError } = useApi<any>({ url: '/api/dashboard' })
-  const { data: ordersRes, loading: ordersLoading } = useApi<any>({ url: '/api/orders?limit=6' })
+  const { data: ordersRes } = useApi<any>({ url: '/api/orders?limit=6' })
   const { data: suppliersRes } = useApi<any>({ url: '/api/suppliers' })
 
   const s = stats || { totalUsers: 0, totalOrders: 0, revenueToday: 0, pendingOrders: 0, completedToday: 0, failedOrders: 0, revenueThisMonth: 0, walletBalance: 0 }

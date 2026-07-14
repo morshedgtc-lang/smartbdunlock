@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
+import { walletPostSchema, validateBody } from '@/lib/validations'
+import { auditLog, getClientIp, getClientUserAgent } from '@/lib/audit'
 
 export async function GET() {
   try {
@@ -32,11 +34,11 @@ export async function POST(request: Request) {
   try {
     const user = await requireAuth()
     const body = await request.json()
-    const { type, amount, description, targetUserId } = body
-
-    const allowed = ['deposit', 'withdraw', 'transfer']
-    if (!allowed.includes(type)) return NextResponse.json({ error: 'Invalid transaction type' }, { status: 400 })
-    if (!amount || amount <= 0) return NextResponse.json({ error: 'Amount must be a positive number' }, { status: 400 })
+    const validation = validateBody(walletPostSchema, body)
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
+    }
+    const { type, amount, description, targetUserId } = validation.data
 
     if ((type === 'deposit' || type === 'withdraw') && user.role !== 'admin') {
       return NextResponse.json({ error: 'Only admin can deposit or withdraw funds' }, { status: 403 })
@@ -120,6 +122,16 @@ export async function POST(request: Request) {
       })
 
       return { success: true }
+    })
+
+    await auditLog({
+      userId: user.id,
+      userEmail: user.email,
+      action: `wallet.${type}`,
+      entityType: 'transaction',
+      newValues: { type, amount, targetUserId, description },
+      ip: getClientIp(request),
+      userAgent: getClientUserAgent(request),
     })
 
     return NextResponse.json(result, { status: 201 })

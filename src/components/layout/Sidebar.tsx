@@ -17,6 +17,7 @@ import {
   ChevronRight,
   Smartphone,
   FileText,
+  Shield,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '@/lib/api'
@@ -30,6 +31,7 @@ const adminLinks = [
   { href: '/admin/wallet', label: 'Wallet', icon: Wallet },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
   { href: '/admin/logs', label: 'Logs', icon: FileText },
+  { href: '/admin/audit', label: 'Audit Trail', icon: Shield },
 ]
 
 const resellerLinks = [

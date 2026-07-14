@@ -4,8 +4,9 @@ import { useEffect } from 'react'
 
 const INTERCEPTOR_TAG = '[LOG_INTERCEPTOR]'
 
-function safeStringify(a: any): string {
+function safeStringify(a: unknown): string {
   if (typeof a === 'string') return a
+  if (a instanceof Error) return a.message
   try {
     const seen = new WeakSet()
     return JSON.stringify(a, (_key, value) => {
@@ -22,6 +23,7 @@ function safeStringify(a: any): string {
 
 function sendLog(level: string, message: string, source: string) {
   if (message.includes(INTERCEPTOR_TAG)) return
+  if (typeof window === 'undefined') return
   try {
     fetch('/api/logs', {
       method: 'POST',
@@ -33,10 +35,12 @@ function sendLog(level: string, message: string, source: string) {
 
 export function ConsoleInterceptor() {
   useEffect(() => {
+    if (process.env.NODE_ENV !== 'development') return
+
     const origError = console.error
     const origWarn = console.warn
 
-    console.error = (...args: any[]) => {
+    console.error = (...args: unknown[]) => {
       try {
         origError.apply(console, args)
         const msg = args.map(safeStringify).join(' ')
@@ -46,7 +50,7 @@ export function ConsoleInterceptor() {
       }
     }
 
-    console.warn = (...args: any[]) => {
+    console.warn = (...args: unknown[]) => {
       try {
         origWarn.apply(console, args)
         const msg = args.map(safeStringify).join(' ')

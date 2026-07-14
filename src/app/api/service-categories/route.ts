@@ -1,12 +1,18 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
+import { categoriesQuerySchema, createCategorySchema, updateCategorySchema, validateBody, validateQuery } from '@/lib/validations'
+import { auditLog, getClientIp, getClientUserAgent } from '@/lib/audit'
 
 export async function GET(request: Request) {
   try {
     await requireAuth()
     const { searchParams } = new URL(request.url)
-    const limit = Math.min(200, Math.max(1, parseInt(searchParams.get('limit') || '200')))
+    const validation = validateQuery(categoriesQuerySchema, searchParams)
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
+    }
+    const { limit } = validation.data
 
     const categories = await prisma.serviceCategory.findMany({
       orderBy: { name: 'asc' },
@@ -33,14 +39,28 @@ export async function POST(request: Request) {
     if (user.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const body = await request.json()
-    const name = (body.name || '').trim()
-
-    if (!name) return NextResponse.json({ error: 'Category name is required' }, { status: 400 })
+    const validation = validateBody(createCategorySchema, body)
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
+    }
+    const { name } = validation.data
 
     const existing = await prisma.serviceCategory.findFirst({ where: { name } })
     if (existing) return NextResponse.json({ error: 'Category already exists' }, { status: 409 })
 
     const category = await prisma.serviceCategory.create({ data: { name } })
+
+    await auditLog({
+      userId: user.id,
+      userEmail: user.email,
+      action: 'category.create',
+      entityType: 'serviceCategory',
+      entityId: category.id,
+      newValues: { name },
+      ip: getClientIp(request),
+      userAgent: getClientUserAgent(request),
+    })
+
     return NextResponse.json(category, { status: 201 })
   } catch (error: any) {
     if (error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
@@ -56,16 +76,28 @@ export async function PATCH(request: Request) {
     if (user.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const body = await request.json()
-    const { id, name: rawName } = body
-    const name = (rawName || '').trim()
-
-    if (!id) return NextResponse.json({ error: 'Category ID is required' }, { status: 400 })
-    if (!name) return NextResponse.json({ error: 'Category name is required' }, { status: 400 })
+    const validation = validateBody(updateCategorySchema, body)
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
+    }
+    const { id, name } = validation.data
 
     const existing = await prisma.serviceCategory.findFirst({ where: { name, NOT: { id } } })
     if (existing) return NextResponse.json({ error: 'Category name already exists' }, { status: 409 })
 
     const category = await prisma.serviceCategory.update({ where: { id }, data: { name } })
+
+    await auditLog({
+      userId: user.id,
+      userEmail: user.email,
+      action: 'category.update',
+      entityType: 'serviceCategory',
+      entityId: id,
+      newValues: { name },
+      ip: getClientIp(request),
+      userAgent: getClientUserAgent(request),
+    })
+
     return NextResponse.json(category)
   } catch (error: any) {
     if (error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
@@ -91,6 +123,17 @@ export async function DELETE(request: Request) {
     }
 
     await prisma.serviceCategory.delete({ where: { id } })
+
+    await auditLog({
+      userId: user.id,
+      userEmail: user.email,
+      action: 'category.delete',
+      entityType: 'serviceCategory',
+      entityId: id,
+      ip: getClientIp(request),
+      userAgent: getClientUserAgent(request),
+    })
+
     return NextResponse.json({ message: 'Category deleted successfully' })
   } catch (error: any) {
     if (error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })

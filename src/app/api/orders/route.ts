@@ -1,15 +1,18 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireAuth, requireAdmin } from '@/lib/auth'
+import { requireAuth } from '@/lib/auth'
+import { ordersQuerySchema, createOrderSchema, updateOrderSchema, validateBody, validateQuery } from '@/lib/validations'
+import { auditLog, getClientIp, getClientUserAgent } from '@/lib/audit'
 
 export async function GET(request: Request) {
   try {
     const user = await requireAuth()
     const { searchParams } = new URL(request.url)
-    const search = searchParams.get('search') || ''
-    const status = searchParams.get('status') || ''
-    const page = Math.max(1, parseInt(searchParams.get('page') || '1'))
-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '10')))
+    const validation = validateQuery(ordersQuerySchema, searchParams)
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
+    }
+    const { search, status, page, limit } = validation.data
     const offset = (page - 1) * limit
 
     const where: any = {}
@@ -66,9 +69,11 @@ export async function POST(request: Request) {
   try {
     const user = await requireAuth()
     const body = await request.json()
-    const { serviceId, imei, deviceInfo, notes, customFieldValues = {} } = body
-
-    if (!serviceId) return NextResponse.json({ error: 'Service ID is required' }, { status: 400 })
+    const validation = validateBody(createOrderSchema, body)
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
+    }
+    const { serviceId, imei, deviceInfo, notes, customFieldValues } = validation.data
 
     const service = await prisma.service.findUnique({ where: { id: serviceId } })
     if (!service) return NextResponse.json({ error: 'Service not found' }, { status: 404 })
@@ -86,8 +91,9 @@ export async function POST(request: Request) {
     }
 
     for (const field of fields) {
-      const value = customFieldValues[field.id]
-      if (!value) continue
+      const rawValue = customFieldValues[field.id]
+      if (!rawValue) continue
+      const value = String(rawValue)
       if (field.fieldType === 'imei_single') {
         const cleaned = value.replace(/\D/g, '')
         if (cleaned.length !== 15) return NextResponse.json({ error: 'IMEI must be exactly 15 digits' }, { status: 400 })
@@ -104,7 +110,7 @@ export async function POST(request: Request) {
     const dateStart = new Date(today.getFullYear(), today.getMonth(), today.getDate())
     const datePrefix = today.toISOString().slice(0, 10).replace(/-/g, '')
 
-    let result: any = null
+    let result: unknown = null
     const MAX_RETRIES = 5
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       try {
@@ -149,18 +155,20 @@ export async function POST(request: Request) {
           })
 
           for (const field of fields) {
-            const value = customFieldValues[field.id]
-            if (value === undefined || value === null) continue
+            const rawValue = customFieldValues[field.id]
+            if (rawValue === undefined || rawValue === null) continue
 
-            let finalValue = String(value)
+            let finalValue = String(rawValue)
             if (field.fieldType === 'imei_multi') {
-              const uniqueImeis = [...new Set(value.split('\n').map((l: string) => l.replace(/\D/g, '').trim()).filter(Boolean))]
+              const str = String(rawValue)
+              const uniqueImeis = [...new Set(str.split('\n').map((l: string) => l.replace(/\D/g, '').trim()).filter(Boolean))]
               finalValue = JSON.stringify(uniqueImeis)
             } else if (field.fieldType === 'serial_multi') {
-              const uniqueSerials = [...new Set(value.split('\n').map((l: string) => l.trim()).filter(Boolean))]
+              const str = String(rawValue)
+              const uniqueSerials = [...new Set(str.split('\n').map((l: string) => l.trim()).filter(Boolean))]
               finalValue = JSON.stringify(uniqueSerials)
-            } else if (field.fieldType === 'multiselect' && Array.isArray(value)) {
-              finalValue = JSON.stringify(value)
+            } else if (field.fieldType === 'multiselect' && Array.isArray(rawValue)) {
+              finalValue = JSON.stringify(rawValue)
             }
 
             await tx.orderCustomFieldValue.create({
@@ -182,6 +190,18 @@ export async function POST(request: Request) {
       }
     }
 
+    const orderResult = result as Record<string, unknown> | null
+    await auditLog({
+      userId: user.id,
+      userEmail: user.email,
+      action: 'order.create',
+      entityType: 'order',
+      entityId: orderResult?.id as string | undefined,
+      newValues: { serviceId, imei, orderNumber: orderResult?.orderNumber },
+      ip: getClientIp(request),
+      userAgent: getClientUserAgent(request),
+    })
+
     return NextResponse.json(result, { status: 201 })
   } catch (error: any) {
     if (error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
@@ -194,9 +214,11 @@ export async function PATCH(request: Request) {
   try {
     const user = await requireAuth()
     const body = await request.json()
-    const { id, status, notes, result } = body
-
-    if (!id) return NextResponse.json({ error: 'Order ID is required' }, { status: 400 })
+    const validation = validateBody(updateOrderSchema, body)
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
+    }
+    const { id, status, notes, result } = validation.data
 
     const order = await prisma.order.findUnique({ where: { id } })
     if (!order) return NextResponse.json({ error: 'Order not found' }, { status: 404 })
@@ -261,6 +283,18 @@ export async function PATCH(request: Request) {
           supplier: { select: { name: true } },
         },
       })
+    })
+
+    await auditLog({
+      userId: user.id,
+      userEmail: user.email,
+      action: 'order.update',
+      entityType: 'order',
+      entityId: id,
+      oldValues: { status: order.status },
+      newValues: data,
+      ip: getClientIp(request),
+      userAgent: getClientUserAgent(request),
     })
 
     return NextResponse.json({

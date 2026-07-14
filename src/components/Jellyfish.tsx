@@ -39,7 +39,6 @@ export function Jellyfish() {
     resize()
     window.addEventListener('resize', resize)
 
-    const isDark = theme === 'dark'
     const w = () => canvas.width
     const h = () => canvas.height
 

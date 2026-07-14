@@ -1,16 +1,18 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
+import { servicesQuerySchema, createServiceSchema, updateServiceSchema, validateBody, validateQuery } from '@/lib/validations'
+import { auditLog, getClientIp, getClientUserAgent } from '@/lib/audit'
 
 export async function GET(request: Request) {
   try {
     await requireAuth()
     const { searchParams } = new URL(request.url)
-    const search = searchParams.get('search') || ''
-    const type = searchParams.get('type') || ''
-    const status = searchParams.get('status') || ''
-    const categoryId = searchParams.get('categoryId') || ''
-    const limit = Math.min(500, Math.max(1, parseInt(searchParams.get('limit') || '500')))
+    const validation = validateQuery(servicesQuerySchema, searchParams)
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
+    }
+    const { search, type, status, categoryId, limit } = validation.data
 
     const where: any = {}
     if (search) {
@@ -57,9 +59,11 @@ export async function POST(request: Request) {
     if (user.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const body = await request.json()
-    const { name, description, type, cost, sellingPrice, processingTime, supplierId, status, categoryId, customFields } = body
-
-    if (!name || !type) return NextResponse.json({ error: 'Name and type are required' }, { status: 400 })
+    const validation = validateBody(createServiceSchema, body)
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
+    }
+    const { name, description, type, cost, sellingPrice, processingTime, supplierId, status, categoryId, customFields } = validation.data
 
     const service = await prisma.$transaction(async (tx) => {
       const s = await tx.service.create({
@@ -98,6 +102,17 @@ export async function POST(request: Request) {
       })
     })
 
+    await auditLog({
+      userId: user.id,
+      userEmail: user.email,
+      action: 'service.create',
+      entityType: 'service',
+      entityId: service?.id as string,
+      newValues: { name, type, cost, sellingPrice },
+      ip: getClientIp(request),
+      userAgent: getClientUserAgent(request),
+    })
+
     return NextResponse.json(service, { status: 201 })
   } catch (error: any) {
     if (error.message === 'Forbidden') return NextResponse.json({ error: error.message }, { status: 403 })
@@ -112,13 +127,15 @@ export async function PATCH(request: Request) {
     if (user.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const body = await request.json()
-    const { id, customFields, ...rawUpdates } = body
+    const validation = validateBody(updateServiceSchema, body)
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
+    }
+    const { id, customFields, ...rawUpdates } = validation.data
 
-    if (!id) return NextResponse.json({ error: 'Service ID is required' }, { status: 400 })
-
-    const data: any = {}
+    const data: Record<string, unknown> = {}
     for (const field of ['name', 'description', 'type', 'cost', 'sellingPrice', 'processingTime', 'status', 'categoryId', 'supplierId']) {
-      if (field in rawUpdates) data[field] = rawUpdates[field]
+      if (field in rawUpdates) data[field] = (rawUpdates as Record<string, unknown>)[field]
     }
 
     const service = await prisma.$transaction(async (tx) => {
@@ -151,6 +168,17 @@ export async function PATCH(request: Request) {
       })
     })
 
+    await auditLog({
+      userId: user.id,
+      userEmail: user.email,
+      action: 'service.update',
+      entityType: 'service',
+      entityId: id,
+      newValues: data,
+      ip: getClientIp(request),
+      userAgent: getClientUserAgent(request),
+    })
+
     return NextResponse.json(service)
   } catch (error: any) {
     if (error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
@@ -175,6 +203,17 @@ export async function DELETE(request: Request) {
     if (!id) return NextResponse.json({ error: 'Service ID is required' }, { status: 400 })
 
     await prisma.service.delete({ where: { id } })
+
+    await auditLog({
+      userId: user.id,
+      userEmail: user.email,
+      action: 'service.delete',
+      entityType: 'service',
+      entityId: id,
+      ip: getClientIp(request),
+      userAgent: getClientUserAgent(request),
+    })
+
     return NextResponse.json({ message: 'Service deleted successfully' })
   } catch (error: any) {
     if (error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })

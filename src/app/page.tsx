@@ -3,9 +3,9 @@
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import {
-  Smartphone, ArrowRight, Shield, Zap, Globe, TrendingUp,
-  Users, Package, ShoppingCart, FileText, CreditCard,
-  CheckCircle, Lock, Headphones, BarChart3, Clock, Star
+  Smartphone, ArrowRight, Shield, Zap, Globe,
+  Users, FileText, CreditCard,
+  Lock, BarChart3, Clock
 } from 'lucide-react';
 
 const features = [

@@ -1,15 +1,19 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth, requireAdmin } from '@/lib/auth'
+import { usersQuerySchema, createUserSchema, updateUserSchema, validateBody, validateQuery } from '@/lib/validations'
+import { auditLog, getClientIp, getClientUserAgent } from '@/lib/audit'
 import bcrypt from 'bcryptjs'
 
 export async function GET(request: Request) {
   try {
     await requireAdmin()
     const { searchParams } = new URL(request.url)
-    const search = searchParams.get('search') || ''
-    const role = searchParams.get('role') || ''
-    const limit = Math.min(1000, Math.max(1, parseInt(searchParams.get('limit') || '500')))
+    const validation = validateQuery(usersQuerySchema, searchParams)
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
+    }
+    const { search, role, limit } = validation.data
 
     const where: any = {}
     if (search) {
@@ -51,16 +55,17 @@ export async function POST(request: Request) {
   try {
     await requireAdmin()
     const body = await request.json()
-    const { email, password, name, phone, role, resellerId } = body
-
-    if (!email || !password || !name) {
-      return NextResponse.json({ error: 'Email, password, and name are required' }, { status: 400 })
+    const validation = validateBody(createUserSchema, body)
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
     }
+    const { email, password, name, phone, role, resellerId } = validation.data
 
     const existing = await prisma.user.findUnique({ where: { email } })
     if (existing) return NextResponse.json({ error: 'Email already exists' }, { status: 409 })
 
     const hashedPassword = await bcrypt.hash(password, 12)
+    const admin = await requireAuth()
     const user = await prisma.user.create({
       data: {
         email,
@@ -76,6 +81,17 @@ export async function POST(request: Request) {
       },
     })
 
+    await auditLog({
+      userId: admin.id,
+      userEmail: admin.email,
+      action: 'user.create',
+      entityType: 'user',
+      entityId: user.id,
+      newValues: { email, name, role: user.role },
+      ip: getClientIp(request),
+      userAgent: getClientUserAgent(request),
+    })
+
     return NextResponse.json(user, { status: 201 })
   } catch (error: any) {
     if (error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
@@ -89,22 +105,26 @@ export async function PATCH(request: Request) {
   try {
     await requireAdmin()
     const body = await request.json()
-    const { id, ...updates } = body
-
-    if (!id) return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
-
-    const data: any = {}
-    for (const field of ['name', 'phone', 'role', 'status', 'resellerId']) {
-      if (field in updates) data[field] = updates[field]
+    const validation = validateBody(updateUserSchema, body)
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
     }
-    if (updates.password) {
-      data.password = await bcrypt.hash(updates.password, 12)
+    const { id, password, ...updates } = validation.data
+
+    const data: Record<string, unknown> = {}
+    for (const field of ['name', 'phone', 'role', 'status', 'resellerId']) {
+      if (field in updates) data[field] = (updates as Record<string, unknown>)[field]
+    }
+    if (password) {
+      data.password = await bcrypt.hash(password, 12)
     }
 
     if (Object.keys(data).length === 0) {
       return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
     }
 
+    const admin = await requireAuth()
+    const before = await prisma.user.findUnique({ where: { id }, select: { name: true, role: true, status: true, phone: true } })
     const user = await prisma.user.update({
       where: { id },
       data,
@@ -112,6 +132,18 @@ export async function PATCH(request: Request) {
         id: true, email: true, name: true, role: true, phone: true,
         status: true, walletBalance: true, resellerId: true,
       },
+    })
+
+    await auditLog({
+      userId: admin.id,
+      userEmail: admin.email,
+      action: 'user.update',
+      entityType: 'user',
+      entityId: id,
+      oldValues: before || {},
+      newValues: data,
+      ip: getClientIp(request),
+      userAgent: getClientUserAgent(request),
     })
 
     return NextResponse.json(user)
@@ -139,7 +171,20 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Cannot delete your own account' }, { status: 400 })
     }
 
+    const deleted = await prisma.user.findUnique({ where: { id: userId }, select: { email: true, name: true, role: true } })
     await prisma.user.delete({ where: { id: userId } })
+
+    await auditLog({
+      userId: admin.id,
+      userEmail: admin.email,
+      action: 'user.delete',
+      entityType: 'user',
+      entityId: userId,
+      oldValues: deleted || {},
+      ip: getClientIp(request),
+      userAgent: getClientUserAgent(request),
+    })
+
     return NextResponse.json({ message: 'User deleted successfully' })
   } catch (error: any) {
     if (error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })

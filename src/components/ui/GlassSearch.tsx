@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -21,6 +21,14 @@ interface GlassSearchProps {
   onSearch?: (query: string) => void;
 }
 
+const DEFAULT_RESULTS: SearchResult[] = [
+  { id: "nav-dashboard", icon: "📊", title: "Dashboard", subtitle: "View analytics", href: "/admin/dashboard", type: "nav" },
+  { id: "nav-orders", icon: "📦", title: "Orders", subtitle: "Manage orders", href: "/admin/orders", type: "nav" },
+  { id: "nav-services", icon: "🔧", title: "Services", subtitle: "Manage services", href: "/admin/services", type: "nav" },
+  { id: "nav-users", icon: "👥", title: "Users", subtitle: "Manage users", href: "/admin/users", type: "nav" },
+  { id: "nav-wallet", icon: "💰", title: "Wallet", subtitle: "Manage funds", href: "/admin/wallet", type: "nav" },
+];
+
 export function GlassSearch({
   placeholder = "Search orders, services, users...",
   results = [],
@@ -31,42 +39,38 @@ export function GlassSearch({
   const [query, setQuery] = useState("");
   const [isFocused, setIsFocused] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-  const [filteredResults, setFilteredResults] = useState<SearchResult[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
 
-  // Default navigation results
-  const defaultResults: SearchResult[] = results.length > 0 ? results : [
-    { id: "nav-dashboard", icon: "📊", title: "Dashboard", subtitle: "View analytics", href: "/admin/dashboard", type: "nav" },
-    { id: "nav-orders", icon: "📦", title: "Orders", subtitle: "Manage orders", href: "/admin/orders", type: "nav" },
-    { id: "nav-services", icon: "🔧", title: "Services", subtitle: "Manage services", href: "/admin/services", type: "nav" },
-    { id: "nav-users", icon: "👥", title: "Users", subtitle: "Manage users", href: "/admin/users", type: "nav" },
-    { id: "nav-wallet", icon: "💰", title: "Wallet", subtitle: "Manage funds", href: "/admin/wallet", type: "nav" },
-  ];
+  const sourceResults = results.length > 0 ? results : DEFAULT_RESULTS;
 
-  // Filter results based on query
-  useEffect(() => {
-    if (query.length === 0) {
-      setFilteredResults(defaultResults.slice(0, 5));
-      return;
-    }
-
+  const filteredResults = useMemo(() => {
+    if (query.length === 0) return sourceResults.slice(0, 5);
     const q = query.toLowerCase();
-    const filtered = defaultResults.filter(
+    return sourceResults.filter(
       (r) =>
         r.title.toLowerCase().includes(q) ||
         r.subtitle.toLowerCase().includes(q) ||
         r.type.toLowerCase().includes(q)
     );
-    setFilteredResults(filtered);
-    setSelectedIndex(-1);
-    onSearch?.(query);
-  }, [query, results, onSearch]);
+  }, [query, sourceResults]);
 
-  // Close on outside click
+  useEffect(() => {
+    if (query.length > 0) {
+      onSearch?.(query);
+    }
+  }, [query, onSearch]);
+
+  const handleSelect = (result: SearchResult) => {
+    setQuery("");
+    setIsOpen(false);
+    onSelect?.(result);
+    router.push(result.href);
+  };
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
@@ -82,7 +86,6 @@ export function GlassSearch({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Keyboard shortcut ⌘K and navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
@@ -116,29 +119,16 @@ export function GlassSearch({
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, filteredResults, selectedIndex]);
+  }, [isOpen, filteredResults, selectedIndex, handleSelect]);
 
   const handleFocus = () => {
     setIsFocused(true);
     setIsOpen(true);
   };
 
-  const handleSelect = (result: SearchResult) => {
-    setQuery("");
-    setIsOpen(false);
-    onSelect?.(result);
-    router.push(result.href);
-  };
-
   const clearQuery = () => {
     setQuery("");
     inputRef.current?.focus();
-  };
-
-  const highlightMatch = (text: string, query: string) => {
-    if (!query) return text;
-    const regex = new RegExp(`(${query})`, "gi");
-    return text.replace(regex, "<mark>$1</mark>");
   };
 
   const groupedResults = filteredResults.reduce(
@@ -198,7 +188,6 @@ export function GlassSearch({
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
         >
-          {/* Mouse glow overlay */}
           <div ref={glowRef} className="search-mouse-glow" />
 
           {filteredResults.length === 0 ? (
@@ -213,7 +202,7 @@ export function GlassSearch({
                 <div className="glass-dropdown-label">
                   {type.charAt(0).toUpperCase() + type.slice(1)}
                 </div>
-                {items.map((result, index) => (
+                {items.map((result) => (
                   <div
                     key={result.id}
                     className={`glass-search-item ${
@@ -227,12 +216,9 @@ export function GlassSearch({
                       {result.icon}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div
-                        className="text-sm font-medium text-[var(--foreground)] truncate"
-                        dangerouslySetInnerHTML={{
-                          __html: highlightMatch(result.title, query),
-                        }}
-                      />
+                      <div className="text-sm font-medium text-[var(--foreground)] truncate">
+                        {result.title}
+                      </div>
                       <div className="text-xs text-[var(--muted)] mt-0.5 truncate">
                         {result.subtitle}
                       </div>

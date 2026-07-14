@@ -17,18 +17,21 @@ interface UseApiResult<T> {
   refetch: () => void
 }
 
-let sessionChecked = false
-let sessionValid = false
+let sessionCheckedAt = 0
+let sessionCachedValid = false
+const SESSION_CACHE_TTL = 30_000
 
 async function checkSession(): Promise<boolean> {
+  const now = Date.now()
+  if (now - sessionCheckedAt < SESSION_CACHE_TTL) return sessionCachedValid
   try {
     const res = await fetch('/api/auth/session', { credentials: 'same-origin' })
-    sessionValid = res.ok
+    sessionCachedValid = res.ok
   } catch {
-    sessionValid = false
+    sessionCachedValid = false
   }
-  sessionChecked = true
-  return sessionValid
+  sessionCheckedAt = now
+  return sessionCachedValid
 }
 
 export function useApi<T = any>({ url, method = 'GET', body, enabled, initialData }: UseApiOptions<T>): UseApiResult<T> {
@@ -70,9 +73,9 @@ export function useApi<T = any>({ url, method = 'GET', body, enabled, initialDat
           }
 
           if (retryCount === 0) {
-            if (!sessionChecked) await checkSession()
+            const valid = await checkSession()
 
-            if (sessionValid) {
+            if (valid) {
               await new Promise(r => setTimeout(r, 300))
               if (!cancelled) await doFetch(1)
               return

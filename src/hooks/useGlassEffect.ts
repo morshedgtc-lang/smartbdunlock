@@ -22,7 +22,6 @@ interface GlassEffectReturn {
 
 export function useGlassEffect(options: GlassEffectOptions = {}): GlassEffectReturn {
   const {
-    enableTilt = true,
     enableDistortion = true,
     enableGlow = true,
     intensity = 1

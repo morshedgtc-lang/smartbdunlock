@@ -1,14 +1,18 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
+import { suppliersQuerySchema, createSupplierSchema, updateSupplierSchema, validateBody, validateQuery } from '@/lib/validations'
+import { auditLog, getClientIp, getClientUserAgent } from '@/lib/audit'
 
 export async function GET(request: Request) {
   try {
     await requireAuth()
     const { searchParams } = new URL(request.url)
-    const search = searchParams.get('search') || ''
-    const status = searchParams.get('status') || ''
-    const limit = Math.min(500, Math.max(1, parseInt(searchParams.get('limit') || '500')))
+    const validation = validateQuery(suppliersQuerySchema, searchParams)
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
+    }
+    const { search, status, limit } = validation.data
 
     const where: any = {}
     if (search) {
@@ -31,6 +35,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       suppliers: suppliers.map(s => ({
         ...s,
+        apiKey: s.apiKey ? '••••••••' : null,
         serviceCount: s._count.services,
         orderCount: s._count.orders,
       })),
@@ -48,9 +53,11 @@ export async function POST(request: Request) {
     if (user.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const body = await request.json()
-    const { name, type, email, phone, website, apiKey, priority } = body
-
-    if (!name || !type) return NextResponse.json({ error: 'Name and type are required' }, { status: 400 })
+    const validation = validateBody(createSupplierSchema, body)
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
+    }
+    const { name, type, email, phone, website, apiKey, priority } = validation.data
 
     const supplier = await prisma.supplier.create({
       data: {
@@ -62,6 +69,17 @@ export async function POST(request: Request) {
         apiKey: apiKey || null,
         priority: priority || 1,
       },
+    })
+
+    await auditLog({
+      userId: user.id,
+      userEmail: user.email,
+      action: 'supplier.create',
+      entityType: 'supplier',
+      entityId: supplier.id,
+      newValues: { name, type },
+      ip: getClientIp(request),
+      userAgent: getClientUserAgent(request),
     })
 
     return NextResponse.json(supplier, { status: 201 })
@@ -79,19 +97,33 @@ export async function PATCH(request: Request) {
     if (user.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const body = await request.json()
-    const { id, ...rawUpdates } = body
+    const validation = validateBody(updateSupplierSchema, body)
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
+    }
+    const { id, ...rawUpdates } = validation.data
 
-    if (!id) return NextResponse.json({ error: 'Supplier ID is required' }, { status: 400 })
-
-    const data: any = {}
-    for (const field of ['name', 'description', 'contact', 'phone', 'email', 'website', 'apiEndpoint', 'apiKey', 'balance', 'status']) {
-      if (field in rawUpdates) data[field] = rawUpdates[field]
+    const data: Record<string, unknown> = {}
+    for (const field of ['name', 'type', 'email', 'phone', 'website', 'apiKey', 'priority', 'status']) {
+      if (field in rawUpdates) data[field] = (rawUpdates as Record<string, unknown>)[field]
     }
     if (Object.keys(data).length === 0) {
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
     }
 
     const supplier = await prisma.supplier.update({ where: { id }, data })
+
+    await auditLog({
+      userId: user.id,
+      userEmail: user.email,
+      action: 'supplier.update',
+      entityType: 'supplier',
+      entityId: id,
+      newValues: data,
+      ip: getClientIp(request),
+      userAgent: getClientUserAgent(request),
+    })
+
     return NextResponse.json(supplier)
   } catch (error: any) {
     if (error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
@@ -121,6 +153,17 @@ export async function DELETE(request: Request) {
     }
 
     await prisma.supplier.delete({ where: { id } })
+
+    await auditLog({
+      userId: user.id,
+      userEmail: user.email,
+      action: 'supplier.delete',
+      entityType: 'supplier',
+      entityId: id,
+      ip: getClientIp(request),
+      userAgent: getClientUserAgent(request),
+    })
+
     return NextResponse.json({ message: 'Supplier deleted successfully' })
   } catch (error: any) {
     if (error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })

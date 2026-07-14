@@ -1,14 +1,17 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/auth'
+import { logsQuerySchema, createLogSchema, validateBody, validateQuery } from '@/lib/validations'
 
 export async function GET(request: Request) {
   try {
     await requireAdmin()
     const { searchParams } = new URL(request.url)
-    const level = searchParams.get('level') || ''
-    const source = searchParams.get('source') || ''
-    const limit = Math.min(500, Math.max(1, parseInt(searchParams.get('limit') || '100')))
+    const validation = validateQuery(logsQuerySchema, searchParams)
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
+    }
+    const { level, source, limit } = validation.data
 
     const where: any = {}
     if (level) where.level = level
@@ -42,11 +45,11 @@ export async function POST(request: Request) {
   try {
     await requireAdmin()
     const body = await request.json()
-    const { level, message, source, details } = body
-
-    if (!message) {
-      return NextResponse.json({ error: 'Message is required' }, { status: 400 })
+    const validation = validateBody(createLogSchema, body)
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
     }
+    const { level, message, source, details } = validation.data
 
     const log = await prisma.log.create({
       data: {
@@ -71,15 +74,13 @@ export async function DELETE(request: Request) {
     await requireAdmin()
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
-
-    if (id) {
-      await prisma.log.delete({ where: { id } })
-    } else {
-      // Clear all logs
-      await prisma.log.deleteMany()
+    if (!id) {
+      return NextResponse.json({ error: 'Log ID is required' }, { status: 400 })
     }
 
-    return NextResponse.json({ message: 'Logs cleared' })
+    await prisma.log.delete({ where: { id } })
+
+    return NextResponse.json({ message: 'Log deleted' })
   } catch (error: any) {
     if (error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
     if (error.message === 'Forbidden') return NextResponse.json({ error: error.message }, { status: 403 })

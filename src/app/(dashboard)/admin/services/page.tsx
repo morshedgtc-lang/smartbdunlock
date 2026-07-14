@@ -9,7 +9,7 @@ import { useToast } from '@/components/ui/Toast'
 import { motion } from 'framer-motion'
 import { Plus, Edit, Trash2, Search, Loader2, X, Package, Settings, GripVertical, ChevronUp, ChevronDown } from 'lucide-react'
 import Link from 'next/link'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 
 const FIELD_TYPES = [
   { value: 'text', label: 'Text' },
@@ -26,8 +26,6 @@ const FIELD_TYPES = [
   { value: 'serial_multi', label: 'Multi Serial Number' },
 ]
 
-const CATEGORY_DEFAULT = 'Unlock, FRP, MDM, iCloud, Network Unlock, Flashing, Repair, Other'
-
 const emptyService = { name: '', description: '', type: 'unlock', cost: '', sellingPrice: '', processingTime: '', supplierId: '', status: 'active', categoryId: '' }
 const emptyField = { fieldType: 'text', label: '', placeholder: '', options: '', required: false, visibleToClient: true }
 
@@ -39,7 +37,6 @@ export default function ServicesPage() {
   const [editing, setEditing] = useState<any>(null)
   const [form, setForm] = useState(emptyService)
   const [customFields, setCustomFields] = useState<any[]>([])
-  const [newFieldName, setNewFieldName] = useState('')
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState<string | null>(null)
   const { toast } = useToast()
