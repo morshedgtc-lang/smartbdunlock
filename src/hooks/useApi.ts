@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from 'react'
 interface UseApiOptions<T> {
   url: string
   method?: string
-  body?: any
+  body?: unknown
   enabled?: boolean
   initialData?: T
 }
@@ -94,8 +94,8 @@ export function useApi<T = any>({ url, method = 'GET', body, enabled, initialDat
           setData(json)
           setError(null)
         }
-      } catch (e: any) {
-        if (!cancelled) setError(e.message)
+      } catch (e: unknown) {
+        if (!cancelled) setError(e instanceof Error ? e.message : 'Request failed')
       } finally {
         if (!cancelled) setLoading(false)
       }

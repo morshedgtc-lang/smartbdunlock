@@ -51,7 +51,31 @@ export async function getSession(): Promise<SessionUser | null> {
     if (!token) return null
 
     const { payload } = await jwtVerify(token, getSecret())
-    return payload.user as SessionUser
+    const jwtUser = payload.user as SessionUser
+    if (!jwtUser?.id) return null
+
+    try {
+      const { prisma } = await import('@/lib/prisma')
+      const dbUser = await prisma.user.findUnique({
+        where: { id: jwtUser.id },
+        select: { id: true, email: true, name: true, role: true, status: true },
+      })
+      if (!dbUser || dbUser.status !== 'active') return null
+      if (dbUser.role !== jwtUser.role || dbUser.name !== jwtUser.name) {
+        const freshUser: SessionUser = {
+          id: dbUser.id,
+          email: dbUser.email,
+          name: dbUser.name,
+          role: dbUser.role,
+        }
+        await createSession(freshUser)
+        return freshUser
+      }
+    } catch {
+      // DB check failed — fall back to JWT data
+    }
+
+    return jwtUser
   } catch {
     return null
   }

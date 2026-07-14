@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/auth'
 import { logsQuerySchema, createLogSchema, validateBody, validateQuery } from '@/lib/validations'
@@ -13,7 +14,7 @@ export async function GET(request: Request) {
     }
     const { level, source, limit } = validation.data
 
-    const where: any = {}
+    const where: Prisma.LogWhereInput = {}
     if (level) where.level = level
     if (source) where.source = source
 
@@ -33,9 +34,9 @@ export async function GET(request: Request) {
     })
 
     return NextResponse.json({ logs })
-  } catch (error: any) {
-    if (error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
-    if (error.message === 'Forbidden') return NextResponse.json({ error: error.message }, { status: 403 })
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
+    if (error instanceof Error && error.message === 'Forbidden') return NextResponse.json({ error: error.message }, { status: 403 })
     console.error('Logs GET error:', error)
     return NextResponse.json({ error: 'Failed to fetch logs' }, { status: 500 })
   }
@@ -61,9 +62,9 @@ export async function POST(request: Request) {
     })
 
     return NextResponse.json(log, { status: 201 })
-  } catch (error: any) {
-    if (error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
-    if (error.message === 'Forbidden') return NextResponse.json({ error: error.message }, { status: 403 })
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
+    if (error instanceof Error && error.message === 'Forbidden') return NextResponse.json({ error: error.message }, { status: 403 })
     console.error('Logs POST error:', error)
     return NextResponse.json({ error: 'Failed to create log' }, { status: 500 })
   }
@@ -81,9 +82,9 @@ export async function DELETE(request: Request) {
     await prisma.log.delete({ where: { id } })
 
     return NextResponse.json({ message: 'Log deleted' })
-  } catch (error: any) {
-    if (error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
-    if (error.message === 'Forbidden') return NextResponse.json({ error: error.message }, { status: 403 })
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
+    if (error instanceof Error && error.message === 'Forbidden') return NextResponse.json({ error: error.message }, { status: 403 })
     console.error('Logs DELETE error:', error)
     return NextResponse.json({ error: 'Failed to delete logs' }, { status: 500 })
   }

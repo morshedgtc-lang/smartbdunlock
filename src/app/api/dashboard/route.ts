@@ -82,8 +82,8 @@ export async function GET() {
         userName: o.user?.name,
       })),
     })
-  } catch (error: any) {
-    if (error.message === 'Unauthorized' || error.message === 'Forbidden') {
+  } catch (error: unknown) {
+    if (error instanceof Error && (error.message === 'Unauthorized' || error.message === 'Forbidden')) {
       return NextResponse.json({ error: error.message }, { status: error.message === 'Unauthorized' ? 401 : 403 })
     }
     console.error('Dashboard error:', error)

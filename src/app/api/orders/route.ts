@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
 import { ordersQuerySchema, createOrderSchema, updateOrderSchema, validateBody, validateQuery } from '@/lib/validations'
@@ -15,7 +16,7 @@ export async function GET(request: Request) {
     const { search, status, page, limit } = validation.data
     const offset = (page - 1) * limit
 
-    const where: any = {}
+    const where: Prisma.OrderWhereInput = {}
     if (user.role !== 'admin') where.userId = user.id
     if (status) where.status = status
     if (search) {
@@ -58,8 +59,8 @@ export async function GET(request: Request) {
       })),
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     })
-  } catch (error: any) {
-    if (error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
     console.error('Orders GET error:', error)
     return NextResponse.json({ error: 'Failed to fetch orders' }, { status: 500 })
   }
@@ -184,8 +185,8 @@ export async function POST(request: Request) {
           return order
         })
         break
-      } catch (txError: any) {
-        if (txError.code === 'P2002' && attempt < MAX_RETRIES - 1) continue
+      } catch (txError: unknown) {
+        if (txError instanceof Error && 'code' in txError && txError.code === 'P2002' && attempt < MAX_RETRIES - 1) continue
         throw txError
       }
     }
@@ -203,10 +204,11 @@ export async function POST(request: Request) {
     })
 
     return NextResponse.json(result, { status: 201 })
-  } catch (error: any) {
-    if (error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
     console.error('Orders POST error:', error)
-    return NextResponse.json({ error: error.message || 'Order creation failed' }, { status: 500 })
+    if (error instanceof Error && error.message === 'Insufficient balance') return NextResponse.json({ error: 'Insufficient balance' }, { status: 400 })
+    return NextResponse.json({ error: 'Order creation failed' }, { status: 500 })
   }
 }
 
@@ -226,7 +228,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const data: any = {}
+    const data: Record<string, unknown> = {}
 
     if (notes !== undefined) data.notes = notes
 
@@ -259,7 +261,7 @@ export async function PATCH(request: Request) {
         })
       }
 
-      if (data.status && ['failed', 'cancelled'].includes(data.status) && ['pending', 'processing'].includes(order.status)) {
+      if (data.status && ['failed', 'cancelled'].includes(data.status as string) && ['pending', 'processing'].includes(order.status)) {
         const userBefore = await tx.user.findUnique({ where: { id: order.userId } })
         const newBalance = (userBefore?.walletBalance || 0) + order.sellingPrice
         await tx.user.update({ where: { id: order.userId }, data: { walletBalance: { increment: order.sellingPrice } } })
@@ -302,8 +304,8 @@ export async function PATCH(request: Request) {
       serviceName: updated?.service?.name,
       supplierName: updated?.supplier?.name,
     })
-  } catch (error: any) {
-    if (error.message === 'Unauthorized' || error.message === 'Forbidden') {
+  } catch (error: unknown) {
+    if (error instanceof Error && (error.message === 'Unauthorized' || error.message === 'Forbidden')) {
       return NextResponse.json({ error: error.message }, { status: error.message === 'Unauthorized' ? 401 : 403 })
     }
     console.error('Orders PATCH error:', error)

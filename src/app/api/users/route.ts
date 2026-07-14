@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { requireAuth, requireAdmin } from '@/lib/auth'
 import { usersQuerySchema, createUserSchema, updateUserSchema, validateBody, validateQuery } from '@/lib/validations'
@@ -15,7 +16,7 @@ export async function GET(request: Request) {
     }
     const { search, role, limit } = validation.data
 
-    const where: any = {}
+    const where: Prisma.UserWhereInput = {}
     if (search) {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
@@ -43,9 +44,9 @@ export async function GET(request: Request) {
         transactionCount: u._count.transactions,
       })),
     })
-  } catch (error: any) {
-    if (error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
-    if (error.message === 'Forbidden') return NextResponse.json({ error: error.message }, { status: 403 })
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
+    if (error instanceof Error && error.message === 'Forbidden') return NextResponse.json({ error: error.message }, { status: 403 })
     console.error('Users GET error:', error)
     return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 })
   }
@@ -93,9 +94,9 @@ export async function POST(request: Request) {
     })
 
     return NextResponse.json(user, { status: 201 })
-  } catch (error: any) {
-    if (error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
-    if (error.message === 'Forbidden') return NextResponse.json({ error: error.message }, { status: 403 })
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
+    if (error instanceof Error && error.message === 'Forbidden') return NextResponse.json({ error: error.message }, { status: 403 })
     console.error('Users POST error:', error)
     return NextResponse.json({ error: 'Failed to create user' }, { status: 500 })
   }
@@ -147,9 +148,9 @@ export async function PATCH(request: Request) {
     })
 
     return NextResponse.json(user)
-  } catch (error: any) {
-    if (error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
-    if (error.message === 'Forbidden') return NextResponse.json({ error: error.message }, { status: 403 })
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
+    if (error instanceof Error && error.message === 'Forbidden') return NextResponse.json({ error: error.message }, { status: 403 })
     console.error('Users PATCH error:', error)
     return NextResponse.json({ error: 'Failed to update user' }, { status: 500 })
   }
@@ -162,7 +163,7 @@ export async function DELETE(request: Request) {
     const id = searchParams.get('id') || ''
 
     const body = await request.json().catch(() => ({}))
-    const userId = id || (body as any).id || ''
+    const userId = id || ((body as Record<string, unknown>).id as string) || ''
 
     if (!userId) return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
 
@@ -186,9 +187,9 @@ export async function DELETE(request: Request) {
     })
 
     return NextResponse.json({ message: 'User deleted successfully' })
-  } catch (error: any) {
-    if (error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
-    if (error.message === 'Forbidden') return NextResponse.json({ error: error.message }, { status: 403 })
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
+    if (error instanceof Error && error.message === 'Forbidden') return NextResponse.json({ error: error.message }, { status: 403 })
     console.error('Users DELETE error:', error)
     return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 })
   }

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
 import { servicesQuerySchema, createServiceSchema, updateServiceSchema, validateBody, validateQuery } from '@/lib/validations'
@@ -14,7 +15,7 @@ export async function GET(request: Request) {
     }
     const { search, type, status, categoryId, limit } = validation.data
 
-    const where: any = {}
+    const where: Prisma.ServiceWhereInput = {}
     if (search) {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
@@ -46,8 +47,8 @@ export async function GET(request: Request) {
         orderCount: s._count.orders,
       })),
     })
-  } catch (error: any) {
-    if (error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
     console.error('Services GET error:', error)
     return NextResponse.json({ error: 'Failed to fetch services' }, { status: 500 })
   }
@@ -82,7 +83,7 @@ export async function POST(request: Request) {
 
       if (customFields?.length) {
         await tx.serviceCustomField.createMany({
-          data: customFields.map((f: any, i: number) => ({
+          data: customFields.map((f: { fieldType: string; label: string; placeholder?: string; options?: unknown; required?: boolean; visibleToClient?: boolean; order?: number }, i: number) => ({
             id: crypto.randomUUID(),
             serviceId: s.id,
             fieldType: f.fieldType,
@@ -114,8 +115,8 @@ export async function POST(request: Request) {
     })
 
     return NextResponse.json(service, { status: 201 })
-  } catch (error: any) {
-    if (error.message === 'Forbidden') return NextResponse.json({ error: error.message }, { status: 403 })
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === 'Forbidden') return NextResponse.json({ error: error.message }, { status: 403 })
     console.error('Services POST error:', error)
     return NextResponse.json({ error: 'Service creation failed' }, { status: 500 })
   }
@@ -147,7 +148,7 @@ export async function PATCH(request: Request) {
         await tx.serviceCustomField.deleteMany({ where: { serviceId: id } })
         if (customFields.length) {
           await tx.serviceCustomField.createMany({
-            data: customFields.map((f: any, i: number) => ({
+            data: customFields.map((f: { fieldType: string; label: string; placeholder?: string; options?: unknown; required?: boolean; visibleToClient?: boolean; order?: number }, i: number) => ({
               id: crypto.randomUUID(),
               serviceId: id,
               fieldType: f.fieldType,
@@ -180,9 +181,9 @@ export async function PATCH(request: Request) {
     })
 
     return NextResponse.json(service)
-  } catch (error: any) {
-    if (error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
-    if (error.message === 'Forbidden') return NextResponse.json({ error: error.message }, { status: 403 })
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
+    if (error instanceof Error && error.message === 'Forbidden') return NextResponse.json({ error: error.message }, { status: 403 })
     console.error('Services PATCH error:', error)
     return NextResponse.json({ error: 'Service update failed' }, { status: 500 })
   }
@@ -197,7 +198,7 @@ export async function DELETE(request: Request) {
     let id = searchParams.get('id') || ''
     if (!id) {
       const body = await request.json().catch(() => ({}))
-      id = (body as any).id || ''
+      id = ((body as Record<string, unknown>).id as string) || ''
     }
 
     if (!id) return NextResponse.json({ error: 'Service ID is required' }, { status: 400 })
@@ -215,9 +216,9 @@ export async function DELETE(request: Request) {
     })
 
     return NextResponse.json({ message: 'Service deleted successfully' })
-  } catch (error: any) {
-    if (error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
-    if (error.message === 'Forbidden') return NextResponse.json({ error: error.message }, { status: 403 })
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
+    if (error instanceof Error && error.message === 'Forbidden') return NextResponse.json({ error: error.message }, { status: 403 })
     console.error('Services DELETE error:', error)
     return NextResponse.json({ error: 'Failed to delete service' }, { status: 500 })
   }

@@ -200,7 +200,7 @@ export default function LoginPage() {
                   </div>
                   Remember me
                 </label>
-                <a href="#" className="text-[var(--accent)] hover:underline">Forgot password?</a>
+                <a href="mailto:support@smartbdunlock.com" className="text-[var(--accent)] hover:underline">Forgot password?</a>
               </div>
 
               {/* Liquid Glass Submit Button */}

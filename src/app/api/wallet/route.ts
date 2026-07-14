@@ -23,8 +23,8 @@ export async function GET() {
       balance: userData?.walletBalance || 0,
       transactions,
     })
-  } catch (error: any) {
-    if (error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
     console.error('Wallet GET error:', error)
     return NextResponse.json({ error: 'Failed to fetch wallet' }, { status: 500 })
   }
@@ -135,11 +135,12 @@ export async function POST(request: Request) {
     })
 
     return NextResponse.json(result, { status: 201 })
-  } catch (error: any) {
-    if (error.message === 'Unauthorized' || error.message === 'Forbidden') {
+  } catch (error: unknown) {
+    if (error instanceof Error && (error.message === 'Unauthorized' || error.message === 'Forbidden')) {
       return NextResponse.json({ error: error.message }, { status: error.message === 'Unauthorized' ? 401 : 403 })
     }
     console.error('Wallet POST error:', error)
-    return NextResponse.json({ error: error.message || 'Transaction failed' }, { status: 500 })
+    const msg = error instanceof Error ? error.message : 'Transaction failed'
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }

@@ -26,8 +26,8 @@ export async function GET(request: Request) {
         serviceCount: c._count.services,
       })),
     })
-  } catch (error: any) {
-    if (error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
     console.error('Categories GET error:', error)
     return NextResponse.json({ error: 'Failed to fetch categories' }, { status: 500 })
   }
@@ -62,9 +62,9 @@ export async function POST(request: Request) {
     })
 
     return NextResponse.json(category, { status: 201 })
-  } catch (error: any) {
-    if (error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
-    if (error.message === 'Forbidden') return NextResponse.json({ error: error.message }, { status: 403 })
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
+    if (error instanceof Error && error.message === 'Forbidden') return NextResponse.json({ error: error.message }, { status: 403 })
     console.error('Categories POST error:', error)
     return NextResponse.json({ error: 'Failed to create category' }, { status: 500 })
   }
@@ -99,9 +99,9 @@ export async function PATCH(request: Request) {
     })
 
     return NextResponse.json(category)
-  } catch (error: any) {
-    if (error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
-    if (error.message === 'Forbidden') return NextResponse.json({ error: error.message }, { status: 403 })
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
+    if (error instanceof Error && error.message === 'Forbidden') return NextResponse.json({ error: error.message }, { status: 403 })
     console.error('Categories PATCH error:', error)
     return NextResponse.json({ error: 'Failed to update category' }, { status: 500 })
   }
@@ -135,9 +135,9 @@ export async function DELETE(request: Request) {
     })
 
     return NextResponse.json({ message: 'Category deleted successfully' })
-  } catch (error: any) {
-    if (error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
-    if (error.message === 'Forbidden') return NextResponse.json({ error: error.message }, { status: 403 })
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
+    if (error instanceof Error && error.message === 'Forbidden') return NextResponse.json({ error: error.message }, { status: 403 })
     console.error('Categories DELETE error:', error)
     return NextResponse.json({ error: 'Failed to delete category' }, { status: 500 })
   }

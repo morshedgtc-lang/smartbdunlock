@@ -46,6 +46,17 @@ export async function POST(request: Request) {
     })
 
     if (!user || !await bcrypt.compare(password, user.password)) {
+      if (user && user.status !== 'active') {
+        await auditLog({
+          userId: user.id,
+          userEmail: user.email,
+          action: 'login.inactive_account',
+          entityType: 'auth',
+          entityId: user.id,
+          ip: getClientIp(request),
+          userAgent: getClientUserAgent(request),
+        })
+      }
       await auditLog({
         action: 'login.failed',
         entityType: 'auth',
