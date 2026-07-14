@@ -1,2 +1,3 @@
 [deploy]
-startCommand = "npx prisma db push --accept-data-loss && next start"
+buildCommand = "npx prisma generate && next build"
+startCommand = "npx prisma db push --accept-data-loss --skip-generate; next start -p $PORT"
