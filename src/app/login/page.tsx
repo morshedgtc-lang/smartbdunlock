@@ -152,6 +152,7 @@ export default function LoginPage() {
                   <input
                     type="email"
                     placeholder="Email address"
+                    autoComplete="email"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
                     onFocus={() => setFocusedField('email')}
@@ -170,6 +171,7 @@ export default function LoginPage() {
                   <input
                     type={showPassword ? 'text' : 'password'}
                     placeholder="Password"
+                    autoComplete="current-password"
                     value={password}
                     onChange={e => setPassword(e.target.value)}
                     onFocus={() => setFocusedField('password')}
