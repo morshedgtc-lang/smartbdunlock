@@ -3,6 +3,7 @@
 import { Header } from '@/components/layout/Header'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GlassButton } from '@/components/ui/GlassButton'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { useApi } from '@/hooks/useApi'
 import { useToast } from '@/components/ui/Toast'
@@ -39,6 +40,8 @@ export default function ServicesPage() {
   const [customFields, setCustomFields] = useState<any[]>([])
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null)
+  const [confirmDeleteCat, setConfirmDeleteCat] = useState<{ id: string; name: string } | null>(null)
   const { toast } = useToast()
   const { data, loading, error, refetch } = useApi<any>({ url: '/api/services' })
   const { data: suppliersData } = useApi<any>({ url: '/api/suppliers' })
@@ -113,7 +116,12 @@ export default function ServicesPage() {
   }
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Delete service "${name}"? This will also remove all custom fields.`)) return
+    setConfirmDelete({ id, name })
+  }
+
+  const confirmDeleteService = async () => {
+    if (!confirmDelete) return
+    const { id } = confirmDelete
     setDeleting(id)
     try {
       const res = await fetch('/api/services', {
@@ -129,6 +137,7 @@ export default function ServicesPage() {
       toast('error', err.message)
     } finally {
       setDeleting(null)
+      setConfirmDelete(null)
     }
   }
 
@@ -180,6 +189,15 @@ export default function ServicesPage() {
 
   return (
     <div>
+      <ConfirmDialog
+        open={!!confirmDelete}
+        onClose={() => setConfirmDelete(null)}
+        onConfirm={confirmDeleteService}
+        title="Delete Service"
+        message={`Delete service "${confirmDelete?.name}"? This will also remove all custom fields. This action cannot be undone.`}
+        variant="danger"
+        loading={!!deleting}
+      />
       <Header title="Services" subtitle={`${allServices.length} services`} />
       <div className="p-6 space-y-6">
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
@@ -439,6 +457,7 @@ function CategoryModal({ categories, onClose, refetch, toast }: { categories: an
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState('')
   const [saving, setSaving] = useState(false)
+  const [confirmDeleteCat, setConfirmDeleteCat] = useState<{ id: string; name: string } | null>(null)
 
   const handleCreate = async () => {
     if (!newCatName.trim()) return
@@ -483,20 +502,35 @@ function CategoryModal({ categories, onClose, refetch, toast }: { categories: an
   }
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Delete category "${name}"?`)) return
+    setConfirmDeleteCat({ id, name })
+  }
+
+  const confirmDeleteCategory = async () => {
+    if (!confirmDeleteCat) return
     try {
-      const res = await fetch(`/api/service-categories?id=${id}`, { method: 'DELETE' })
+      const res = await fetch(`/api/service-categories?id=${confirmDeleteCat.id}`, { method: 'DELETE' })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       toast('success', 'Category deleted')
       refetch()
     } catch (err: any) {
       toast('error', err.message)
+    } finally {
+      setConfirmDeleteCat(null)
     }
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <ConfirmDialog
+        open={!!confirmDeleteCat}
+        onClose={() => setConfirmDeleteCat(null)}
+        onConfirm={confirmDeleteCategory}
+        title="Delete Category"
+        message={`Delete category "${confirmDeleteCat?.name}"? This will remove it from all services.`}
+        variant="danger"
+        loading={saving}
+      />
       <motion.div className="glass p-6 w-full max-w-md mx-4" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold text-[var(--foreground)]">Manage Categories</h3>

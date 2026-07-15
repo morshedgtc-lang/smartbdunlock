@@ -4,6 +4,7 @@ import { Header } from '@/components/layout/Header'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { StatusBadge } from '@/components/ui/StatusBadge'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useApi } from '@/hooks/useApi'
 import { useToast } from '@/components/ui/Toast'
 import { motion } from 'framer-motion'
@@ -19,6 +20,7 @@ export default function SuppliersPage() {
   const [form, setForm] = useState(emptySupplier)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null)
   const { toast } = useToast()
   const { data, loading, error, refetch } = useApi<any>({ url: '/api/suppliers' })
   const suppliers = data?.suppliers || []
@@ -64,13 +66,17 @@ export default function SuppliersPage() {
   }
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Delete supplier "${name}"?`)) return
-    setDeleting(id)
+    setConfirmDelete({ id, name })
+  }
+
+  const confirmDeleteSupplier = async () => {
+    if (!confirmDelete) return
+    setDeleting(confirmDelete.id)
     try {
       const res = await fetch('/api/suppliers', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id }),
+        body: JSON.stringify({ id: confirmDelete.id }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
@@ -80,6 +86,7 @@ export default function SuppliersPage() {
       toast('error', err.message)
     } finally {
       setDeleting(null)
+      setConfirmDelete(null)
     }
   }
 
@@ -108,6 +115,15 @@ export default function SuppliersPage() {
 
   return (
     <div>
+      <ConfirmDialog
+        open={!!confirmDelete}
+        onClose={() => setConfirmDelete(null)}
+        onConfirm={confirmDeleteSupplier}
+        title="Delete Supplier"
+        message={`Delete supplier "${confirmDelete?.name}"? This action cannot be undone.`}
+        variant="danger"
+        loading={!!deleting}
+      />
       <Header title="Suppliers" subtitle="Manage supplier connections" />
       <div className="p-6 space-y-6">
         <div className="flex justify-end">

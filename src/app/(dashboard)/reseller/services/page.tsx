@@ -4,6 +4,7 @@ import { Header } from '@/components/layout/Header'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { GlassDropdown, DropdownOption } from '@/components/ui/GlassDropdown'
+import { AlertModal } from '@/components/ui/ConfirmDialog'
 import { useApi } from '@/hooks/useApi'
 import { useToast } from '@/components/ui/Toast'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -36,6 +37,7 @@ export default function ClientServicesPage() {
   const [orderForm, setOrderForm] = useState({ notes: '' })
   const [customValues, setCustomValues] = useState<Record<string, string>>({})
   const [imeiCount, setImeiCount] = useState<Record<string, number>>({})
+  const [alertState, setAlertState] = useState<{ title: string; message: string } | null>(null)
   const { toast } = useToast()
   const { data, loading, error } = useApi<any>({ url: '/api/services' })
   const { data: catData } = useApi<any>({ url: '/api/service-categories' })
@@ -144,6 +146,13 @@ export default function ClientServicesPage() {
 
   return (
     <div>
+      <AlertModal
+        open={!!alertState}
+        onClose={() => setAlertState(null)}
+        title={alertState?.title || ''}
+        message={alertState?.message || ''}
+        variant="warning"
+      />
       <Header title="Services" subtitle={`${services.length} services available`} />
       <div className="p-6 space-y-6">
         {/* Filters */}
@@ -354,6 +363,7 @@ export default function ClientServicesPage() {
                         onChange={(val) => updateCustomValue(field.id, val)}
                         onImeiMultiChange={(val) => handleImeiMultiInput(field.id, val)}
                         imeiCount={imeiCount[field.id] || 0}
+                        onAlert={setAlertState}
                       />
                     ))}
                   </div>
@@ -399,12 +409,13 @@ export default function ClientServicesPage() {
   )
 }
 
-function CustomFieldInput({ field, value, onChange, onImeiMultiChange, imeiCount }: {
+function CustomFieldInput({ field, value, onChange, onImeiMultiChange, imeiCount, onAlert }: {
   field: any
   value: string
   onChange: (val: string) => void
   onImeiMultiChange: (val: string) => void
   imeiCount: number
+  onAlert?: (state: { title: string; message: string }) => void
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState<string | null>(null)
@@ -412,7 +423,7 @@ function CustomFieldInput({ field, value, onChange, onImeiMultiChange, imeiCount
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    if (file.size > 5 * 1024 * 1024) { alert('File must be less than 5MB'); return }
+    if (file.size > 5 * 1024 * 1024) { onAlert?.({ title: 'File Too Large', message: 'File must be less than 5MB.' }); return }
     const reader = new FileReader()
     reader.onloadend = () => {
       const base64 = reader.result as string

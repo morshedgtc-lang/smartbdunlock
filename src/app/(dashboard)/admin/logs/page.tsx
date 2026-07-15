@@ -3,6 +3,7 @@
 import { Header } from '@/components/layout/Header'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GlassButton } from '@/components/ui/GlassButton'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
 import { useApi } from '@/hooks/useApi'
 import { motion } from 'framer-motion'
@@ -22,6 +23,7 @@ export default function LogsPage() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [newLog, setNewLog] = useState({ level: 'info', message: '', source: '' })
   const [saving, setSaving] = useState(false)
+  const [confirmClear, setConfirmClear] = useState(false)
   const { toast } = useToast()
   const { data, loading, error, refetch } = useApi<any>({
     url: `/api/logs?limit=200${levelFilter !== 'ALL' ? `&level=${levelFilter}` : ''}${sourceFilter ? `&source=${sourceFilter}` : ''}`,
@@ -29,7 +31,11 @@ export default function LogsPage() {
   const logs = data?.logs || []
 
   const handleClearAll = async () => {
-    if (!confirm('Clear all logs? This cannot be undone.')) return
+    setConfirmClear(true)
+  }
+
+  const confirmClearLogs = async () => {
+    setConfirmClear(false)
     try {
       const res = await fetch('/api/logs', { method: 'DELETE' })
       if (!res.ok) throw new Error('Failed')
@@ -85,6 +91,15 @@ export default function LogsPage() {
 
   return (
     <div>
+      <ConfirmDialog
+        open={confirmClear}
+        onClose={() => setConfirmClear(false)}
+        onConfirm={confirmClearLogs}
+        title="Clear All Logs"
+        message="Clear all system logs? This action cannot be undone."
+        variant="danger"
+        confirmLabel="Clear All"
+      />
       <Header title="System Logs" subtitle={`${logs.length} entries`} />
       <div className="p-6 space-y-6">
         <motion.div className="glass p-4" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>

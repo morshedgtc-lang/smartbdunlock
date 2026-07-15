@@ -4,12 +4,13 @@ import { Header } from '@/components/layout/Header'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { StatusBadge } from '@/components/ui/StatusBadge'
+import { Modal } from '@/components/ui/Modal'
 import { useApi } from '@/hooks/useApi'
 import { useToast } from '@/components/ui/Toast'
 import { motion } from 'framer-motion'
-import { Search, Eye, Loader2, X } from 'lucide-react'
+import { Search, Eye, Loader2, Send, User, Smartphone, DollarSign, Clock, CheckCircle2, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 
 function renderCustomValue(value: string, fieldType?: string): string {
   if (!value) return '—'
@@ -34,13 +35,24 @@ function renderCustomValue(value: string, fieldType?: string): string {
   return value
 }
 
+const STATUS_OPTIONS = [
+  { value: 'pending', label: 'Pending', color: 'badge-warning' },
+  { value: 'processing', label: 'Processing', color: 'badge-info' },
+  { value: 'completed', label: 'Completed', color: 'badge-success' },
+  { value: 'failed', label: 'Failed', color: 'badge-danger' },
+  { value: 'cancelled', label: 'Cancelled', color: 'badge-danger' },
+]
+
 export default function OrdersPage() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [viewOrder, setViewOrder] = useState<any>(null)
-  const [updating, setUpdating] = useState<string | null>(null)
+  const [updating, setUpdating] = useState(false)
   const [replyText, setReplyText] = useState('')
   const [sendingReply, setSendingReply] = useState(false)
+  const [replySuccess, setReplySuccess] = useState(false)
+  const replyInputRef = useRef<HTMLTextAreaElement>(null)
+  const notesEndRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
   const { data, loading, error, refetch } = useApi<any>({ url: '/api/orders' })
   const allOrders = data?.orders || []
@@ -50,6 +62,19 @@ export default function OrdersPage() {
     const matchStatus = statusFilter === 'ALL' || o.status === statusFilter
     return matchSearch && matchStatus
   })
+
+  useEffect(() => {
+    if (viewOrder) {
+      setReplySuccess(false)
+      setReplyText('')
+    }
+  }, [viewOrder?.id])
+
+  useEffect(() => {
+    if (replySuccess) {
+      notesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [replySuccess])
 
   const sendReply = async (orderId: string) => {
     if (!replyText.trim()) return
@@ -62,10 +87,11 @@ export default function OrdersPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      toast('success', 'Reply sent')
       setReplyText('')
+      setReplySuccess(true)
       refetch()
-      setViewOrder({ ...viewOrder, notes: replyText })
+      setViewOrder((prev: any) => ({ ...prev, notes: replyText }))
+      toast('success', 'Reply sent successfully')
     } catch (err: any) {
       toast('error', err.message)
     } finally {
@@ -73,23 +99,24 @@ export default function OrdersPage() {
     }
   }
 
-  const updateStatus = async (orderId: string, newStatus: string) => {
-    setUpdating(orderId)
+  const updateStatus = async (newStatus: string) => {
+    if (!viewOrder) return
+    setUpdating(true)
     try {
       const res = await fetch('/api/orders', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: orderId, status: newStatus }),
+        body: JSON.stringify({ id: viewOrder.id, status: newStatus }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      toast('success', `Order status updated to ${newStatus}`)
+      toast('success', `Status updated to ${newStatus}`)
       refetch()
-      if (viewOrder?.id === orderId) setViewOrder({ ...viewOrder, status: newStatus })
+      setViewOrder((prev: any) => ({ ...prev, status: newStatus }))
     } catch (err: any) {
       toast('error', err.message)
     } finally {
-      setUpdating(null)
+      setUpdating(false)
     }
   }
 
@@ -128,88 +155,159 @@ export default function OrdersPage() {
             </div>
             <select className="glass-input w-auto" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
               <option value="ALL">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="processing">Processing</option>
-              <option value="completed">Completed</option>
-              <option value="failed">Failed</option>
-              <option value="cancelled">Cancelled</option>
+              {STATUS_OPTIONS.map(s => (
+                <option key={s.value} value={s.value}>{s.label}</option>
+              ))}
             </select>
           </div>
         </div>
 
         {/* Order Detail Modal */}
-        {viewOrder && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <motion.div className="glass p-6 w-full max-w-lg mx-4" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-[var(--foreground)]">Order {viewOrder.orderNumber}</h3>
-                <button onClick={() => setViewOrder(null)} className="text-[var(--muted)] hover:text-[var(--foreground)]"><X size={20} /></button>
+        <Modal
+          open={!!viewOrder}
+          onClose={() => setViewOrder(null)}
+          title={viewOrder ? `Order ${viewOrder.orderNumber}` : ''}
+          size="lg"
+        >
+          {viewOrder && (
+            <div className="space-y-5">
+              {/* Order Info Header */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="p-3 rounded-xl bg-white/5 border border-[var(--card-border)]">
+                  <div className="flex items-center gap-2 mb-1">
+                    <User size={13} className="text-[var(--accent)]" />
+                    <span className="text-xs text-[var(--muted)]">Client</span>
+                  </div>
+                  <p className="text-sm font-medium text-[var(--foreground)]">{viewOrder.user?.name || 'N/A'}</p>
+                  <p className="text-xs text-[var(--muted)]">{viewOrder.user?.email}</p>
+                </div>
+                <div className="p-3 rounded-xl bg-white/5 border border-[var(--card-border)]">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Smartphone size={13} className="text-[var(--accent)]" />
+                    <span className="text-xs text-[var(--muted)]">Service</span>
+                  </div>
+                  <p className="text-sm font-medium text-[var(--foreground)]">{viewOrder.service?.name}</p>
+                  <p className="text-xs text-[var(--muted)]">{viewOrder.service?.type}</p>
+                </div>
+                <div className="p-3 rounded-xl bg-white/5 border border-[var(--card-border)]">
+                  <div className="flex items-center gap-2 mb-1">
+                    <DollarSign size={13} className="text-[var(--accent)]" />
+                    <span className="text-xs text-[var(--muted)]">Price</span>
+                  </div>
+                  <p className="text-sm font-bold text-[var(--foreground)]">${viewOrder.sellingPrice?.toFixed(2)}</p>
+                  <p className="text-xs text-emerald-500">Profit: ${viewOrder.profit?.toFixed(2)}</p>
+                </div>
+                <div className="p-3 rounded-xl bg-white/5 border border-[var(--card-border)]">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Clock size={13} className="text-[var(--accent)]" />
+                    <span className="text-xs text-[var(--muted)]">Date</span>
+                  </div>
+                  <p className="text-sm font-medium text-[var(--foreground)]">{new Date(viewOrder.createdAt).toLocaleDateString()}</p>
+                  <p className="text-xs text-[var(--muted)]">{new Date(viewOrder.createdAt).toLocaleTimeString()}</p>
+                </div>
               </div>
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between"><span className="text-[var(--muted)]">Service</span><span className="text-[var(--foreground)]">{viewOrder.service?.name}</span></div>
-                <div className="flex justify-between"><span className="text-[var(--muted)]">User</span><span className="text-[var(--foreground)]">{viewOrder.user?.name}</span></div>
-                <div className="flex justify-between"><span className="text-[var(--muted)]">IMEI</span><span className="text-[var(--foreground)] font-mono">{viewOrder.imei || '—'}</span></div>
-                <div className="flex justify-between"><span className="text-[var(--muted)]">Device</span><span className="text-[var(--foreground)]">{viewOrder.deviceInfo || '—'}</span></div>
-                <div className="flex justify-between"><span className="text-[var(--muted)]">Cost</span><span className="text-[var(--foreground)]">${viewOrder.cost?.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span className="text-[var(--muted)]">Selling Price</span><span className="text-[var(--foreground)]">${viewOrder.sellingPrice?.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span className="text-[var(--muted)]">Profit</span><span className="text-green-500 font-bold">${viewOrder.profit?.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span className="text-[var(--muted)]">Status</span><StatusBadge status={viewOrder.status} /></div>
-                <div className="flex justify-between"><span className="text-[var(--muted)]">Date</span><span className="text-[var(--foreground)]">{new Date(viewOrder.createdAt).toLocaleString()}</span></div>
-                {viewOrder.notes && <div className="flex justify-between"><span className="text-[var(--muted)]">Notes</span><span className="text-[var(--foreground)]">{viewOrder.notes}</span></div>}
-                {viewOrder.customValues && viewOrder.customValues.length > 0 && (
-                  <div className="pt-2 border-t border-[var(--card-border)]">
-                    <p className="text-xs text-[var(--muted)] mb-2">Custom Field Values</p>
+
+              {/* Device & IMEI */}
+              {(viewOrder.imei || viewOrder.deviceInfo) && (
+                <div className="p-3 rounded-xl bg-white/5 border border-[var(--card-border)]">
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    {viewOrder.deviceInfo && (
+                      <div><span className="text-[var(--muted)]">Device: </span><span className="text-[var(--foreground)]">{viewOrder.deviceInfo}</span></div>
+                    )}
+                    {viewOrder.imei && (
+                      <div><span className="text-[var(--muted)]">IMEI: </span><span className="text-[var(--foreground)] font-mono">{viewOrder.imei}</span></div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Custom Field Values */}
+              {viewOrder.customValues && viewOrder.customValues.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-[var(--muted)] mb-2 uppercase tracking-wider">Order Details</p>
+                  <div className="space-y-1.5">
                     {viewOrder.customValues.map((cv: any) => (
-                      <div key={cv.id} className="flex justify-between py-1">
+                      <div key={cv.id} className="flex justify-between py-1.5 px-3 rounded-lg bg-white/3 text-sm">
                         <span className="text-[var(--muted)]">{cv.customField?.label}</span>
-                        <span className="text-[var(--foreground)] font-mono text-xs max-w-[200px] truncate">{renderCustomValue(cv.value, cv.customField?.fieldType)}</span>
+                        <span className="text-[var(--foreground)] font-mono text-xs max-w-[250px] truncate">{renderCustomValue(cv.value, cv.customField?.fieldType)}</span>
                       </div>
                     ))}
                   </div>
-                )}
+                </div>
+              )}
+
+              {/* Status Control */}
+              <div>
+                <p className="text-xs font-medium text-[var(--muted)] mb-2 uppercase tracking-wider">Update Status</p>
+                <div className="flex gap-2 flex-wrap">
+                  {STATUS_OPTIONS.map(s => (
+                    <GlassButton
+                      key={s.value}
+                      size="sm"
+                      variant={viewOrder.status === s.value ? 'primary' : 'secondary'}
+                      onClick={() => updateStatus(s.value)}
+                      disabled={updating || viewOrder.status === s.value}
+                    >
+                      {updating ? <Loader2 size={12} className="animate-spin" /> : null}
+                      {s.label}
+                    </GlassButton>
+                  ))}
+                </div>
               </div>
 
-              {/* Reply Note */}
-              <div className="mt-4 pt-4 border-t border-[var(--card-border)]">
-                <p className="text-xs text-[var(--muted)] mb-2">Reply / Add Note</p>
+              {/* Reply Section */}
+              <div className="border-t border-[var(--card-border)] pt-4">
+                <p className="text-xs font-medium text-[var(--muted)] mb-3 uppercase tracking-wider">Reply / Add Note</p>
+
+                {/* Existing notes */}
+                {viewOrder.notes && (
+                  <div className="mb-3 p-3 rounded-xl bg-white/5 border border-[var(--card-border)]">
+                    <p className="text-xs text-[var(--muted)] mb-1">Previous Note</p>
+                    <p className="text-sm text-[var(--foreground)] whitespace-pre-wrap">{viewOrder.notes}</p>
+                  </div>
+                )}
+
+                {/* Reply success feedback */}
+                {replySuccess && (
+                  <motion.div
+                    className="mb-3 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2"
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                  >
+                    <CheckCircle2 size={16} className="text-emerald-500 flex-shrink-0" />
+                    <span className="text-sm text-emerald-500 font-medium">Reply sent successfully</span>
+                  </motion.div>
+                )}
+
                 <textarea
+                  ref={replyInputRef}
                   className="glass-input w-full min-h-[80px] resize-y"
                   placeholder="Type your reply or note..."
                   value={replyText}
-                  onChange={e => setReplyText(e.target.value)}
+                  onChange={e => { setReplyText(e.target.value); setReplySuccess(false) }}
                 />
-                <div className="flex justify-end mt-2">
+                <div ref={notesEndRef} />
+                <div className="flex justify-between items-center mt-3">
+                  <GlassButton
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setViewOrder(null)}
+                  >
+                    <ArrowLeft size={14} /> Back to Orders
+                  </GlassButton>
                   <GlassButton
                     size="sm"
                     onClick={() => sendReply(viewOrder.id)}
                     disabled={sendingReply || !replyText.trim()}
                   >
-                    {sendingReply ? <Loader2 size={14} className="animate-spin" /> : null}
+                    {sendingReply ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
                     Send Reply
                   </GlassButton>
                 </div>
               </div>
-
-              <div className="mt-4 pt-4 border-t border-[var(--card-border)]">
-                <p className="text-xs text-[var(--muted)] mb-2">Update Status</p>
-                <div className="flex gap-2 flex-wrap">
-                  {['processing', 'completed', 'failed', 'cancelled'].map(status => (
-                    <GlassButton
-                      key={status}
-                      size="sm"
-                      variant={viewOrder.status === status ? 'primary' : 'secondary'}
-                      onClick={() => updateStatus(viewOrder.id, status)}
-                      disabled={updating === viewOrder.id || viewOrder.status === status}
-                    >
-                      {updating === viewOrder.id ? <Loader2 size={12} className="animate-spin" /> : null}
-                      {status.charAt(0).toUpperCase() + status.slice(1)}
-                    </GlassButton>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
+            </div>
+          )}
+        </Modal>
 
         <GlassCard padding="p-0">
           <div className="overflow-x-auto">
@@ -236,13 +334,18 @@ export default function OrdersPage() {
                     <td className="py-3 px-4"><StatusBadge status={order.status} /></td>
                     <td className="py-3 px-4 text-right font-medium text-[var(--foreground)]">${order.sellingPrice?.toFixed(2) || '0.00'}</td>
                     <td className="py-3 px-4 text-xs text-[var(--muted)]">{new Date(order.createdAt).toLocaleDateString()}</td>
-                    <td className="py-3 px-4">
-                      <button className="p-1.5 rounded-lg hover:bg-white/10 text-[var(--muted)] hover:text-[var(--foreground)] transition-colors" onClick={() => setViewOrder(order)}>
-                        <Eye size={14} />
-                      </button>
+                    <td className="py-3 px-4 text-right">
+                      <GlassButton size="sm" variant="ghost" onClick={() => setViewOrder(order)}>
+                        <Eye size={14} /> View
+                      </GlassButton>
                     </td>
                   </motion.tr>
                 ))}
+                {filtered.length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="py-12 text-center text-[var(--muted)]">No orders found</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

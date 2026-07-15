@@ -4,6 +4,7 @@ import { Header } from '@/components/layout/Header'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { StatusBadge } from '@/components/ui/StatusBadge'
+import { AlertModal } from '@/components/ui/ConfirmDialog'
 import { useApi } from '@/hooks/useApi'
 import { useToast } from '@/components/ui/Toast'
 import { motion } from 'framer-motion'
@@ -21,6 +22,7 @@ export default function ClientOrdersPage() {
   })
   const [customValues, setCustomValues] = useState<Record<string, string>>({})
   const [imeiCount, setImeiCount] = useState<Record<string, number>>({})
+  const [alertState, setAlertState] = useState<{ title: string; message: string } | null>(null)
   const { toast } = useToast()
   const { data, loading, error, refetch } = useApi<any>({ url: '/api/orders' })
   const { data: servicesData } = useApi<any>({ url: '/api/services' })
@@ -106,6 +108,13 @@ export default function ClientOrdersPage() {
 
   return (
     <div>
+      <AlertModal
+        open={!!alertState}
+        onClose={() => setAlertState(null)}
+        title={alertState?.title || ''}
+        message={alertState?.message || ''}
+        variant="warning"
+      />
       <Header title="My Orders" subtitle={`${allOrders.length} orders`} />
       <div className="p-6 space-y-6">
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
@@ -187,6 +196,7 @@ export default function ClientOrdersPage() {
                         onChange={(val) => updateCustomValue(field.id, val)}
                         onImeiMultiChange={(val) => handleImeiMultiInput(field.id, val)}
                         imeiCount={imeiCount[field.id] || 0}
+                        onAlert={setAlertState}
                       />
                     ))}
                   </div>
@@ -273,12 +283,13 @@ export default function ClientOrdersPage() {
   )
 }
 
-function CustomFieldInput({ field, value, onChange, onImeiMultiChange, imeiCount }: {
+function CustomFieldInput({ field, value, onChange, onImeiMultiChange, imeiCount, onAlert }: {
   field: any
   value: string
   onChange: (val: string) => void
   onImeiMultiChange: (val: string) => void
   imeiCount: number
+  onAlert?: (state: { title: string; message: string }) => void
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState<string | null>(null)
@@ -288,7 +299,7 @@ function CustomFieldInput({ field, value, onChange, onImeiMultiChange, imeiCount
     if (!file) return
 
     if (file.size > 5 * 1024 * 1024) {
-      alert('File must be less than 5MB')
+      onAlert?.({ title: 'File Too Large', message: 'File must be less than 5MB.' })
       return
     }
 
