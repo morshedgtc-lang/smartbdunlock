@@ -18,6 +18,8 @@ import {
   Smartphone,
   FileText,
   Shield,
+  Key,
+  BarChart3,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '@/lib/api'
@@ -29,9 +31,11 @@ const adminLinks = [
   { href: '/admin/orders', label: 'Orders', icon: ShoppingCart },
   { href: '/admin/suppliers', label: 'Suppliers', icon: Plug },
   { href: '/admin/wallet', label: 'Wallet', icon: Wallet },
+  { href: '/admin/reporting', label: 'Reporting', icon: BarChart3 },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
   { href: '/admin/logs', label: 'Logs', icon: FileText },
   { href: '/admin/audit', label: 'Audit Trail', icon: Shield },
+  { href: '/admin/api-keys', label: 'API Keys', icon: Key },
 ]
 
 const clientLinks = [

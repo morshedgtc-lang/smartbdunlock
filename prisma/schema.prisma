@@ -165,20 +165,55 @@ model Log {
 }
 
 model AuditLog {
-  id         String   @id @default(cuid())
-  userId     String?
-  userEmail  String?
-  action     String   // e.g., "user.create", "order.update", "login.success"
-  entityType String   // e.g., "user", "order", "service"
-  entityId   String?
-  oldValues  String?  // JSON stringified
-  newValues  String?  // JSON stringified
-  ip         String?
-  userAgent  String?
-  createdAt  DateTime @default(now())
+  id          String   @id @default(cuid())
+  userId      String?
+  userEmail   String?
+  action      String   // e.g., "user.create", "order.update", "login.success"
+  entityType  String   // e.g., "user", "order", "service"
+  entityId    String?
+  description String?  // human-readable description
+  module      String?  // e.g., "auth", "users", "services", "orders", "wallet", "security"
+  oldValues   String?  // JSON stringified
+  newValues   String?  // JSON stringified
+  ip          String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
 
   @@index([userId])
   @@index([entityType, entityId])
   @@index([action])
+  @@index([module])
   @@index([createdAt])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      String   @default("info") // info, success, warning, error
+  read      Boolean  @default(false)
+  link      String?  // optional link to navigate to
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+  @@index([createdAt])
+}
+
+model ApiKey {
+  id          String    @id @default(cuid())
+  name        String
+  keyHash     String    @unique // SHA-256 hash of the API key
+  keyPrefix   String    // first 8 chars for display (e.g., "sbdu_****")
+  userId      String    // owner (admin or client)
+  status      String    @default("active") // active, revoked
+  permissions String    @default("read")   // read, write, admin
+  requestLimit Int      @default(100)     // requests per minute
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([keyHash])
+  @@index([userId])
 }

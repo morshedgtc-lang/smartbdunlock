@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
 import { ordersQuerySchema, createOrderSchema, updateOrderSchema, validateBody, validateQuery } from '@/lib/validations'
 import { auditLog, getClientIp, getClientUserAgent } from '@/lib/audit'
+import { createOrderNotification, createWalletNotification } from '@/lib/notifications'
 
 export async function GET(request: Request) {
   try {
@@ -155,6 +156,8 @@ export async function POST(request: Request) {
             },
           })
 
+          await createWalletNotification(user.id, 'order_payment', service.sellingPrice, `Payment for ${service.name}`)
+
           for (const field of fields) {
             const rawValue = customFieldValues[field.id]
             if (rawValue === undefined || rawValue === null) continue
@@ -201,6 +204,14 @@ export async function POST(request: Request) {
       newValues: { serviceId, imei, orderNumber: orderResult?.orderNumber },
       ip: getClientIp(request),
       userAgent: getClientUserAgent(request),
+    })
+
+    await createOrderNotification({
+      id: orderResult?.id as string,
+      orderNumber: orderResult?.orderNumber as string,
+      status: 'pending',
+      serviceName: service.name,
+      userId: user.id,
     })
 
     return NextResponse.json(result, { status: 201 })
@@ -276,6 +287,8 @@ export async function PATCH(request: Request) {
             description: `Refund for ${order.orderNumber}`,
           },
         })
+
+        await createWalletNotification(order.userId, 'order_refund', order.sellingPrice, `Refund for ${order.orderNumber}`)
       }
 
       return tx.order.findUnique({
@@ -298,6 +311,16 @@ export async function PATCH(request: Request) {
       ip: getClientIp(request),
       userAgent: getClientUserAgent(request),
     })
+
+    if (status && status !== order.status) {
+      await createOrderNotification({
+        id,
+        orderNumber: order.orderNumber,
+        status: status as string,
+        serviceName: updated?.service?.name,
+        userId: order.userId,
+      })
+    }
 
     return NextResponse.json({
       ...updated,

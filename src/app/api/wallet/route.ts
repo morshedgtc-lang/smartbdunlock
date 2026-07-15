@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
 import { walletPostSchema, validateBody } from '@/lib/validations'
 import { auditLog, getClientIp, getClientUserAgent } from '@/lib/audit'
+import { createWalletNotification } from '@/lib/notifications'
 
 export async function GET() {
   try {
@@ -133,6 +134,13 @@ export async function POST(request: Request) {
       ip: getClientIp(request),
       userAgent: getClientUserAgent(request),
     })
+
+    if (type === 'transfer' && targetUserId) {
+      await createWalletNotification(user.id, 'transfer', amount, description)
+      await createWalletNotification(targetUserId, 'deposit', amount, description || 'Transfer received')
+    } else {
+      await createWalletNotification(user.id, type, amount, description || undefined)
+    }
 
     return NextResponse.json(result, { status: 201 })
   } catch (error: unknown) {
