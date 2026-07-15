@@ -7,7 +7,7 @@ import { auditLog, getClientIp, getClientUserAgent } from '@/lib/audit'
 
 export async function GET(request: Request) {
   try {
-    await requireAuth()
+    const user = await requireAuth()
     const { searchParams } = new URL(request.url)
     const validation = validateQuery(servicesQuerySchema, searchParams)
     if (!validation.success) {
@@ -16,6 +16,12 @@ export async function GET(request: Request) {
     const { search, type, status, categoryId, limit } = validation.data
 
     const where: Prisma.ServiceWhereInput = {}
+
+    if (user.role !== 'admin') {
+      where.clientVisible = true
+      where.status = 'active'
+    }
+
     if (search) {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
@@ -41,9 +47,10 @@ export async function GET(request: Request) {
     return NextResponse.json({
       services: services.map(s => ({
         ...s,
+        ...(user.role !== 'admin' ? { cost: undefined, supplierId: undefined, supplier: undefined } : {}),
         categoryName: s.category?.name,
-        supplierName: s.supplier?.name,
-        supplierStatus: s.supplier?.status,
+        supplierName: user.role === 'admin' ? s.supplier?.name : undefined,
+        supplierStatus: user.role === 'admin' ? s.supplier?.status : undefined,
         orderCount: s._count.orders,
         clientVisible: s.clientVisible,
       })),

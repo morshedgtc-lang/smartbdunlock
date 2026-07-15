@@ -7,12 +7,12 @@ This version has breaking changes — APIs, conventions, and file structure may 
 # SmartBD Unlock — Agent Instructions
 
 ## Project State
-GSM service reseller management platform. Dev server on localhost:3000.
+GSM service client management platform. Dev server on localhost:3000.
 
 ## Quick Start
 1. `npm run dev`
 2. Login: Admin `admin@smartbdunlock.com` / `admin123`
-3. Login: Reseller `reseller@smartbdunlock.com` / `reseller123`
+3. Login: Client `reseller@smartbdunlock.com` / `reseller123`
 
 ## Commands
 - `npm run dev` — dev server (Turbopack)
@@ -34,7 +34,7 @@ Build, lint, and typecheck all pass. No test suite exists — verify changes wit
 
 ### Route Structure
 - `src/app/(dashboard)/admin/` — Admin dashboard (protected, `requireAdmin()`)
-- `src/app/(dashboard)/reseller/` — Reseller dashboard (protected, `requireAuth()`)
+- `src/app/(dashboard)/reseller/` — Client dashboard (protected, `requireAuth()`)
 - `src/app/api/` — REST API endpoints (13 route groups)
 - `src/app/login/` — Login page
 - `src/app/page.tsx` — Public landing page
@@ -63,7 +63,7 @@ PostgreSQL. 10 models: User, ServiceCategory, Service, ServiceCustomField, Suppl
 
 ### Auth
 - JWT via `jose`, stored in httpOnly cookie `sb_session`
-- Two roles: `admin`, `reseller` (Customer role removed)
+- Two roles: `admin`, `reseller` (DB role stays `reseller`, UI label is "Client")
 - `requireAuth()` throws `Error('Unauthorized')`, `requireAdmin()` throws `Error('Forbidden')`
 - `getSession()` validates JWT, then checks DB for current role/status — auto-issues new JWT if stale
 - In dev, falls back to insecure JWT_SECRET if not set
@@ -71,7 +71,7 @@ PostgreSQL. 10 models: User, ServiceCategory, Service, ServiceCustomField, Suppl
 ### Key Conventions
 - Order statuses: `pending`, `processing`, `completed`, `failed`, `cancelled` (all lowercase)
 - StatusBadge component is case-insensitive (converts to lowercase internally)
-- Wallet: admin can deposit/transfer; reseller can view only
+- Wallet: admin can deposit/transfer; client can view only
 - Order reply notes saved to `notes` field via PATCH `/api/orders`
 - Audit logs track all CRUD actions across users, orders, services, suppliers, categories, wallet, and auth
 - Supplier API keys are masked in all responses (`••••••••`)
