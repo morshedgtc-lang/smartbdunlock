@@ -87,7 +87,7 @@ export async function POST(request: Request) {
             type: 'deposit',
             amount,
             balanceAfter: targetAfter!.walletBalance,
-            description: description || 'Transfer from reseller',
+            description: description || 'Transfer from client',
           },
         })
 

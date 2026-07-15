@@ -26,7 +26,7 @@ const FIELD_TYPES = [
   { value: 'serial_multi', label: 'Multi Serial Number' },
 ]
 
-const emptyService = { name: '', description: '', type: 'unlock', cost: '', sellingPrice: '', processingTime: '', supplierId: '', status: 'active', categoryId: '' }
+const emptyService = { name: '', description: '', type: 'unlock', cost: '', sellingPrice: '', processingTime: '', supplierId: '', status: 'active', categoryId: '', clientVisible: true }
 const emptyField = { fieldType: 'text', label: '', placeholder: '', options: '', required: false, visibleToClient: true }
 
 export default function ServicesPage() {
@@ -66,6 +66,7 @@ export default function ServicesPage() {
       supplierId: service.supplierId || '',
       status: service.status,
       categoryId: service.categoryId || '',
+      clientVisible: service.clientVisible !== false,
     })
     setCustomFields(
       (service.customFields || []).map((f: any) => ({
@@ -86,6 +87,7 @@ export default function ServicesPage() {
         sellingPrice: parseFloat(form.sellingPrice),
         supplierId: form.supplierId || undefined,
         categoryId: form.categoryId || undefined,
+        clientVisible: form.clientVisible,
         customFields: customFields.map((f, i) => ({
           ...f,
           options: f.options ? f.options.split('\n').filter(Boolean) : undefined,
@@ -241,6 +243,19 @@ export default function ServicesPage() {
                   </select>
                 </div>
 
+                <label className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-[var(--card-border)] cursor-pointer hover:bg-white/8 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={form.clientVisible}
+                    onChange={e => setForm({ ...form, clientVisible: e.target.checked })}
+                    className="w-4 h-4 rounded"
+                  />
+                  <div>
+                    <span className="text-sm font-medium text-[var(--foreground)]">Visible to Clients</span>
+                    <p className="text-xs text-[var(--muted)]">Toggle whether clients can see and order this service</p>
+                  </div>
+                </label>
+
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs text-[var(--muted)] mb-1">Cost Price ($)</label>
@@ -369,7 +384,12 @@ export default function ServicesPage() {
                       <span className="text-xs text-[var(--muted)]">{service.type}</span>
                     </div>
                   </div>
-                  <StatusBadge status={service.status} />
+                  <div className="flex items-center gap-2">
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${service.clientVisible !== false ? 'bg-emerald-500/10 text-emerald-400' : 'bg-gray-500/10 text-gray-400'}`}>
+                      {service.clientVisible !== false ? '👁 Visible' : '🙈 Hidden'}
+                    </span>
+                    <StatusBadge status={service.status} />
+                  </div>
                 </div>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">

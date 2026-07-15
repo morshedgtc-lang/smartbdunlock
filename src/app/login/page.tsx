@@ -87,7 +87,7 @@ export default function LoginPage() {
             <Smartphone size={28} className="text-white relative z-10" strokeWidth={1.8} />
           </div>
           <h1 className="text-3xl font-bold text-[var(--foreground)]">SmartBD Unlock</h1>
-          <p className="text-[var(--muted)] mt-1">GSM Service Reseller Platform</p>
+          <p className="text-[var(--muted)] mt-1">GSM Service Platform</p>
         </motion.div>
 
         {/* Liquid Glass Card */}

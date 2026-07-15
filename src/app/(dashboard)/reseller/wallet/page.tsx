@@ -8,7 +8,7 @@ import { motion } from 'framer-motion'
 import { Loader2, Wallet } from 'lucide-react'
 import Link from 'next/link'
 
-export default function ResellerWalletPage() {
+export default function ClientWalletPage() {
   const { data: walletData, loading: walletLoading, error: walletError } = useApi<any>({ url: '/api/wallet' })
 
   const balance = walletData?.balance ?? 0

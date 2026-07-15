@@ -45,6 +45,7 @@ export async function GET(request: Request) {
         supplierName: s.supplier?.name,
         supplierStatus: s.supplier?.status,
         orderCount: s._count.orders,
+        clientVisible: s.clientVisible,
       })),
     })
   } catch (error: unknown) {
@@ -64,7 +65,7 @@ export async function POST(request: Request) {
     if (!validation.success) {
       return NextResponse.json({ error: validation.error }, { status: 400 })
     }
-    const { name, description, type, cost, sellingPrice, processingTime, supplierId, status, categoryId, customFields } = validation.data
+    const { name, description, type, cost, sellingPrice, processingTime, supplierId, status, clientVisible, categoryId, customFields } = validation.data
 
     const service = await prisma.$transaction(async (tx) => {
       const s = await tx.service.create({
@@ -77,6 +78,7 @@ export async function POST(request: Request) {
           processingTime: processingTime || null,
           supplierId: supplierId || null,
           status: status || 'active',
+          clientVisible: clientVisible !== false,
           categoryId: categoryId || null,
         },
       })
@@ -135,7 +137,7 @@ export async function PATCH(request: Request) {
     const { id, customFields, ...rawUpdates } = validation.data
 
     const data: Record<string, unknown> = {}
-    for (const field of ['name', 'description', 'type', 'cost', 'sellingPrice', 'processingTime', 'status', 'categoryId', 'supplierId']) {
+    for (const field of ['name', 'description', 'type', 'cost', 'sellingPrice', 'processingTime', 'status', 'clientVisible', 'categoryId', 'supplierId']) {
       if (field in rawUpdates) data[field] = (rawUpdates as Record<string, unknown>)[field]
     }
 

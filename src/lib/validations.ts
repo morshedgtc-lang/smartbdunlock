@@ -54,6 +54,7 @@ export const createServiceSchema = z.object({
   processingTime: z.string().optional(),
   supplierId: z.string().optional(),
   status: z.enum(['active', 'inactive']).optional().default('active'),
+  clientVisible: z.boolean().optional().default(true),
   categoryId: z.string().optional(),
   customFields: z.array(customFieldInputSchema).optional(),
 })
@@ -67,6 +68,7 @@ export const updateServiceSchema = z.object({
   sellingPrice: z.number().min(0).optional(),
   processingTime: z.string().optional().nullable(),
   status: z.enum(['active', 'inactive']).optional(),
+  clientVisible: z.boolean().optional(),
   categoryId: z.string().optional().nullable(),
   supplierId: z.string().optional().nullable(),
   customFields: z.array(customFieldInputSchema).optional(),

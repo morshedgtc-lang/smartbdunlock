@@ -17,11 +17,11 @@ GSM service reseller management platform. Dev server on localhost:3000.
 ## Commands
 - `npm run dev` — dev server (Turbopack)
 - `npm run build` — production build (Turbopack)
-- `npm run lint` — ESLint (0 errors, ~126 warnings from `no-explicit-any`)
+- `npm run lint` — ESLint (0 errors, ~87 warnings from `no-explicit-any` in client components)
 - `npx prisma generate` — regenerate Prisma client after schema changes
 - `npx prisma db push` — sync schema to DB (dev only; prod uses `migrate deploy`)
 
-Build, lint, and typecheck all pass. No test suite exists.
+Build, lint, and typecheck all pass. No test suite exists — verify changes with `npm run build` and `npm run lint`.
 
 ## Stack
 - Next.js 16.2.10 (App Router, Turbopack), React 19, TypeScript 5
@@ -35,34 +35,37 @@ Build, lint, and typecheck all pass. No test suite exists.
 ### Route Structure
 - `src/app/(dashboard)/admin/` — Admin dashboard (protected, `requireAdmin()`)
 - `src/app/(dashboard)/reseller/` — Reseller dashboard (protected, `requireAuth()`)
-- `src/app/api/` — REST API endpoints (11 route groups)
+- `src/app/api/` — REST API endpoints (13 route groups)
 - `src/app/login/` — Login page
 - `src/app/page.tsx` — Public landing page
 
 ### API Endpoints
-`auth/login`, `auth/logout`, `auth/session`, `dashboard`, `health`, `logs`, `audit-logs`, `orders`, `services`, `service-categories`, `suppliers`, `users`, `wallet`
+`auth/login`, `auth/logout`, `auth/session`, `dashboard`, `health`, `logs`, `audit-logs`, `orders`, `services`, `service-categories`, `suppliers`, `users`, `wallet`, `upload`
 
 ### Key Lib Files
-- `src/lib/auth.ts` — JWT session management (`createSession`, `getSession`, `requireAuth`, `requireAdmin`)
-- `src/lib/prisma.ts` — Prisma singleton (global in dev to avoid connection exhaustion)
+- `src/lib/auth.ts` — JWT session management (`createSession`, `getSession`, `requireAuth`, `requireAdmin`). `getSession()` auto-refreshes JWT when DB role/name differs from token.
+- `src/lib/prisma.ts` — Prisma singleton (global in dev) + `withRetry()` for connection errors
 - `src/lib/validations.ts` — Zod schemas for all API inputs + `validateBody`/`validateQuery` helpers
 - `src/lib/audit.ts` — Audit logging utility (`auditLog`, `getClientIp`, `getClientUserAgent`)
-- `src/lib/api.tsx` — React context for auth (`AuthProvider`, `useAuth`)
+- `src/lib/api.tsx` — React context for auth (`AuthProvider`, `useAuth`, `ProtectedRoute`)
 - `src/lib/logger.ts` — DB-backed application logging
 
 ### Middleware (`src/middleware.ts`)
-- Rate limiting: 100 requests/minute per IP (in-memory map)
+- Rate limiting: 100 requests/minute per IP (in-memory map), returns `X-RateLimit-*` and `Retry-After` headers
+- CORS: same-origin only (validates `Origin` header matches `Host`)
 - Body size limit: 5MB on POST/PUT/PATCH
-- Security headers: HSTS, CSP, X-Frame-Options: DENY, etc.
+- Security headers: HSTS, CSP, X-Frame-Options: DENY, X-XSS-Protection, Referrer-Policy, Permissions-Policy, COOP
+- Crash protection: entire middleware wrapped in try/catch (won't kill all routes)
 - Applies to all routes except `_next/static`, `_next/image`, `favicon.ico`
 
 ## Database
-PostgreSQL. 9 models: User, ServiceCategory, Service, ServiceCustomField, Supplier, Order, OrderCustomFieldValue, Transaction, Log, AuditLog.
+PostgreSQL. 10 models: User, ServiceCategory, Service, ServiceCustomField, Supplier, Order, OrderCustomFieldValue, Transaction, Log, AuditLog.
 
 ### Auth
 - JWT via `jose`, stored in httpOnly cookie `sb_session`
 - Two roles: `admin`, `reseller` (Customer role removed)
 - `requireAuth()` throws `Error('Unauthorized')`, `requireAdmin()` throws `Error('Forbidden')`
+- `getSession()` validates JWT, then checks DB for current role/status — auto-issues new JWT if stale
 - In dev, falls back to insecure JWT_SECRET if not set
 
 ### Key Conventions
@@ -71,6 +74,7 @@ PostgreSQL. 9 models: User, ServiceCategory, Service, ServiceCustomField, Suppli
 - Wallet: admin can deposit/transfer; reseller can view only
 - Order reply notes saved to `notes` field via PATCH `/api/orders`
 - Audit logs track all CRUD actions across users, orders, services, suppliers, categories, wallet, and auth
+- Supplier API keys are masked in all responses (`••••••••`)
 
 ## Validation Pattern
 All API routes use Zod schemas from `src/lib/validations.ts`:
@@ -80,6 +84,12 @@ const result = validateBody(loginSchema, body)
 if (!result.success) return NextResponse.json({ error: result.error }, { status: 400 })
 ```
 Note: This project uses **Zod v4** which has different API from v3 (e.g., `z.enum()` takes a string message, not `{ errorMap }`).
+
+## Error Handling
+- All API routes use `catch (error: unknown)` with `instanceof Error` checks — never leak internal messages
+- `error.message === 'Unauthorized'` / `'Forbidden'` are the only safe strings to match on
+- Client-side: global `error.tsx` boundary, custom `not-found.tsx`, route-level `loading.tsx`
+- Prisma connection errors retry via `withRetry()` from `src/lib/prisma.ts`
 
 ## Deploy
 - Platform: Railway
@@ -92,6 +102,7 @@ Note: This project uses **Zod v4** which has different API from v3 (e.g., `z.enu
 - `@/*` path alias maps to `src/*`
 - `prisma.ts` uses global singleton pattern — don't create new PrismaClient instances elsewhere
 - Auth functions throw errors (not return responses) — catch them in route handlers
-- ESLint: `no-explicit-any` is `warn`, not `error` — `any` is used in several API routes for Prisma query `where` clauses
+- ESLint: `no-explicit-any` is `warn`, not `error` — client components still use `any` in `.map()` callbacks
 - No test suite — verify changes with `npm run build` and `npm run lint`
 - `.env*` files are gitignored — see `.env.example` for required vars (`DATABASE_URL`, `JWT_SECRET`)
+- Rate limiting is per-process (in-memory) — Railway scaling multiplies effective limit by instance count

@@ -11,7 +11,7 @@ import { Plus, Search, Loader2, X, Smartphone, Upload, AlertCircle } from 'lucid
 import Link from 'next/link'
 import { useState, useRef } from 'react'
 
-export default function ResellerOrdersPage() {
+export default function ClientOrdersPage() {
   const [search, setSearch] = useState('')
   const [showCreate, setShowCreate] = useState(false)
   const [creating, setCreating] = useState(false)

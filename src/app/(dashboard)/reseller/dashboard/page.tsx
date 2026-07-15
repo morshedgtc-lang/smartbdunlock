@@ -12,7 +12,7 @@ import { ShoppingCart, Wallet, TrendingUp, Loader2 } from 'lucide-react'
 const container = { animate: { transition: { staggerChildren: 0.08 } } }
 const item = { initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 } }
 
-export default function ResellerDashboard() {
+export default function ClientDashboard() {
   const { data: stats, loading: statsLoading, error: statsError } = useApi<any>({ url: '/api/dashboard' })
   const { data: ordersRes, loading: ordersLoading } = useApi<any>({ url: '/api/orders?limit=5' })
   const { data: walletData } = useApi<any>({ url: '/api/wallet' })
@@ -23,7 +23,7 @@ export default function ResellerDashboard() {
   if (statsLoading || ordersLoading) {
     return (
       <div>
-        <Header title="Reseller Dashboard" subtitle="Loading..." />
+        <Header title="Client Dashboard" subtitle="Loading..." />
         <div className="p-6 flex items-center justify-center py-20">
           <Loader2 size={32} className="animate-spin text-[var(--accent)]" />
         </div>
@@ -34,7 +34,7 @@ export default function ResellerDashboard() {
   if (statsError) {
     return (
       <div>
-        <Header title="Reseller Dashboard" />
+        <Header title="Client Dashboard" />
         <div className="p-6 flex flex-col items-center justify-center py-20 gap-4">
           <p className="text-red-400 text-sm">{statsError}</p>
           <Link href="/login" className="text-[var(--accent)] text-sm hover:underline">Go to Login</Link>
@@ -46,7 +46,7 @@ export default function ResellerDashboard() {
   const s = stats || { totalOrders: 0, pendingOrders: 0, completedToday: 0, revenueThisMonth: 0, totalServices: 0 }
   return (
     <div>
-      <Header title="Reseller Dashboard" subtitle="Welcome back, Master Reseller" />
+      <Header title="Client Dashboard" subtitle="Welcome back" />
       <div className="p-6 space-y-6">
         <motion.div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" variants={container} initial="initial" animate="animate">
           <motion.div variants={item}>

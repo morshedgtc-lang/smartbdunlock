@@ -46,6 +46,7 @@ model Service {
   sellingPrice   Float               @default(0)
   processingTime String?
   status         String              @default("active") // active, inactive
+  clientVisible  Boolean             @default(true)
   categoryId     String?
   category       ServiceCategory?    @relation(fields: [categoryId], references: [id])
   supplierId     String?

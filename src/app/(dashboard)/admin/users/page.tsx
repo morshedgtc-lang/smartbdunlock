@@ -13,7 +13,7 @@ import { useState } from 'react'
 
 const roleLabels: Record<string, string> = {
   admin: 'Admin',
-  reseller: 'Reseller',
+  reseller: 'Client',
 }
 
 export default function UsersPage() {
@@ -125,7 +125,7 @@ export default function UsersPage() {
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {[
             { label: 'Admins', count: allUsers.filter((u: any) => u.role === 'admin').length, color: 'text-blue-500' },
-            { label: 'Resellers', count: allUsers.filter((u: any) => u.role === 'reseller').length, color: 'text-purple-500' },
+            { label: 'Clients', count: allUsers.filter((u: any) => u.role === 'reseller').length, color: 'text-purple-500' },
             { label: 'Total Balance', count: `$${allUsers.reduce((sum: number, u: any) => sum + (u.walletBalance || 0), 0).toLocaleString()}`, color: 'text-amber-500' },
           ].map(s => (
             <div key={s.label} className="glass p-3 text-center">
@@ -154,7 +154,7 @@ export default function UsersPage() {
                 <input className="glass-input w-full" type="password" placeholder={editing ? 'New password (leave blank to keep)' : 'Password'} value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} required={!editing} minLength={8} />
                 <div className="grid grid-cols-2 gap-3">
                   <select className="glass-input" value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}>
-                    <option value="reseller">Reseller</option>
+                    <option value="reseller">Client</option>
                     <option value="admin">Admin</option>
                   </select>
                   <select className="glass-input" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>

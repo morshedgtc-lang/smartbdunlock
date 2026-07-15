@@ -10,10 +10,10 @@ import {
 
 const features = [
   { icon: Shield, title: 'Dynamic Services', desc: 'Admin creates any service with custom fields — IMEI, photo uploads, custom forms', color: 'from-blue-500 to-cyan-500' },
-  { icon: Zap, title: 'Instant Orders', desc: 'Reseller submits orders with auto-generated service-specific forms', color: 'from-purple-500 to-fuchsia-500' },
+  { icon: Zap, title: 'Instant Orders', desc: 'Clients submit orders with auto-generated service-specific forms', color: 'from-purple-500 to-fuchsia-500' },
   { icon: Globe, title: 'USDT Payments', desc: 'Secure wallet system with admin-approved deposits and real-time balance tracking', color: 'from-emerald-500 to-teal-500' },
   { icon: Lock, title: '7-Day Secure Links', desc: 'File uploads with automatic expiry and secure time-limited download URLs', color: 'from-amber-500 to-orange-500' },
-  { icon: Users, title: 'Role-Based Access', desc: 'Admin and Reseller panels with granular permissions and wallet management', color: 'from-rose-500 to-pink-500' },
+  { icon: Users, title: 'Role-Based Access', desc: 'Admin and Client panels with granular permissions and wallet management', color: 'from-rose-500 to-pink-500' },
   { icon: BarChart3, title: 'Live Dashboard', desc: 'Real-time analytics, revenue tracking, and order status monitoring', color: 'from-indigo-500 to-blue-500' },
 ];
 
@@ -24,7 +24,7 @@ const services = [
 ];
 
 const steps = [
-  { num: '01', title: 'Sign In', desc: 'Log in as a reseller and get instant access to the platform' },
+  { num: '01', title: 'Sign In', desc: 'Log in as a client and get instant access to the platform' },
   { num: '02', title: 'Fund Wallet', desc: 'Deposit USDT and get admin-approved balance for placing orders' },
   { num: '03', title: 'Place Orders', desc: 'Select a service, fill the dynamic form, and submit instantly' },
   { num: '04', title: 'Track Results', desc: 'Monitor order status in real-time and download results securely' },
@@ -141,7 +141,7 @@ export default function Home() {
               viewport={{ once: true }}
             >
               <h2 className="text-3xl md:text-4xl font-bold text-[var(--foreground)] mb-4">Everything You Need</h2>
-              <p className="text-[var(--muted)] max-w-lg mx-auto">A complete platform built for GSM service resellers with admin management.</p>
+              <p className="text-[var(--muted)] max-w-lg mx-auto">A complete platform built for GSM services with admin management and client access.</p>
             </motion.div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {features.map((f, i) => (
@@ -175,7 +175,7 @@ export default function Home() {
               viewport={{ once: true }}
             >
               <h2 className="text-3xl md:text-4xl font-bold text-[var(--foreground)] mb-4">Supported Services</h2>
-              <p className="text-[var(--muted)] max-w-lg mx-auto">Admin defines services with custom fields — resellers see auto-generated order forms.</p>
+              <p className="text-[var(--muted)] max-w-lg mx-auto">Admin defines services with custom fields — clients see auto-generated order forms.</p>
             </motion.div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {services.map((service, i) => (
@@ -226,7 +226,7 @@ export default function Home() {
               <div className="relative">
                 <h2 className="text-3xl md:text-4xl font-bold text-[var(--foreground)] mb-4">Ready to Get Started?</h2>
                 <p className="text-lg text-[var(--muted)] mb-8 max-w-xl mx-auto">
-                  Join hundreds of resellers using SmartBD Unlock for their mobile device unlocking services.
+                  Join hundreds of clients using SmartBD Unlock for their mobile device unlocking services.
                 </p>
                 <div className="flex items-center justify-center gap-4 flex-wrap">
                   <Link href="/login">

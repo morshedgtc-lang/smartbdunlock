@@ -133,7 +133,7 @@ export default function SuppliersPage() {
                   <select className="glass-input" value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}>
                     <option value="api">API</option>
                     <option value="manual">Manual</option>
-                    <option value="reseller">Reseller</option>
+                    <option value="reseller">Client</option>
                   </select>
                   <select className="glass-input" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
                     <option value="active">Active</option>

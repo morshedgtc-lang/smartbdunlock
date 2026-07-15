@@ -34,8 +34,9 @@ const adminLinks = [
   { href: '/admin/audit', label: 'Audit Trail', icon: Shield },
 ]
 
-const resellerLinks = [
+const clientLinks = [
   { href: '/reseller/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/reseller/services', label: 'Services', icon: Package },
   { href: '/reseller/orders', label: 'Orders', icon: ShoppingCart },
   { href: '/reseller/wallet', label: 'Wallet', icon: Wallet },
 ]
@@ -47,8 +48,8 @@ export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false)
 
   const role = pathname.startsWith('/admin') ? 'admin' : 'reseller'
-  const links = role === 'admin' ? adminLinks : resellerLinks
-  const userName = user?.name || (role === 'admin' ? 'Super Admin' : 'Reseller')
+  const links = role === 'admin' ? adminLinks : clientLinks
+  const userName = user?.name || (role === 'admin' ? 'Super Admin' : 'Client')
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' })

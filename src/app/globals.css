@@ -1157,3 +1157,19 @@ img[loading="lazy"]:not([src=""]) {
 .dropdown-mouse-glow {
   z-index: 1;
 }
+
+/* ============================================
+   SAFE AREA — iOS notch support
+   ============================================ */
+.safe-area-inset-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ============================================
+   HIDE SIDEBAR ON MOBILE (client bottom nav)
+   ============================================ */
+@media (max-width: 767px) {
+  .sidebar {
+    display: none;
+  }
+}

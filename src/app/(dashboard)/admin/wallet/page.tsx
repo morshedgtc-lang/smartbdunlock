@@ -98,7 +98,7 @@ export default function AdminWalletPage() {
               </div>
               <div className="flex gap-2">
                 <GlassButton size="sm" onClick={() => setShowModal('deposit')}><ArrowDownToLine size={16} /> Deposit</GlassButton>
-                <GlassButton size="sm" variant="secondary" onClick={() => setShowModal('transfer')}><Send size={16} /> Transfer to Reseller</GlassButton>
+                <GlassButton size="sm" variant="secondary" onClick={() => setShowModal('transfer')}><Send size={16} /> Transfer to Client</GlassButton>
               </div>
             </div>
           </GlassCard>
@@ -109,14 +109,14 @@ export default function AdminWalletPage() {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
             <motion.div className="glass p-6 w-full max-w-md mx-4" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-[var(--foreground)]">{showModal === 'deposit' ? 'Deposit Funds' : 'Transfer to Reseller'}</h3>
+                <h3 className="text-lg font-bold text-[var(--foreground)]">{showModal === 'deposit' ? 'Deposit Funds' : 'Transfer to Client'}</h3>
                 <button onClick={() => setShowModal(null)} className="text-[var(--muted)] hover:text-[var(--foreground)]"><X size={20} /></button>
               </div>
               <form onSubmit={handleTransaction} className="space-y-3">
                 {showModal === 'transfer' && (
                   <div>
-                    <label className="block text-xs text-[var(--muted)] mb-1">Reseller Email</label>
-                    <input className="glass-input w-full" type="email" placeholder="reseller@email.com" value={targetEmail} onChange={e => setTargetEmail(e.target.value)} required />
+                    <label className="block text-xs text-[var(--muted)] mb-1">Client Email</label>
+                    <input className="glass-input w-full" type="email" placeholder="client@email.com" value={targetEmail} onChange={e => setTargetEmail(e.target.value)} required />
                   </div>
                 )}
                 <div>
