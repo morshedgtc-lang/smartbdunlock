@@ -204,11 +204,11 @@ html {
 
 .glass-input:hover {
   border-color: rgba(99, 102, 241, 0.3);
-  background: rgba(255, 255, 255, 0.08);
+  background-color: rgba(255, 255, 255, 0.08);
 }
 
 .dark .glass-input:hover {
-  background: rgba(255, 255, 255, 0.07);
+  background-color: rgba(255, 255, 255, 0.07);
 }
 
 .glass-input:focus {
@@ -216,7 +216,7 @@ html {
   box-shadow:
     0 0 0 4px var(--accent-glow),
     0 0 20px rgba(99, 102, 241, 0.1);
-  background: var(--surface);
+  background-color: var(--surface);
 }
 
 .glass-input::placeholder {
@@ -779,7 +779,7 @@ img[loading="lazy"]:not([src=""]) {
   visibility: hidden;
   transform: translateY(-12px) scale(0.96);
   transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  z-index: 9999;
+  z-index: 50;
   box-shadow: 0 8px 32px rgba(0,0,0,0.12), 0 32px 80px rgba(0,0,0,0.08);
 }
 

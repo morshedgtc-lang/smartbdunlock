@@ -162,7 +162,7 @@ export function Dropdown({
         <AnimatePresence>
           {isOpen && (
             <motion.div
-              className={`absolute top-full mt-2 z-[9999] min-w-[200px] border rounded-xl shadow-xl py-1 ${alignClass} ${menuClassName}`}
+              className={`absolute top-full mt-2 z-50 min-w-[200px] border rounded-xl shadow-xl py-1 ${alignClass} ${menuClassName}`}
               style={{
                 background: 'var(--card-bg)',
                 backdropFilter: 'blur(20px) saturate(180%)',
