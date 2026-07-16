@@ -146,6 +146,13 @@ export function NotificationBell() {
     }
   }
 
+  const menuBg = {
+    background: 'var(--card-bg)',
+    backdropFilter: 'blur(20px) saturate(180%)',
+    WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+    borderColor: 'var(--card-border)',
+  }
+
   return (
     <div ref={wrapperRef} className="relative">
       <Dropdown
@@ -157,7 +164,10 @@ export function NotificationBell() {
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className="relative p-2 rounded-xl text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--accent)]/5 transition-colors cursor-pointer"
+          className="relative p-2 rounded-xl text-[var(--muted)] hover:text-[var(--foreground)] transition-colors cursor-pointer"
+          style={{ background: 'transparent' }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(99, 102, 241, 0.05)' }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
         >
           <Bell size={20} />
           {!connected && (
@@ -171,9 +181,12 @@ export function NotificationBell() {
         </button>
 
         {isOpen && (
-          <div className="absolute right-0 top-full mt-2 w-[380px] bg-white dark:bg-[#12121f] border border-[var(--card-border)] rounded-xl shadow-xl z-[9999]">
+          <div
+            className="absolute right-0 top-full mt-2 w-[380px] border rounded-xl shadow-xl z-[9999]"
+            style={menuBg}
+          >
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--card-border)]">
+            <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid var(--card-border)' }}>
               <span className="text-sm font-semibold text-[var(--foreground)]">
                 Notifications
                 {unreadCount > 0 && (
@@ -214,9 +227,17 @@ export function NotificationBell() {
                       }
                       setIsOpen(false)
                     }}
-                    className={`w-full text-left px-4 py-3 border-b border-[var(--card-border)] last:border-b-0 transition-colors hover:bg-[var(--accent)]/5 cursor-pointer ${
-                      !notification.read ? 'bg-[var(--accent)]/[0.04]' : ''
-                    }`}
+                    className="w-full text-left px-4 py-3 last:border-b-0 transition-colors cursor-pointer"
+                    style={{
+                      borderBottom: '1px solid var(--card-border)',
+                      background: !notification.read ? 'rgba(99, 102, 241, 0.04)' : 'transparent',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (notification.read) e.currentTarget.style.background = 'rgba(99, 102, 241, 0.05)'
+                    }}
+                    onMouseLeave={(e) => {
+                      if (notification.read) e.currentTarget.style.background = 'transparent'
+                    }}
                   >
                     <div className="flex items-start gap-3">
                       <span className={`mt-0.5 flex-shrink-0 w-2 h-2 rounded-full ${
@@ -236,7 +257,7 @@ export function NotificationBell() {
                         <p className="text-xs text-[var(--muted)] mt-0.5 line-clamp-2">
                           {notification.message}
                         </p>
-                        <span className="text-[10px] text-[var(--muted)]/60 mt-1 block">
+                        <span className="text-[10px] mt-1 block" style={{ color: 'var(--muted)', opacity: 0.6 }}>
                           {timeAgo(notification.createdAt)}
                         </span>
                       </div>

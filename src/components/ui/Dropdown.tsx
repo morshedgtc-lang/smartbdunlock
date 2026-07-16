@@ -134,10 +134,12 @@ export function Dropdown({
           className={`inline-flex items-center justify-between gap-2 rounded-xl border text-sm font-medium cursor-pointer transition-colors ${sizeClasses[size]} ${
             disabled ? 'opacity-50 cursor-not-allowed' : ''
           } ${
-            isOpen
-              ? 'bg-white border-[var(--accent)] shadow-sm dark:bg-[#12121f] dark:border-[var(--accent)]'
-              : 'bg-white/80 border-[var(--card-border)] hover:border-[var(--accent)]/30 dark:bg-white/5 dark:hover:border-[var(--accent)]/30'
+            isOpen ? 'border-[var(--accent)]' : 'border-[var(--card-border)] hover:border-[var(--accent)]/30'
           } ${triggerClassName}`}
+          style={{
+            background: isOpen ? 'var(--card-bg)' : 'var(--input-bg)',
+            color: 'var(--foreground)',
+          }}
           onClick={() => !disabled && setIsOpen(!isOpen)}
           disabled={disabled}
         >
@@ -159,7 +161,13 @@ export function Dropdown({
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            className={`absolute top-full mt-2 z-[9999] min-w-[200px] bg-white dark:bg-[#12121f] border border-[var(--card-border)] rounded-xl shadow-xl py-1 ${alignClass} ${menuClassName}`}
+            className={`absolute top-full mt-2 z-[9999] min-w-[200px] border rounded-xl shadow-xl py-1 ${alignClass} ${menuClassName}`}
+            style={{
+              background: 'var(--card-bg)',
+              backdropFilter: 'blur(20px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+              borderColor: 'var(--card-border)',
+            }}
             initial={{ opacity: 0, y: -4, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -4, scale: 0.97 }}
@@ -171,11 +179,26 @@ export function Dropdown({
                 type="button"
                 className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition-colors cursor-pointer ${
                   value === option.value
-                    ? 'text-[var(--accent)] bg-[var(--accent)]/5'
-                    : 'text-[var(--foreground)] hover:bg-[var(--accent)]/5'
+                    ? 'text-[var(--accent)]'
+                    : 'text-[var(--foreground)]'
                 } ${option.disabled ? 'opacity-40 cursor-not-allowed' : ''} ${
                   selectedIndex === idx ? 'bg-[var(--accent)]/5' : ''
                 }`}
+                style={{
+                  background: value === option.value || selectedIndex === idx
+                    ? 'rgba(99, 102, 241, 0.08)'
+                    : undefined,
+                }}
+                onMouseEnter={(e) => {
+                  if (value !== option.value && selectedIndex !== idx) {
+                    e.currentTarget.style.background = 'rgba(99, 102, 241, 0.05)'
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (value !== option.value && selectedIndex !== idx) {
+                    e.currentTarget.style.background = ''
+                  }
+                }}
                 onClick={() => handleSelect(option)}
                 disabled={option.disabled}
               >

@@ -36,6 +36,13 @@ export function ProfileDropdown() {
   const walletPath = user.role === 'admin' ? '/admin/wallet' : '/reseller/wallet'
   const roleLabel = user.role === 'admin' ? 'Admin' : 'Reseller'
 
+  const menuBg = {
+    background: 'var(--card-bg)',
+    backdropFilter: 'blur(20px) saturate(180%)',
+    WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+    borderColor: 'var(--card-border)',
+  }
+
   return (
     <>
       <Dropdown
@@ -52,9 +59,12 @@ export function ProfileDropdown() {
         </button>
 
         {open && (
-          <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-[#12121f] border border-[var(--card-border)] rounded-xl shadow-xl z-[9999]">
+          <div
+            className="absolute right-0 top-full mt-2 w-64 border rounded-xl shadow-xl z-[9999]"
+            style={menuBg}
+          >
             {/* Header */}
-            <div className="px-4 py-3 border-b border-[var(--card-border)]">
+            <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--card-border)' }}>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
                   {initial}
@@ -62,7 +72,7 @@ export function ProfileDropdown() {
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-[var(--foreground)] truncate">{user.name}</p>
                   <p className="text-xs text-[var(--muted)] truncate">{user.email}</p>
-                  <p className="text-xs text-indigo-400 font-medium">{roleLabel}</p>
+                  <p className="text-xs font-medium" style={{ color: 'var(--accent)' }}>{roleLabel}</p>
                 </div>
               </div>
             </div>
@@ -71,28 +81,40 @@ export function ProfileDropdown() {
             <div className="py-1">
               <button
                 onClick={() => { setOpen(false); router.push(dashboardPath) }}
-                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[var(--foreground)] hover:bg-[var(--accent)]/5 transition-colors cursor-pointer"
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[var(--foreground)] transition-colors cursor-pointer"
+                style={{ background: 'transparent' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(99, 102, 241, 0.05)' }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
               >
                 <User size={16} className="text-[var(--muted)]" />
                 My Profile
               </button>
               <button
                 onClick={() => { setOpen(false); router.push(walletPath) }}
-                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[var(--foreground)] hover:bg-[var(--accent)]/5 transition-colors cursor-pointer"
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[var(--foreground)] transition-colors cursor-pointer"
+                style={{ background: 'transparent' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(99, 102, 241, 0.05)' }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
               >
                 <Wallet size={16} className="text-[var(--muted)]" />
                 Wallet Balance
               </button>
               <button
                 onClick={() => { setOpen(false); setShowPasswordModal(true) }}
-                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[var(--foreground)] hover:bg-[var(--accent)]/5 transition-colors cursor-pointer"
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[var(--foreground)] transition-colors cursor-pointer"
+                style={{ background: 'transparent' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(99, 102, 241, 0.05)' }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
               >
                 <Lock size={16} className="text-[var(--muted)]" />
                 Change Password
               </button>
               <button
                 onClick={() => setOpen(false)}
-                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[var(--foreground)] hover:bg-[var(--accent)]/5 transition-colors cursor-pointer"
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[var(--foreground)] transition-colors cursor-pointer"
+                style={{ background: 'transparent' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(99, 102, 241, 0.05)' }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
               >
                 <Settings size={16} className="text-[var(--muted)]" />
                 Security Settings
@@ -100,11 +122,14 @@ export function ProfileDropdown() {
             </div>
 
             {/* Divider + Logout */}
-            <div className="border-t border-[var(--card-border)] py-1">
+            <div className="py-1" style={{ borderTop: '1px solid var(--card-border)' }}>
               <button
                 onClick={handleLogout}
                 disabled={loggingOut}
-                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/5 transition-colors cursor-pointer"
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 transition-colors cursor-pointer"
+                style={{ background: 'transparent' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.05)' }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
               >
                 <LogOut size={16} />
                 {loggingOut ? 'Logging out...' : 'Logout'}
