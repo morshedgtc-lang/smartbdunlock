@@ -109,7 +109,7 @@ export function useGlassEffect(options: GlassEffectOptions = {}): GlassEffectRet
         updateSVGFilters(x, y, distance)
       }
     })
-  }, [enableGlow, intensity, updateSVGFilters])
+  }, [enableGlow, updateSVGFilters])
 
   const handleMouseLeave = useCallback(() => {
     if (glowRef.current) {

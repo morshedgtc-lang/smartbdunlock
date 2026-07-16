@@ -12,6 +12,44 @@ import { Plus, Edit, Trash2, Search, Loader2, X, Package, Settings, GripVertical
 import Link from 'next/link'
 import { useState } from 'react'
 
+interface ServiceCustomField {
+  id?: string
+  fieldType: string
+  label: string
+  placeholder: string
+  options: string
+  required: boolean
+  visibleToClient: boolean
+}
+
+interface ServiceItem {
+  id: string
+  name: string
+  description?: string
+  type: string
+  cost: number
+  sellingPrice: number
+  processingTime?: string
+  status: string
+  supplierId?: string
+  categoryId?: string
+  clientVisible?: boolean
+  customFields?: ServiceCustomField[]
+  category?: { name: string }
+  supplier?: { name: string }
+}
+
+interface SupplierItem {
+  id: string
+  name: string
+}
+
+interface CategoryItem {
+  id: string
+  name: string
+  _count?: { services: number }
+}
+
 const FIELD_TYPES = [
   { value: 'text', label: 'Text' },
   { value: 'textarea', label: 'Textarea' },
@@ -35,29 +73,28 @@ export default function ServicesPage() {
   const [categoryFilter, setCategoryFilter] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [showCatModal, setShowCatModal] = useState(false)
-  const [editing, setEditing] = useState<any>(null)
+  const [editing, setEditing] = useState<ServiceItem | null>(null)
   const [form, setForm] = useState(emptyService)
-  const [customFields, setCustomFields] = useState<any[]>([])
+  const [customFields, setCustomFields] = useState<ServiceCustomField[]>([])
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null)
-  const [confirmDeleteCat, setConfirmDeleteCat] = useState<{ id: string; name: string } | null>(null)
   const { toast } = useToast()
-  const { data, loading, error, refetch } = useApi<any>({ url: '/api/services' })
-  const { data: suppliersData } = useApi<any>({ url: '/api/suppliers' })
-  const { data: catData, refetch: refetchCats } = useApi<any>({ url: '/api/service-categories' })
+  const { data, loading, error, refetch } = useApi<{ services: ServiceItem[] }>({ url: '/api/services' })
+  const { data: suppliersData } = useApi<{ suppliers: SupplierItem[] }>({ url: '/api/suppliers' })
+  const { data: catData, refetch: refetchCats } = useApi<{ categories: CategoryItem[] }>({ url: '/api/service-categories' })
   const allServices = data?.services || []
   const suppliers = suppliersData?.suppliers || []
   const categories = catData?.categories || []
 
-  const filtered = allServices.filter((s: any) => {
+  const filtered = allServices.filter((s: ServiceItem) => {
     const matchSearch = s.name.toLowerCase().includes(search.toLowerCase()) || s.type.toLowerCase().includes(search.toLowerCase())
     const matchCat = !categoryFilter || s.categoryId === categoryFilter
     return matchSearch && matchCat
   })
 
   const openCreate = () => { setEditing(null); setForm(emptyService); setCustomFields([]); setShowModal(true) }
-  const openEdit = (service: any) => {
+  const openEdit = (service: ServiceItem) => {
     setEditing(service)
     setForm({
       name: service.name,
@@ -72,7 +109,7 @@ export default function ServicesPage() {
       clientVisible: service.clientVisible !== false,
     })
     setCustomFields(
-      (service.customFields || []).map((f: any) => ({
+      (service.customFields || []).map((f: ServiceCustomField) => ({
         ...f,
         options: f.options ? (typeof f.options === 'string' ? f.options : JSON.stringify(f.options)) : '',
       }))
@@ -108,8 +145,8 @@ export default function ServicesPage() {
       toast('success', editing ? 'Service updated' : 'Service created')
       setShowModal(false)
       refetch()
-    } catch (err: any) {
-      toast('error', err.message)
+    } catch (err: unknown) {
+      toast('error', err instanceof Error ? err.message : 'Failed')
     } finally {
       setSaving(false)
     }
@@ -133,8 +170,8 @@ export default function ServicesPage() {
       if (!res.ok) throw new Error(data.error)
       toast('success', 'Service deleted')
       refetch()
-    } catch (err: any) {
-      toast('error', err.message)
+    } catch (err: unknown) {
+      toast('error', err instanceof Error ? err.message : 'Failed')
     } finally {
       setDeleting(null)
       setConfirmDelete(null)
@@ -145,7 +182,7 @@ export default function ServicesPage() {
     setCustomFields([...customFields, { ...emptyField, id: `new-${Date.now()}` }])
   }
 
-  const updateField = (index: number, data: any) => {
+  const updateField = (index: number, data: Partial<ServiceCustomField>) => {
     const updated = [...customFields]
     updated[index] = { ...updated[index], ...data }
     setCustomFields(updated)
@@ -208,8 +245,8 @@ export default function ServicesPage() {
             </div>
             <select className="glass-input w-auto" value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}>
               <option value="">All Categories</option>
-              {categories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+              {categories.map((c: CategoryItem) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
           </div>
           <div className="flex gap-2">
             <GlassButton size="sm" variant="secondary" onClick={() => setShowCatModal(true)}><Settings size={16} /> Categories</GlassButton>
@@ -241,7 +278,7 @@ export default function ServicesPage() {
                   <label className="block text-xs text-[var(--muted)] mb-1">Category</label>
                   <select className="glass-input w-full" value={form.categoryId} onChange={e => setForm({ ...form, categoryId: e.target.value })}>
                     <option value="">No Category</option>
-                    {categories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    {categories.map((c: CategoryItem) => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
 
@@ -289,7 +326,7 @@ export default function ServicesPage() {
                   <input className="glass-input w-full" placeholder="Processing time (e.g. 24-48 hours)" value={form.processingTime} onChange={e => setForm({ ...form, processingTime: e.target.value })} />
                   <select className="glass-input w-full" value={form.supplierId} onChange={e => setForm({ ...form, supplierId: e.target.value })}>
                     <option value="">No supplier</option>
-                    {suppliers.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    {suppliers.map((s: SupplierItem) => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                 </div>
 
@@ -389,7 +426,7 @@ export default function ServicesPage() {
 
         {/* Service Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filtered.map((service: any, i: number) => (
+          {filtered.map((service: ServiceItem, i: number) => (
             <motion.div key={service.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
               <GlassCard className="h-full">
                 <div className="flex items-start justify-between mb-3">
@@ -452,7 +489,7 @@ export default function ServicesPage() {
   )
 }
 
-function CategoryModal({ categories, onClose, refetch, toast }: { categories: any[]; onClose: () => void; refetch: () => void; toast: any }) {
+function CategoryModal({ categories, onClose, refetch, toast }: { categories: CategoryItem[]; onClose: () => void; refetch: () => void; toast: (type: 'success' | 'error' | 'warning' | 'info', message: string, duration?: number) => void }) {
   const [newCatName, setNewCatName] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState('')
@@ -473,8 +510,8 @@ function CategoryModal({ categories, onClose, refetch, toast }: { categories: an
       toast('success', 'Category created')
       setNewCatName('')
       refetch()
-    } catch (err: any) {
-      toast('error', err.message)
+    } catch (err: unknown) {
+      toast('error', err instanceof Error ? err.message : 'Failed')
     } finally {
       setSaving(false)
     }
@@ -494,8 +531,8 @@ function CategoryModal({ categories, onClose, refetch, toast }: { categories: an
       toast('success', 'Category updated')
       setEditingId(null)
       refetch()
-    } catch (err: any) {
-      toast('error', err.message)
+    } catch (err: unknown) {
+      toast('error', err instanceof Error ? err.message : 'Failed')
     } finally {
       setSaving(false)
     }
@@ -513,8 +550,8 @@ function CategoryModal({ categories, onClose, refetch, toast }: { categories: an
       if (!res.ok) throw new Error(data.error)
       toast('success', 'Category deleted')
       refetch()
-    } catch (err: any) {
-      toast('error', err.message)
+    } catch (err: unknown) {
+      toast('error', err instanceof Error ? err.message : 'Failed')
     } finally {
       setConfirmDeleteCat(null)
     }
@@ -545,7 +582,7 @@ function CategoryModal({ categories, onClose, refetch, toast }: { categories: an
         </div>
 
         <div className="space-y-2 max-h-80 overflow-y-auto">
-          {categories.map((cat: any) => (
+          {categories.map((cat: CategoryItem) => (
             <div key={cat.id} className="flex items-center justify-between p-3 rounded-xl bg-white/5">
               {editingId === cat.id ? (
                 <input className="glass-input flex-1 mr-2 text-sm" value={editingName} onChange={e => setEditingName(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleUpdate(cat.id)} autoFocus />

@@ -8,8 +8,17 @@ import { motion } from 'framer-motion'
 import { Loader2, Wallet } from 'lucide-react'
 import Link from 'next/link'
 
+interface TransactionItem {
+  id: string
+  type: string
+  description?: string
+  amount: number
+  balanceAfter?: number
+  createdAt: string
+}
+
 export default function ClientWalletPage() {
-  const { data: walletData, loading: walletLoading, error: walletError } = useApi<any>({ url: '/api/wallet' })
+  const { data: walletData, loading: walletLoading, error: walletError } = useApi<{ balance: number; transactions: TransactionItem[] }>({ url: '/api/wallet' })
 
   const balance = walletData?.balance ?? 0
   const transactions = walletData?.transactions || []
@@ -79,7 +88,7 @@ export default function ClientWalletPage() {
                     </td>
                   </tr>
                 ) : (
-                  transactions.map((txn: any, i: number) => (
+                  transactions.map((txn: TransactionItem, i: number) => (
                     <motion.tr key={txn.id} className="border-b border-[var(--card-border)] hover:bg-white/5 dark:hover:bg-white/5" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}>
                       <td className="py-3 px-4"><StatusBadge status={txn.type} /></td>
                       <td className="py-3 px-4 text-[var(--foreground)]">{txn.description || '—'}</td>

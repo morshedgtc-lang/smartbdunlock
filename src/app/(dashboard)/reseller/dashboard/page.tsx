@@ -7,12 +7,38 @@ import { useApi } from '@/hooks/useApi'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import {
-  ShoppingCart, Wallet, TrendingUp, Loader2, Package,
-  CheckCircle2, Clock, ArrowRight, Zap, CreditCard,
+  ShoppingCart, Wallet, Loader2, Package,
+  CheckCircle2, Clock, ArrowRight, CreditCard,
 } from 'lucide-react'
 
 const container = { animate: { transition: { staggerChildren: 0.08 } } }
 const item = { initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 } }
+
+interface DashboardStats {
+  totalOrders: number
+  pendingOrders: number
+  completedToday: number
+  revenueThisMonth: number
+}
+
+interface OrderItem {
+  id: string
+  orderNumber: string
+  status: string
+  sellingPrice: number
+  service?: { name: string }
+}
+
+interface WalletData {
+  balance: number
+}
+
+interface ServiceItem {
+  id: string
+  name: string
+  status: string
+  clientVisible?: boolean
+}
 
 const QUICK_ACTIONS = [
   { label: 'Browse Services', href: '/reseller/services', icon: Package, gradient: 'from-indigo-500 to-purple-500', shadow: 'shadow-indigo-500/20' },
@@ -22,15 +48,15 @@ const QUICK_ACTIONS = [
 ]
 
 export default function ClientDashboard() {
-  const { data: stats, loading: statsLoading, error: statsError } = useApi<any>({ url: '/api/dashboard' })
-  const { data: ordersRes, loading: ordersLoading } = useApi<any>({ url: '/api/orders?limit=5' })
-  const { data: walletData } = useApi<any>({ url: '/api/wallet' })
-  const { data: servicesData } = useApi<any>({ url: '/api/services' })
+  const { data: stats, loading: statsLoading, error: statsError } = useApi<DashboardStats>({ url: '/api/dashboard' })
+  const { data: ordersRes, loading: ordersLoading } = useApi<{ orders: OrderItem[] }>({ url: '/api/orders?limit=5' })
+  const { data: walletData } = useApi<WalletData>({ url: '/api/wallet' })
+  const { data: servicesData } = useApi<{ services: ServiceItem[] }>({ url: '/api/services' })
 
   const recentOrders = ordersRes?.orders || []
   const balance = walletData?.balance ?? 0
   const allServices = servicesData?.services || []
-  const activeServices = allServices.filter((s: any) => s.status === 'active' && s.clientVisible !== false).length
+  const activeServices = allServices.filter((s: ServiceItem) => s.status === 'active' && s.clientVisible !== false).length
 
   if (statsLoading || ordersLoading) {
     return (
@@ -105,7 +131,7 @@ export default function ClientDashboard() {
                     <Link href="/reseller/services" className="text-xs text-[var(--accent)] hover:underline mt-1 inline-block">Browse Services</Link>
                   </div>
                 ) : (
-                  recentOrders.map((order: any) => (
+                  recentOrders.map((order: OrderItem) => (
                     <div key={order.id} className="flex items-center justify-between px-6 py-3.5 hover:bg-white/5 transition-colors">
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center flex-shrink-0">

@@ -25,6 +25,9 @@ export const updateOrderSchema = z.object({
   status: z.enum(['pending', 'processing', 'completed', 'failed', 'cancelled']).optional(),
   notes: z.string().optional(),
   result: z.string().optional(),
+  priority: z.enum(['low', 'normal', 'high', 'urgent']).optional(),
+  assignedTo: z.string().optional().nullable(),
+  internalNotes: z.string().optional(),
 })
 
 export const servicesQuerySchema = z.object({

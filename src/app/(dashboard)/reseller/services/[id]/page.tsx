@@ -25,16 +25,43 @@ const TYPE_COLORS: Record<string, string> = {
   imei: 'from-blue-500 to-cyan-500',
 }
 
+interface ServiceCustomField {
+  id: string
+  fieldType: string
+  label: string
+  placeholder?: string
+  options?: string | string[]
+  required: boolean
+  visibleToClient: boolean
+}
+
+interface ServiceItem {
+  id: string
+  name: string
+  description?: string
+  type: string
+  sellingPrice: number
+  cost: number
+  processingTime?: string
+  status: string
+  categoryName?: string
+  customFields?: ServiceCustomField[]
+}
+
+interface WalletData {
+  balance: number
+}
+
 export default function ServiceDetailPage() {
   const params = useParams()
   const router = useRouter()
   const serviceId = params?.id as string
   const { toast } = useToast()
 
-  const { data, loading, error } = useApi<any>({ url: `/api/services` })
-  const { data: walletData } = useApi<any>({ url: '/api/wallet' })
+  const { data, loading, error } = useApi<{ services: ServiceItem[] }>({ url: `/api/services` })
+  const { data: walletData } = useApi<WalletData>({ url: '/api/wallet' })
 
-  const service = data?.services?.find((s: any) => s.id === serviceId)
+  const service = data?.services?.find((s: ServiceItem) => s.id === serviceId)
   const balance = walletData?.balance ?? 0
 
   const [showOrderForm, setShowOrderForm] = useState(false)
@@ -44,10 +71,8 @@ export default function ServiceDetailPage() {
   const [imeiCount, setImeiCount] = useState<Record<string, number>>({})
   const [alertState, setAlertState] = useState<{ title: string; message: string } | null>(null)
 
-  const customFields = service?.customFields?.filter((f: any) => f.visibleToClient) || []
+  const customFields = service?.customFields?.filter((f: ServiceCustomField) => f.visibleToClient) || []
   const hasBalance = balance >= (service?.sellingPrice || 0)
-  const typeColor = TYPE_COLORS[service?.type] || TYPE_COLORS.unlock
-  const typeIcon = TYPE_ICONS[service?.type] || '📦'
 
   if (loading) {
     return (
@@ -72,11 +97,14 @@ export default function ServiceDetailPage() {
     )
   }
 
+  const typeColor = TYPE_COLORS[service.type] || TYPE_COLORS.unlock
+  const typeIcon = TYPE_ICONS[service.type] || '📦'
+
   const handleCreateOrder = async (e: React.FormEvent) => {
     e.preventDefault()
     setCreating(true)
     try {
-      const body: any = {
+      const body: { serviceId: string; notes?: string; customFieldValues: Record<string, string> } = {
         serviceId: service.id,
         notes: orderForm.notes || undefined,
         customFieldValues: customValues,
@@ -91,8 +119,8 @@ export default function ServiceDetailPage() {
       toast('success', `Order ${data.orderNumber} created successfully!`)
       setShowOrderForm(false)
       router.push('/reseller/orders')
-    } catch (err: any) {
-      toast('error', err.message)
+    } catch (err: unknown) {
+      toast('error', err instanceof Error ? err.message : 'Failed')
     } finally {
       setCreating(false)
     }
@@ -193,7 +221,7 @@ export default function ServiceDetailPage() {
                 Required Information
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {customFields.map((field: any) => {
+                {customFields.map((field: ServiceCustomField) => {
                   const fieldIcons: Record<string, string> = {
                     imei_single: '📱', imei_multi: '📱', serial_single: '🔢', serial_multi: '🔢',
                     image: '📷', file: '📎', text: '📝', textarea: '📝', number: '🔢',
@@ -262,7 +290,7 @@ export default function ServiceDetailPage() {
                       <CheckCircle2 size={14} className="text-[var(--accent)]" />
                       Required Information
                     </p>
-                    {customFields.map((field: any) => (
+                    {customFields.map((field: ServiceCustomField) => (
                       <CustomFieldInput
                         key={field.id}
                         field={field}
@@ -312,7 +340,7 @@ export default function ServiceDetailPage() {
 }
 
 function CustomFieldInput({ field, value, onChange, onImeiMultiChange, imeiCount, onAlert }: {
-  field: any
+  field: ServiceCustomField
   value: string
   onChange: (val: string) => void
   onImeiMultiChange: (val: string) => void
@@ -418,6 +446,7 @@ function CustomFieldInput({ field, value, onChange, onImeiMultiChange, imeiCount
           <div className="border-2 border-dashed border-[var(--card-border)] rounded-xl p-6 text-center cursor-pointer hover:border-[var(--accent)] transition-colors" onClick={() => fileInputRef.current?.click()}>
             {preview && field.fieldType === 'image' ? (
               <div className="relative inline-block">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={preview} alt="Preview" className="max-h-32 rounded-lg" />
                 <button type="button" onClick={(e) => { e.stopPropagation(); setPreview(null); onChange('') }} className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center">
                   <X size={12} />

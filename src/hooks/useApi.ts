@@ -34,7 +34,7 @@ async function checkSession(): Promise<boolean> {
   return sessionCachedValid
 }
 
-export function useApi<T = any>({ url, method = 'GET', body, enabled, initialData }: UseApiOptions<T>): UseApiResult<T> {
+export function useApi<T = Record<string, unknown>>({ url, method = 'GET', body, enabled, initialData }: UseApiOptions<T>): UseApiResult<T> {
   const shouldFetch = enabled ?? method === 'GET'
   const [data, setData] = useState<T | null>(initialData ?? null)
   const [loading, setLoading] = useState(shouldFetch)
@@ -106,7 +106,7 @@ export function useApi<T = any>({ url, method = 'GET', body, enabled, initialDat
     doFetch(0)
 
     return () => { cancelled = true }
-  }, [url, method, trigger, shouldFetch])
+  }, [url, method, trigger, shouldFetch]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return { data, loading, error, refetch }
 }

@@ -8,7 +8,7 @@ import { AlertModal } from '@/components/ui/ConfirmDialog'
 import { useApi } from '@/hooks/useApi'
 import { useToast } from '@/components/ui/Toast'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Search, Loader2, X, Smartphone, Upload, AlertCircle, ArrowRight, Package, Clock, ChevronDown, ChevronUp } from 'lucide-react'
+import { Plus, Search, Loader2, X, Smartphone, Upload, AlertCircle, ArrowRight, Package, ChevronDown, ChevronUp } from 'lucide-react'
 import Link from 'next/link'
 import { useState, useRef } from 'react'
 
@@ -16,6 +16,46 @@ const STATUS_STEPS = ['pending', 'processing', 'completed']
 const STATUS_COLORS: Record<string, string> = {
   pending: 'bg-amber-500', processing: 'bg-blue-500', completed: 'bg-green-500',
   failed: 'bg-red-500', cancelled: 'bg-gray-500',
+}
+
+interface ServiceItem {
+  id: string
+  name: string
+  status: string
+  cost: number
+  sellingPrice: number
+  processingTime?: string
+  type: string
+  customFields?: CustomField[]
+}
+
+interface CustomField {
+  id: string
+  fieldType: string
+  label: string
+  placeholder?: string
+  options?: string | string[]
+  required: boolean
+  visibleToClient: boolean
+}
+
+interface OrderItem {
+  id: string
+  orderNumber: string
+  status: string
+  imei?: string
+  deviceInfo?: string
+  sellingPrice?: number
+  createdAt: string
+  notes?: string
+  result?: string
+  processingTime?: string
+  completedAt?: string
+  service?: { name: string }
+}
+
+interface WalletData {
+  balance: number
 }
 
 export default function ClientOrdersPage() {
@@ -28,26 +68,26 @@ export default function ClientOrdersPage() {
   const [imeiCount, setImeiCount] = useState<Record<string, number>>({})
   const [alertState, setAlertState] = useState<{ title: string; message: string } | null>(null)
   const { toast } = useToast()
-  const { data, loading, error, refetch } = useApi<any>({ url: '/api/orders' })
-  const { data: servicesData } = useApi<any>({ url: '/api/services' })
-  const { data: walletData } = useApi<any>({ url: '/api/wallet' })
+  const { data, loading, error, refetch } = useApi<{ orders: OrderItem[] }>({ url: '/api/orders' })
+  const { data: servicesData } = useApi<{ services: ServiceItem[] }>({ url: '/api/services' })
+  const { data: walletData } = useApi<WalletData>({ url: '/api/wallet' })
   const allOrders = data?.orders || []
   const services = servicesData?.services || []
   const balance = walletData?.balance ?? 0
 
-  const filtered = allOrders.filter((o: any) =>
+  const filtered = allOrders.filter((o: OrderItem) =>
     o.orderNumber.toLowerCase().includes(search.toLowerCase()) || o.imei?.toLowerCase().includes(search.toLowerCase()) || o.service?.name?.toLowerCase().includes(search.toLowerCase())
   )
 
-  const selectedService = services.find((s: any) => s.id === orderForm.serviceId)
-  const customFields = selectedService?.customFields?.filter((f: any) => f.visibleToClient) || []
+  const selectedService = services.find((s: ServiceItem) => s.id === orderForm.serviceId)
+  const customFields = selectedService?.customFields?.filter((f: CustomField) => f.visibleToClient) || []
 
   const handleCreateOrder = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!orderForm.serviceId) { toast('error', 'Please select a service'); return }
     setCreating(true)
     try {
-      const body: any = { serviceId: orderForm.serviceId, notes: orderForm.notes || undefined, customFieldValues: customValues }
+      const body: { serviceId: string; notes?: string; customFieldValues: Record<string, string> } = { serviceId: orderForm.serviceId, notes: orderForm.notes || undefined, customFieldValues: customValues }
       const res = await fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
@@ -57,7 +97,7 @@ export default function ClientOrdersPage() {
       setCustomValues({})
       setImeiCount({})
       refetch()
-    } catch (err: any) { toast('error', err.message) } finally { setCreating(false) }
+    } catch (err: unknown) { toast('error', err instanceof Error ? err.message : 'Failed') } finally { setCreating(false) }
   }
 
   const updateCustomValue = (fieldId: string, value: string) => setCustomValues(prev => ({ ...prev, [fieldId]: value }))
@@ -129,7 +169,7 @@ export default function ClientOrdersPage() {
                   <label className="block text-sm font-medium text-[var(--foreground)] mb-1.5">Service *</label>
                   <select className="glass-input w-full" value={orderForm.serviceId} onChange={e => { setOrderForm({ ...orderForm, serviceId: e.target.value }); setCustomValues({}); setImeiCount({}) }} required>
                     <option value="">Select a service...</option>
-                    {services.filter((s: any) => s.status === 'active').map((service: any) => (
+                    {services.filter((s: ServiceItem) => s.status === 'active').map((service: ServiceItem) => (
                       <option key={service.id} value={service.id}>{service.name} — ${service.sellingPrice} ({service.processingTime || 'N/A'})</option>
                     ))}
                   </select>
@@ -151,7 +191,7 @@ export default function ClientOrdersPage() {
                 {customFields.length > 0 && (
                   <div className="space-y-4 border-t border-[var(--card-border)] pt-4">
                     <p className="text-sm font-medium text-[var(--foreground)]">Required Information</p>
-                    {customFields.map((field: any) => (
+                    {customFields.map((field: CustomField) => (
                       <CustomFieldInput key={field.id} field={field} value={customValues[field.id] || ''} onChange={(val) => updateCustomValue(field.id, val)} onImeiMultiChange={(val) => handleImeiMultiInput(field.id, val)} imeiCount={imeiCount[field.id] || 0} onAlert={setAlertState} />
                     ))}
                   </div>
@@ -192,7 +232,7 @@ export default function ClientOrdersPage() {
         ) : (
           <div className="space-y-4">
             <AnimatePresence>
-              {filtered.map((order: any, i: number) => {
+              {filtered.map((order: OrderItem, i: number) => {
                 const isExpanded = expandedOrder === order.id
                 const currentStep = STATUS_STEPS.indexOf(order.status)
                 const isTerminal = order.status === 'failed' || order.status === 'cancelled'
@@ -329,7 +369,7 @@ export default function ClientOrdersPage() {
 }
 
 function CustomFieldInput({ field, value, onChange, onImeiMultiChange, imeiCount, onAlert }: {
-  field: any
+  field: CustomField
   value: string
   onChange: (val: string) => void
   onImeiMultiChange: (val: string) => void
@@ -416,6 +456,7 @@ function CustomFieldInput({ field, value, onChange, onImeiMultiChange, imeiCount
           <div className="border-2 border-dashed border-[var(--card-border)] rounded-xl p-6 text-center cursor-pointer hover:border-[var(--accent)] transition-colors" onClick={() => fileInputRef.current?.click()}>
             {preview && field.fieldType === 'image' ? (
               <div className="relative inline-block">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={preview} alt="Preview" className="max-h-32 rounded-lg" />
                 <button type="button" onClick={(e) => { e.stopPropagation(); setPreview(null); onChange('') }} className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center"><X size={12} /></button>
               </div>

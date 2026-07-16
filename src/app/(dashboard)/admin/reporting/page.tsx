@@ -25,9 +25,26 @@ const RANGE_OPTIONS = [
   { value: '1y', label: '1 Year' },
 ]
 
+interface ReportingData {
+  summary: {
+    revenue: number
+    profit: number
+    totalOrders: number
+    avgOrderValue: number
+    activeUsers: number
+    activeServices: number
+    conversionRate: number
+    completedOrders: number
+  }
+  dailyRevenue: { date: string; revenue: number; orders: number }[]
+  topServices: { name: string; revenue: number; orders: number }[]
+  topUsers: { name: string; email: string; spent: number; orders: number }[]
+  statusDistribution: { status: string; count: number }[]
+}
+
 export default function ReportingPage() {
   const [range, setRange] = useState('30d')
-  const { data: report, loading } = useApi<any>({ url: `/api/reporting?range=${range}` })
+  const { data: report, loading } = useApi<ReportingData>({ url: `/api/reporting?range=${range}` })
 
   if (loading) {
     return (
@@ -40,13 +57,13 @@ export default function ReportingPage() {
     )
   }
 
-  const s = report?.summary || {}
+  const s = report?.summary ?? { revenue: 0, profit: 0, totalOrders: 0, avgOrderValue: 0, activeUsers: 0, activeServices: 0, conversionRate: 0, completedOrders: 0 }
   const daily = report?.dailyRevenue || []
   const topServices = report?.topServices || []
   const topUsers = report?.topUsers || []
   const statusDist = report?.statusDistribution || []
 
-  const maxRevenue = Math.max(...daily.map((d: any) => d.revenue), 1)
+  const maxRevenue = Math.max(...daily.map((d: { revenue: number }) => d.revenue), 1)
 
   return (
     <div>
@@ -146,7 +163,7 @@ export default function ReportingPage() {
           <GlassCard>
             <h3 className="text-lg font-bold text-[var(--foreground)] mb-4">Revenue Trend (30 Days)</h3>
             <div className="h-48 flex items-end gap-1">
-              {daily.map((d: any, i: number) => (
+              {daily.map((d: { date: string; revenue: number; orders: number }, i: number) => (
                 <div key={i} className="flex-1 flex flex-col items-center gap-1">
                   <div
                     className="w-full rounded-t bg-gradient-to-t from-emerald-600 to-emerald-400 min-h-[2px] transition-all hover:from-emerald-500 hover:to-emerald-300"
@@ -172,7 +189,7 @@ export default function ReportingPage() {
                 <p className="text-sm text-[var(--muted)]">No data yet</p>
               ) : (
                 <div className="space-y-3">
-                  {topServices.map((svc: any, i: number) => (
+                  {topServices.map((svc: { name: string; revenue: number; orders: number }, i: number) => (
                     <div key={i} className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <span className="text-xs text-[var(--muted)] w-4">#{i + 1}</span>
@@ -197,7 +214,7 @@ export default function ReportingPage() {
                 <p className="text-sm text-[var(--muted)]">No data yet</p>
               ) : (
                 <div className="space-y-3">
-                  {topUsers.map((u: any, i: number) => (
+                  {topUsers.map((u: { name: string; email: string; spent: number; orders: number }, i: number) => (
                     <div key={i} className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <span className="text-xs text-[var(--muted)] w-4">#{i + 1}</span>
@@ -223,8 +240,8 @@ export default function ReportingPage() {
           <GlassCard>
             <h3 className="text-lg font-bold text-[var(--foreground)] mb-4">Order Status Distribution</h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              {statusDist.map((item: any) => {
-                const colors: Record<string, { bg: string; text: string; icon: any }> = {
+              {statusDist.map((item: { status: string; count: number }) => {
+                const colors: Record<string, { bg: string; text: string; icon: typeof ArrowUpRight }> = {
                   completed: { bg: 'from-emerald-500 to-green-500', text: 'text-emerald-400', icon: ArrowUpRight },
                   pending: { bg: 'from-amber-500 to-yellow-500', text: 'text-amber-400', icon: ShoppingCart },
                   failed: { bg: 'from-red-500 to-rose-500', text: 'text-red-400', icon: ArrowDownRight },

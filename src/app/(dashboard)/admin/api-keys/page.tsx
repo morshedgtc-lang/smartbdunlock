@@ -8,7 +8,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
 import { useApi } from '@/hooks/useApi'
 import { motion } from 'framer-motion'
-import { Key, Plus, Trash2, Loader2, X, Copy, CheckCircle } from 'lucide-react'
+import { Key, Plus, Trash2, Loader2, X, Copy, CheckCircle, Ban, RefreshCw } from 'lucide-react'
 import { useState } from 'react'
 
 interface ApiKey {
@@ -19,6 +19,7 @@ interface ApiKey {
   status: string
   permissions: string
   requestLimit: number
+  totalRequests: number
   lastUsedAt: string | null
   expiresAt: string | null
   createdAt: string
@@ -27,6 +28,8 @@ interface ApiKey {
 export default function ApiKeysPage() {
   const [showModal, setShowModal] = useState(false)
   const [showRevokeDialog, setShowRevokeDialog] = useState(false)
+  const [showDisableDialog, setShowDisableDialog] = useState(false)
+  const [showRegenerateDialog, setShowRegenerateDialog] = useState(false)
   const [selectedKey, setSelectedKey] = useState<ApiKey | null>(null)
   const [newKey, setNewKey] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -51,8 +54,8 @@ export default function ApiKeysPage() {
       setForm({ name: '', permissions: 'read', requestLimit: 100 })
       toast('success', 'API key generated — copy it now, it won\'t be shown again')
       refetch()
-    } catch (err: any) {
-      toast('error', err.message)
+    } catch (err: unknown) {
+      toast('error', err instanceof Error ? err.message : 'Failed')
     } finally {
       setSaving(false)
     }
@@ -71,8 +74,46 @@ export default function ApiKeysPage() {
       setShowRevokeDialog(false)
       setSelectedKey(null)
       refetch()
-    } catch (err: any) {
-      toast('error', err.message)
+    } catch (err: unknown) {
+      toast('error', err instanceof Error ? err.message : 'Failed')
+    }
+  }
+
+  const handleDisable = async () => {
+    if (!selectedKey) return
+    try {
+      const res = await fetch('/api/api-keys', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: selectedKey.id, status: 'disabled' }),
+      })
+      if (!res.ok) throw new Error('Failed to disable')
+      toast('success', 'API key disabled')
+      setShowDisableDialog(false)
+      setSelectedKey(null)
+      refetch()
+    } catch (err: unknown) {
+      toast('error', err instanceof Error ? err.message : 'Failed')
+    }
+  }
+
+  const handleRegenerate = async () => {
+    if (!selectedKey) return
+    try {
+      const res = await fetch('/api/api-keys', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: selectedKey.id, action: 'regenerate' }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to regenerate')
+      setNewKey(data.key)
+      toast('success', 'API key regenerated — copy it now, it won\'t be shown again')
+      setShowRegenerateDialog(false)
+      setSelectedKey(null)
+      refetch()
+    } catch (err: unknown) {
+      toast('error', err instanceof Error ? err.message : 'Failed')
     }
   }
 
@@ -177,6 +218,26 @@ export default function ApiKeysPage() {
           confirmLabel="Revoke"
         />
 
+        <ConfirmDialog
+          open={showDisableDialog}
+          onClose={() => { setShowDisableDialog(false); setSelectedKey(null) }}
+          onConfirm={handleDisable}
+          title="Disable API Key"
+          message={`Are you sure you want to disable "${selectedKey?.name}"? The key can be re-enabled later.`}
+          variant="warning"
+          confirmLabel="Disable"
+        />
+
+        <ConfirmDialog
+          open={showRegenerateDialog}
+          onClose={() => { setShowRegenerateDialog(false); setSelectedKey(null) }}
+          onConfirm={handleRegenerate}
+          title="Regenerate API Key"
+          message={`Regenerate "${selectedKey?.name}"? The old key will stop working immediately. You'll see the new key once.`}
+          variant="warning"
+          confirmLabel="Regenerate"
+        />
+
         <GlassCard padding="p-0">
           <div className="table-responsive">
             <table className="w-full text-sm min-w-[800px]">
@@ -187,6 +248,7 @@ export default function ApiKeysPage() {
                   <th className="text-left py-4 px-4 text-[var(--muted)] font-medium">Status</th>
                   <th className="text-left py-4 px-4 text-[var(--muted)] font-medium">Permissions</th>
                   <th className="text-right py-4 px-4 text-[var(--muted)] font-medium">Req. Limit</th>
+                  <th className="text-right py-4 px-4 text-[var(--muted)] font-medium">Usage</th>
                   <th className="text-left py-4 px-4 text-[var(--muted)] font-medium">Last Used</th>
                   <th className="text-left py-4 px-4 text-[var(--muted)] font-medium">Created</th>
                   <th className="text-right py-4 px-4 text-[var(--muted)] font-medium">Actions</th>
@@ -195,7 +257,7 @@ export default function ApiKeysPage() {
               <tbody>
                 {apiKeys.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-12 text-center">
+                    <td colSpan={9} className="py-12 text-center">
                       <Key size={40} className="mx-auto text-[var(--muted)] mb-3 opacity-50" />
                       <p className="text-[var(--muted)]">No API keys yet</p>
                     </td>
@@ -214,8 +276,9 @@ export default function ApiKeysPage() {
                         <span className="text-xs font-medium px-2 py-1 rounded-lg bg-white/5 dark:bg-white/5">{permissionLabels[key.permissions] || key.permissions}</span>
                       </td>
                       <td className="py-3 px-4 text-right text-[var(--foreground)]">{key.requestLimit}/min</td>
+                      <td className="py-3 px-4 text-right text-[var(--foreground)]">{key.totalRequests.toLocaleString()}</td>
                       <td className="py-3 px-4 text-[var(--muted)] text-xs">
-                        {key.lastUsedAt ? new Date(key.lastUsedAt).toLocaleDateString() : 'Never'}
+                        {key.lastUsedAt ? new Date(key.lastUsedAt).toLocaleString() : 'Never'}
                       </td>
                       <td className="py-3 px-4 text-[var(--muted)] text-xs">
                         {new Date(key.createdAt).toLocaleDateString()}
@@ -223,9 +286,17 @@ export default function ApiKeysPage() {
                       <td className="py-3 px-4">
                         <div className="flex items-center justify-end gap-1">
                           {key.status === 'active' && (
-                            <button className="p-1.5 rounded-lg hover:bg-red-500/10 text-[var(--muted)] hover:text-red-500 transition-colors cursor-pointer" onClick={() => { setSelectedKey(key); setShowRevokeDialog(true) }}>
-                              <Trash2 size={14} />
-                            </button>
+                            <>
+                              <button className="p-1.5 rounded-lg hover:bg-amber-500/10 text-[var(--muted)] hover:text-amber-500 transition-colors cursor-pointer" title="Regenerate" onClick={() => { setSelectedKey(key); setShowRegenerateDialog(true) }}>
+                                <RefreshCw size={14} />
+                              </button>
+                              <button className="p-1.5 rounded-lg hover:bg-orange-500/10 text-[var(--muted)] hover:text-orange-500 transition-colors cursor-pointer" title="Disable" onClick={() => { setSelectedKey(key); setShowDisableDialog(true) }}>
+                                <Ban size={14} />
+                              </button>
+                              <button className="p-1.5 rounded-lg hover:bg-red-500/10 text-[var(--muted)] hover:text-red-500 transition-colors cursor-pointer" title="Revoke" onClick={() => { setSelectedKey(key); setShowRevokeDialog(true) }}>
+                                <Trash2 size={14} />
+                              </button>
+                            </>
                           )}
                         </div>
                       </td>

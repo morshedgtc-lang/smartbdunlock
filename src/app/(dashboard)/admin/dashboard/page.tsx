@@ -21,13 +21,39 @@ import {
   Package,
 } from 'lucide-react'
 
+interface DashboardStats {
+  totalUsers: number
+  totalOrders: number
+  revenueToday: number
+  pendingOrders: number
+  completedToday: number
+  failedOrders: number
+  revenueThisMonth: number
+  walletBalance: number
+}
+
+interface RecentOrder {
+  id: string
+  orderNumber: string
+  status: string
+  sellingPrice: number
+  service?: { name: string }
+  user?: { name: string }
+}
+
+interface SupplierItem {
+  id: string
+  name: string
+  status: string
+}
+
 const container = { animate: { transition: { staggerChildren: 0.08 } } }
 const item = { initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 } }
 
 export default function AdminDashboard() {
-  const { data: stats, loading: statsLoading, error: statsError } = useApi<any>({ url: '/api/dashboard' })
-  const { data: ordersRes } = useApi<any>({ url: '/api/orders?limit=6' })
-  const { data: suppliersRes } = useApi<any>({ url: '/api/suppliers' })
+  const { data: stats, loading: statsLoading, error: statsError } = useApi<DashboardStats>({ url: '/api/dashboard' })
+  const { data: ordersRes } = useApi<{ orders: RecentOrder[] }>({ url: '/api/orders?limit=6' })
+  const { data: suppliersRes } = useApi<{ suppliers: SupplierItem[] }>({ url: '/api/suppliers' })
 
   const s = stats || { totalUsers: 0, totalOrders: 0, revenueToday: 0, pendingOrders: 0, completedToday: 0, failedOrders: 0, revenueThisMonth: 0, walletBalance: 0 }
   const recentOrders = ordersRes?.orders || []
@@ -149,7 +175,7 @@ export default function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {recentOrders.map((order: any) => (
+                    {recentOrders.map((order: RecentOrder) => (
                       <tr key={order.id} className="border-b border-[var(--card-border)] hover:bg-white/5 dark:hover:bg-white/5 transition-colors">
                         <td className="py-3 px-2 font-mono text-[var(--foreground)]">{order.orderNumber}</td>
                         <td className="py-3 px-2 text-[var(--foreground)]">{order.service?.name || 'N/A'}</td>
@@ -201,7 +227,7 @@ export default function AdminDashboard() {
                 {(suppliersRes?.suppliers || []).length === 0 && (
                   <p className="text-sm text-[var(--muted)]">No suppliers configured</p>
                 )}
-                {(suppliersRes?.suppliers || []).slice(0, 5).map((supplier: any) => (
+                {(suppliersRes?.suppliers || []).slice(0, 5).map((supplier: SupplierItem) => (
                   <div key={supplier.id} className="flex items-center justify-between text-sm">
                     <span className="text-[var(--muted)]">{supplier.name}</span>
                     <span className={`flex items-center gap-1.5 ${supplier.status === 'active' ? 'text-emerald-500' : 'text-red-500'}`}>

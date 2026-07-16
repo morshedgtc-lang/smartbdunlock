@@ -12,21 +12,36 @@ import { Plus, Edit, Trash2, Loader2, X, Plug, Wifi, WifiOff } from 'lucide-reac
 import Link from 'next/link'
 import { useState } from 'react'
 
+interface SupplierItem {
+  id: string
+  name: string
+  email?: string
+  phone?: string
+  website?: string
+  type: string
+  status: string
+  priority: number
+  apiKey?: string
+  config?: string
+  successRate: number
+  totalOrders: number
+}
+
 const emptySupplier = { name: '', email: '', phone: '', website: '', type: 'api', status: 'active', priority: '1', apiKey: '', config: '' }
 
 export default function SuppliersPage() {
   const [showModal, setShowModal] = useState(false)
-  const [editing, setEditing] = useState<any>(null)
+  const [editing, setEditing] = useState<SupplierItem | null>(null)
   const [form, setForm] = useState(emptySupplier)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null)
   const { toast } = useToast()
-  const { data, loading, error, refetch } = useApi<any>({ url: '/api/suppliers' })
+  const { data, loading, error, refetch } = useApi<{ suppliers: SupplierItem[] }>({ url: '/api/suppliers' })
   const suppliers = data?.suppliers || []
 
   const openCreate = () => { setEditing(null); setForm(emptySupplier); setShowModal(true) }
-  const openEdit = (supplier: any) => {
+  const openEdit = (supplier: SupplierItem) => {
     setEditing(supplier)
     setForm({
       name: supplier.name,
@@ -58,8 +73,8 @@ export default function SuppliersPage() {
       toast('success', editing ? 'Supplier updated' : 'Supplier created')
       setShowModal(false)
       refetch()
-    } catch (err: any) {
-      toast('error', err.message)
+    } catch (err: unknown) {
+      toast('error', err instanceof Error ? err.message : 'Failed')
     } finally {
       setSaving(false)
     }
@@ -82,8 +97,8 @@ export default function SuppliersPage() {
       if (!res.ok) throw new Error(data.error)
       toast('success', 'Supplier deleted')
       refetch()
-    } catch (err: any) {
-      toast('error', err.message)
+    } catch (err: unknown) {
+      toast('error', err instanceof Error ? err.message : 'Failed')
     } finally {
       setDeleting(null)
       setConfirmDelete(null)
@@ -175,7 +190,7 @@ export default function SuppliersPage() {
 
         {/* Supplier Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {suppliers.map((supplier: any, i: number) => (
+          {suppliers.map((supplier: SupplierItem, i: number) => (
             <motion.div key={supplier.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
               <GlassCard className="h-full">
                 <div className="flex items-start justify-between mb-4">

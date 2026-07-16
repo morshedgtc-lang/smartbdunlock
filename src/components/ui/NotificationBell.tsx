@@ -41,6 +41,7 @@ export function NotificationBell() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(false)
+  const [connected, setConnected] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
 
   const fetchNotifications = useCallback(async () => {
@@ -60,8 +61,59 @@ export function NotificationBell() {
 
   useEffect(() => {
     fetchNotifications()
-    const interval = setInterval(fetchNotifications, 30000)
-    return () => clearInterval(interval)
+
+    let retryDelay = 3000
+    let retryTimeout: ReturnType<typeof setTimeout> | null = null
+    let eventSource: EventSource | null = null
+
+    const connect = () => {
+      eventSource = new EventSource('/api/notifications/stream')
+
+      eventSource.onopen = () => {
+        setConnected(true)
+        retryDelay = 3000
+      }
+
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          if (data.notifications) {
+            setNotifications(prev => {
+              const existingIds = new Set(prev.map(n => n.id))
+              const newOnes = data.notifications.filter((n: Notification) => !existingIds.has(n.id))
+              if (newOnes.length === 0) return prev
+              return [...newOnes, ...prev].slice(0, 30)
+            })
+          }
+          if (typeof data.unreadCount === 'number') {
+            setUnreadCount(data.unreadCount)
+          }
+        } catch {
+          // silent
+        }
+      }
+
+      eventSource.onerror = () => {
+        setConnected(false)
+        eventSource?.close()
+        retryTimeout = setTimeout(() => {
+          retryDelay = Math.min(retryDelay * 1.5, 30000)
+          connect()
+        }, retryDelay)
+      }
+    }
+
+    connect()
+
+    return () => {
+      if (retryTimeout) clearTimeout(retryTimeout)
+      if (eventSource) {
+        eventSource.onopen = null
+        eventSource.onmessage = null
+        eventSource.onerror = null
+        eventSource.close()
+      }
+    }
   }, [fetchNotifications])
 
   useEffect(() => {
@@ -112,6 +164,9 @@ export function NotificationBell() {
         className="relative p-2 rounded-xl text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-white/10 dark:hover:bg-white/5 transition-colors"
       >
         <Bell size={20} />
+        {!connected && (
+          <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full shadow-lg shadow-red-500/30" />
+        )}
         {unreadCount > 0 && (
           <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-red-500 rounded-full shadow-lg shadow-red-500/30">
             {unreadCount > 99 ? '99+' : unreadCount}

@@ -10,6 +10,25 @@ import { Search, Loader2, Package, Clock, DollarSign, Shield, Eye } from 'lucide
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
 
+interface ServiceItem {
+  id: string
+  name: string
+  description?: string
+  type: string
+  sellingPrice: number
+  processingTime?: string
+  status: string
+  clientVisible?: boolean
+  categoryId?: string
+  categoryName?: string
+  customFields?: { visibleToClient: boolean }[]
+}
+
+interface CategoryItem {
+  id: string
+  name: string
+}
+
 const TYPE_ICONS: Record<string, string> = {
   unlock: '🔓',
   flash: '⚡',
@@ -36,40 +55,39 @@ export default function ClientServicesPage() {
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [sortBy, setSortBy] = useState('default')
-  const { data, loading, error } = useApi<any>({ url: '/api/services' })
-  const { data: catData } = useApi<any>({ url: '/api/service-categories' })
-  const { data: walletData } = useApi<any>({ url: '/api/wallet' })
+  const { data, loading, error } = useApi<{ services: ServiceItem[] }>({ url: '/api/services' })
+  const { data: catData } = useApi<{ categories: CategoryItem[] }>({ url: '/api/service-categories' })
+  const { data: walletData } = useApi<{ balance: number }>({ url: '/api/wallet' })
 
-  const allServices = data?.services || []
+  const services = useMemo(() => {
+    const allSvc = data?.services || []
+    return allSvc.filter((s: ServiceItem) => s.status === 'active' && s.clientVisible !== false)
+  }, [data])
+
   const categories = catData?.categories || []
   const balance = walletData?.balance ?? 0
-
-  const services = useMemo(() =>
-    allServices.filter((s: any) => s.status === 'active' && s.clientVisible !== false),
-    [allServices]
-  )
 
   const filtered = useMemo(() => {
     let result = services
     if (search) {
       const q = search.toLowerCase()
-      result = result.filter((s: any) =>
+      result = result.filter((s: ServiceItem) =>
         s.name.toLowerCase().includes(q) ||
         s.description?.toLowerCase().includes(q) ||
         s.type.toLowerCase().includes(q)
       )
     }
     if (categoryFilter) {
-      result = result.filter((s: any) => s.categoryId === categoryFilter)
+      result = result.filter((s: ServiceItem) => s.categoryId === categoryFilter)
     }
-    result = [...result].sort((a: any, b: any) => {
+    result = [...result].sort((a: ServiceItem, b: ServiceItem) => {
       switch (sortBy) {
         case 'price_asc': return a.sellingPrice - b.sellingPrice
         case 'price_desc': return b.sellingPrice - a.sellingPrice
         case 'name_asc': return a.name.localeCompare(b.name)
         case 'time_asc': {
           const parseTime = (t: string) => { const m = t?.match(/(\d+)/); return m ? parseInt(m[1]) : 9999 }
-          return parseTime(a.processingTime) - parseTime(b.processingTime)
+          return parseTime(a.processingTime || '') - parseTime(b.processingTime || '')
         }
         default: return 0
       }
@@ -79,7 +97,7 @@ export default function ClientServicesPage() {
 
   const categoryOptions: DropdownOption[] = [
     { value: '', label: 'All Categories' },
-    ...categories.map((c: any) => ({ value: c.id, label: c.name })),
+    ...categories.map((c: CategoryItem) => ({ value: c.id, label: c.name })),
   ]
 
   if (loading) {
@@ -162,10 +180,10 @@ export default function ClientServicesPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             <AnimatePresence mode="popLayout">
-              {filtered.map((service: any, i: number) => {
+              {filtered.map((service: ServiceItem, i: number) => {
                 const typeColor = TYPE_COLORS[service.type] || TYPE_COLORS.unlock
                 const typeIcon = TYPE_ICONS[service.type] || '📦'
-                const fieldCount = service.customFields?.filter((f: any) => f.visibleToClient).length || 0
+                const fieldCount = service.customFields?.filter((f: { visibleToClient: boolean }) => f.visibleToClient).length || 0
 
                 return (
                   <motion.div

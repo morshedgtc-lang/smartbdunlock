@@ -28,6 +28,7 @@ export async function GET() {
         status: true,
         permissions: true,
         requestLimit: true,
+        totalRequests: true,
         lastUsedAt: true,
         expiresAt: true,
         createdAt: true,
@@ -106,16 +107,48 @@ export async function PATCH(request: Request) {
   try {
     const admin = await requireAdmin()
     const body = await request.json()
-    const { id, name, status, permissions, requestLimit } = body as {
+    const { id, action, name, status, permissions, requestLimit, expiresAt } = body as {
       id?: string
+      action?: string
       name?: string
       status?: string
       permissions?: string
       requestLimit?: number
+      expiresAt?: string | null
     }
 
     if (!id) {
       return NextResponse.json({ error: 'API key ID is required' }, { status: 400 })
+    }
+
+    if (action === 'regenerate') {
+      const existing = await prisma.apiKey.findUnique({ where: { id }, select: { id: true, status: true } })
+      if (!existing) return NextResponse.json({ error: 'API key not found' }, { status: 404 })
+      if (existing.status !== 'active') return NextResponse.json({ error: 'Can only regenerate active keys' }, { status: 400 })
+
+      const plainKey = generateKey()
+      const keyHash = await hashKey(plainKey)
+      const keyPrefix = `sbdu_${plainKey.slice(5, 9)}****`
+
+      const before = await prisma.apiKey.findUnique({ where: { id }, select: { name: true, keyPrefix: true } })
+      const apiKey = await prisma.apiKey.update({
+        where: { id },
+        data: { keyHash, keyPrefix, totalRequests: 0 },
+      })
+
+      await auditLog({
+        userId: admin.id,
+        userEmail: admin.email,
+        action: 'api_key.regenerate',
+        entityType: 'api_key',
+        entityId: id,
+        oldValues: before || {},
+        newValues: { keyPrefix },
+        ip: getClientIp(request),
+        userAgent: getClientUserAgent(request),
+      })
+
+      return NextResponse.json({ ...apiKey, key: plainKey })
     }
 
     const data: Record<string, unknown> = {}
@@ -123,6 +156,7 @@ export async function PATCH(request: Request) {
     if (status) data.status = status
     if (permissions) data.permissions = permissions
     if (requestLimit !== undefined) data.requestLimit = requestLimit
+    if (expiresAt !== undefined) data.expiresAt = expiresAt ? new Date(expiresAt) : null
 
     if (Object.keys(data).length === 0) {
       return NextResponse.json({ error: 'No fields to update' }, { status: 400 })

@@ -10,7 +10,15 @@ import { motion } from 'framer-motion'
 import { Search, Trash2, Loader2, FileText, AlertCircle, Info, AlertTriangle } from 'lucide-react'
 import { useState } from 'react'
 
-const levelConfig: Record<string, { color: string; icon: any }> = {
+interface LogEntry {
+  id: string
+  level: string
+  message: string
+  source: string
+  createdAt: string
+}
+
+const levelConfig: Record<string, { color: string; icon: typeof Info }> = {
   info: { color: 'text-blue-500', icon: Info },
   warn: { color: 'text-amber-500', icon: AlertTriangle },
   error: { color: 'text-red-500', icon: AlertCircle },
@@ -25,7 +33,7 @@ export default function LogsPage() {
   const [saving, setSaving] = useState(false)
   const [confirmClear, setConfirmClear] = useState(false)
   const { toast } = useToast()
-  const { data, loading, error, refetch } = useApi<any>({
+  const { data, loading, error, refetch } = useApi<{ logs: LogEntry[] }>({
     url: `/api/logs?limit=200${levelFilter !== 'ALL' ? `&level=${levelFilter}` : ''}${sourceFilter ? `&source=${sourceFilter}` : ''}`,
   })
   const logs = data?.logs || []
@@ -41,8 +49,8 @@ export default function LogsPage() {
       if (!res.ok) throw new Error('Failed')
       toast('success', 'Logs cleared')
       refetch()
-    } catch (err: any) {
-      toast('error', err.message)
+    } catch (err: unknown) {
+      toast('error', err instanceof Error ? err.message : 'Failed')
     }
   }
 
@@ -60,8 +68,8 @@ export default function LogsPage() {
       setShowAddModal(false)
       setNewLog({ level: 'info', message: '', source: '' })
       refetch()
-    } catch (err: any) {
-      toast('error', err.message)
+    } catch (err: unknown) {
+      toast('error', err instanceof Error ? err.message : 'Failed')
     } finally {
       setSaving(false)
     }
@@ -183,7 +191,7 @@ export default function LogsPage() {
                     </td>
                   </tr>
                 ) : (
-                  logs.map((log: any, i: number) => {
+                  logs.map((log: LogEntry, i: number) => {
                     const config = levelConfig[log.level] || levelConfig.info
                     const Icon = config.icon
                     return (

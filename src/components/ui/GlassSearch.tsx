@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -64,12 +64,12 @@ export function GlassSearch({
     }
   }, [query, onSearch]);
 
-  const handleSelect = (result: SearchResult) => {
+  const handleSelect = useCallback((result: SearchResult) => {
     setQuery("");
     setIsOpen(false);
     onSelect?.(result);
     router.push(result.href);
-  };
+  }, [onSelect, router]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {

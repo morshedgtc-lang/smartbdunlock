@@ -11,6 +11,17 @@ import { Search, Plus, Edit, Users, Loader2, X } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
 
+interface UserItem {
+  id: string
+  name: string
+  email: string
+  phone?: string
+  role: string
+  status: string
+  walletBalance?: number
+  _count?: { orders: number }
+}
+
 const roleLabels: Record<string, string> = {
   admin: 'Admin',
   reseller: 'Client',
@@ -20,21 +31,21 @@ export default function UsersPage() {
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState('ALL')
   const [showModal, setShowModal] = useState(false)
-  const [editing, setEditing] = useState<any>(null)
+  const [editing, setEditing] = useState<UserItem | null>(null)
   const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', role: 'reseller', status: 'active' })
   const [saving, setSaving] = useState(false)
   const { toast } = useToast()
-  const { data, loading, error, refetch } = useApi<any>({ url: '/api/users' })
+  const { data, loading, error, refetch } = useApi<{ users: UserItem[] }>({ url: '/api/users' })
   const allUsers = data?.users || []
 
-  const filtered = allUsers.filter((u: any) => {
+  const filtered = allUsers.filter((u: UserItem) => {
     const matchSearch = u.name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase())
     const matchRole = roleFilter === 'ALL' || u.role === roleFilter
     return matchSearch && matchRole
   })
 
   const openCreate = () => { setEditing(null); setForm({ name: '', email: '', phone: '', password: '', role: 'reseller', status: 'active' }); setShowModal(true) }
-  const openEdit = (user: any) => {
+  const openEdit = (user: UserItem) => {
     setEditing(user)
     setForm({ name: user.name, email: user.email, phone: user.phone || '', password: '', role: user.role, status: user.status })
     setShowModal(true)
@@ -45,7 +56,7 @@ export default function UsersPage() {
     setSaving(true)
     try {
       if (editing) {
-        const body: any = { id: editing.id, name: form.name, phone: form.phone, role: form.role, status: form.status }
+        const body: { id: string; name: string; phone: string; role: string; status: string; password?: string } = { id: editing.id, name: form.name, phone: form.phone, role: form.role, status: form.status }
         if (form.password) body.password = form.password
         const res = await fetch('/api/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
         const data = await res.json()
@@ -60,22 +71,22 @@ export default function UsersPage() {
       }
       setShowModal(false)
       refetch()
-    } catch (err: any) {
-      toast('error', err.message)
+    } catch (err: unknown) {
+      toast('error', err instanceof Error ? err.message : 'Failed')
     } finally {
       setSaving(false)
     }
   }
 
-  const handleStatusToggle = async (user: any) => {
+  const handleStatusToggle = async (user: UserItem) => {
     const newStatus = user.status === 'active' ? 'suspended' : 'active'
     try {
       const res = await fetch('/api/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: user.id, status: newStatus }) })
       if (!res.ok) throw new Error('Failed')
       toast('success', `User ${newStatus}`)
       refetch()
-    } catch (err: any) {
-      toast('error', err.message)
+    } catch (err: unknown) {
+      toast('error', err instanceof Error ? err.message : 'Failed')
     }
   }
 
@@ -124,9 +135,9 @@ export default function UsersPage() {
 
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {[
-            { label: 'Admins', count: allUsers.filter((u: any) => u.role === 'admin').length, color: 'text-blue-500' },
-            { label: 'Clients', count: allUsers.filter((u: any) => u.role === 'reseller').length, color: 'text-purple-500' },
-            { label: 'Total Balance', count: `$${allUsers.reduce((sum: number, u: any) => sum + (u.walletBalance || 0), 0).toLocaleString()}`, color: 'text-amber-500' },
+            { label: 'Admins', count: allUsers.filter((u: UserItem) => u.role === 'admin').length, color: 'text-blue-500' },
+            { label: 'Clients', count: allUsers.filter((u: UserItem) => u.role === 'reseller').length, color: 'text-purple-500' },
+            { label: 'Total Balance', count: `$${allUsers.reduce((sum: number, u: UserItem) => sum + (u.walletBalance || 0), 0).toLocaleString()}`, color: 'text-amber-500' },
           ].map(s => (
             <div key={s.label} className="glass p-3 text-center">
               <p className={`text-xl font-bold ${s.color}`}>{s.count}</p>
@@ -197,7 +208,7 @@ export default function UsersPage() {
                     </td>
                   </tr>
                 ) : (
-                  filtered.map((user: any, i: number) => (
+                  filtered.map((user: UserItem, i: number) => (
                     <motion.tr key={user.id} className="border-b border-[var(--card-border)] hover:bg-white/5 dark:hover:bg-white/5 transition-colors" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.03 }}>
                       <td className="py-3 px-4">
                         <div>

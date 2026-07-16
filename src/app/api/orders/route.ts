@@ -231,7 +231,7 @@ export async function PATCH(request: Request) {
     if (!validation.success) {
       return NextResponse.json({ error: validation.error }, { status: 400 })
     }
-    const { id, status, notes, result } = validation.data
+    const { id, status, notes, result, priority, assignedTo, internalNotes } = validation.data
 
     const order = await prisma.order.findUnique({ where: { id } })
     if (!order) return NextResponse.json({ error: 'Order not found' }, { status: 404 })
@@ -255,8 +255,31 @@ export async function PATCH(request: Request) {
       data.result = result
     }
 
+    if (priority !== undefined && user.role === 'admin') {
+      data.priority = priority
+    }
+
+    if (assignedTo !== undefined && user.role === 'admin') {
+      data.assignedTo = assignedTo || null
+    }
+
+    if (internalNotes !== undefined && user.role === 'admin') {
+      data.internalNotes = internalNotes
+    }
+
     if (Object.keys(data).length === 0) {
       return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
+    }
+
+    const timelineNotes: Array<{ authorName: string; content: string; visible: boolean }> = []
+    if (status && status !== order.status) {
+      timelineNotes.push({ authorName: 'System', content: `Status changed from "${order.status}" to "${status}"`, visible: true })
+    }
+    if (priority !== undefined && priority !== order.priority) {
+      timelineNotes.push({ authorName: 'System', content: `Priority changed from "${order.priority}" to "${priority}"`, visible: false })
+    }
+    if (assignedTo !== undefined && assignedTo !== order.assignedTo) {
+      timelineNotes.push({ authorName: 'System', content: assignedTo ? `Order assigned to a team member` : `Order unassigned`, visible: false })
     }
 
     const updated = await prisma.$transaction(async (tx) => {
@@ -264,6 +287,19 @@ export async function PATCH(request: Request) {
         where: { id },
         data,
       })
+
+      if (timelineNotes.length > 0) {
+        await tx.orderNote.createMany({
+          data: timelineNotes.map((n) => ({
+            id: crypto.randomUUID(),
+            orderId: id,
+            authorId: user.id,
+            authorName: n.authorName,
+            content: n.content,
+            visible: n.visible,
+          })),
+        })
+      }
 
       if (data.status && data.status === 'completed' && order.status !== 'completed' && order.supplierId) {
         await tx.supplier.update({
@@ -306,7 +342,7 @@ export async function PATCH(request: Request) {
       action: 'order.update',
       entityType: 'order',
       entityId: id,
-      oldValues: { status: order.status },
+      oldValues: { status: order.status, priority: order.priority, assignedTo: order.assignedTo },
       newValues: data,
       ip: getClientIp(request),
       userAgent: getClientUserAgent(request),

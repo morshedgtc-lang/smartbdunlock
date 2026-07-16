@@ -11,6 +11,25 @@ import { ArrowDownToLine, Send, Loader2, X, Wallet } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
 
+interface WalletData {
+  balance: number
+  transactions: TransactionItem[]
+}
+
+interface TransactionItem {
+  id: string
+  type: string
+  description?: string
+  amount: number
+  balanceAfter?: number
+  createdAt: string
+}
+
+interface UserItem {
+  id: string
+  email: string
+}
+
 export default function AdminWalletPage() {
   const [showModal, setShowModal] = useState<string | null>(null)
   const [targetEmail, setTargetEmail] = useState('')
@@ -18,8 +37,8 @@ export default function AdminWalletPage() {
   const [description, setDescription] = useState('')
   const [saving, setSaving] = useState(false)
   const { toast } = useToast()
-  const { data: walletData, loading: walletLoading, error: walletError, refetch: refetchWallet } = useApi<any>({ url: '/api/wallet' })
-  const { data: usersData, refetch: refetchUsers } = useApi<any>({ url: '/api/users' })
+  const { data: walletData, loading: walletLoading, error: walletError, refetch: refetchWallet } = useApi<WalletData>({ url: '/api/wallet' })
+  const { data: usersData, refetch: refetchUsers } = useApi<{ users: UserItem[] }>({ url: '/api/users' })
 
   const balance = walletData?.balance ?? 0
   const transactions = walletData?.transactions || []
@@ -29,10 +48,10 @@ export default function AdminWalletPage() {
     e.preventDefault()
     setSaving(true)
     try {
-      const targetUser = users.find((u: any) => u.email === targetEmail)
+      const targetUser = users.find((u: UserItem) => u.email === targetEmail)
       if (!targetUser && showModal === 'transfer') throw new Error('User not found')
 
-      const body: any = {
+      const body: { type: string | null; amount: number; description?: string; targetUserId?: string } = {
         type: showModal,
         amount: parseFloat(amount),
         description: description || undefined,
@@ -55,8 +74,8 @@ export default function AdminWalletPage() {
       setDescription('')
       refetchWallet()
       refetchUsers()
-    } catch (err: any) {
-      toast('error', err.message)
+    } catch (err: unknown) {
+      toast('error', err instanceof Error ? err.message : 'Failed')
     } finally {
       setSaving(false)
     }
@@ -155,7 +174,7 @@ export default function AdminWalletPage() {
                 </tr>
               </thead>
               <tbody>
-                {transactions.map((txn: any, i: number) => (
+                {transactions.map((txn: TransactionItem, i: number) => (
                   <motion.tr key={txn.id} className="border-b border-[var(--card-border)] hover:bg-white/5 dark:hover:bg-white/5" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}>
                     <td className="py-3 px-4"><StatusBadge status={txn.type} /></td>
                     <td className="py-3 px-4 text-[var(--foreground)]">{txn.description || '—'}</td>

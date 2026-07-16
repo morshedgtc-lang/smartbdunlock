@@ -103,10 +103,13 @@ model Order {
   imei          String?
   deviceInfo    String?
   status        String                 @default("pending") // pending, processing, completed, failed, cancelled
+  priority      String                 @default("normal")  // low, normal, high, urgent
+  assignedTo    String?                // admin user ID this order is assigned to
   cost          Float
   sellingPrice  Float
   profit        Float                  @default(0)
-  notes         String?
+  notes         String?                // client-visible notes
+  internalNotes String?                // admin-only internal notes
   result        String?                // JSON result from supplier
   completedAt   DateTime?
   user          User                   @relation(fields: [userId], references: [id])
@@ -114,11 +117,28 @@ model Order {
   supplier      Supplier?              @relation(fields: [supplierId], references: [id])
   transactions  Transaction[]
   customValues  OrderCustomFieldValue[]
+  orderNotes    OrderNote[]
   createdAt     DateTime               @default(now())
   updatedAt     DateTime               @updatedAt
 
   @@index([userId, status, createdAt])
   @@index([status])
+  @@index([assignedTo])
+  @@index([priority])
+}
+
+model OrderNote {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  authorId  String
+  authorName String
+  content   String
+  visible   Boolean  @default(true) // true = client can see, false = internal only
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+  @@index([authorId])
 }
 
 model OrderCustomFieldValue {
@@ -201,18 +221,19 @@ model Notification {
 }
 
 model ApiKey {
-  id          String    @id @default(cuid())
-  name        String
-  keyHash     String    @unique // SHA-256 hash of the API key
-  keyPrefix   String    // first 8 chars for display (e.g., "sbdu_****")
-  userId      String    // owner (admin or client)
-  status      String    @default("active") // active, revoked
-  permissions String    @default("read")   // read, write, admin
-  requestLimit Int      @default(100)     // requests per minute
-  lastUsedAt  DateTime?
-  expiresAt   DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id            String    @id @default(cuid())
+  name          String
+  keyHash       String    @unique // SHA-256 hash of the API key
+  keyPrefix     String    // first 8 chars for display (e.g., "sbdu_****")
+  userId        String    // owner (admin or client)
+  status        String    @default("active") // active, revoked, disabled
+  permissions   String    @default("read")   // read, write, admin
+  requestLimit  Int       @default(100)     // requests per minute
+  totalRequests Int       @default(0)       // total requests made
+  lastUsedAt    DateTime?
+  expiresAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   @@index([keyHash])
   @@index([userId])

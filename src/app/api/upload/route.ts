@@ -16,6 +16,7 @@ export async function POST(request: Request) {
 
     const formData = await request.formData()
     const file = formData.get('file') as File | null
+    const purpose = (formData.get('purpose') as string) || 'general'
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 })
@@ -29,6 +30,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'File type not allowed' }, { status: 400 })
     }
 
+    const extension = file.name.split('.').pop() || 'bin'
+    const randomFilename = `${crypto.randomUUID()}.${extension}`
+
     const buffer = Buffer.from(await file.arrayBuffer())
     const base64 = buffer.toString('base64')
     const dataUrl = `data:${file.type};base64,${base64}`
@@ -38,16 +42,19 @@ export async function POST(request: Request) {
       userEmail: user.email,
       action: 'file.upload',
       entityType: 'file',
-      newValues: { filename: file.name, type: file.type, size: file.size },
+      entityId: randomFilename,
+      newValues: { filename: randomFilename, originalName: file.name, type: file.type, size: file.size, purpose },
       ip: getClientIp(request),
       userAgent: getClientUserAgent(request),
     })
 
     return NextResponse.json({
       url: dataUrl,
-      name: file.name,
+      name: randomFilename,
+      originalName: file.name,
       type: file.type,
       size: file.size,
+      purpose,
     })
   } catch (error: unknown) {
     if (error instanceof Error && error.message === 'Unauthorized') {
