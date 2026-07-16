@@ -26,6 +26,7 @@ interface OrderItem {
   orderNumber: string
   status: string
   sellingPrice: number
+  imei?: string
   service?: { name: string }
 }
 
@@ -119,36 +120,57 @@ export default function ClientDashboard() {
             <GlassCard padding="p-0">
               <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--card-border)]">
                 <h3 className="font-bold text-[var(--foreground)]">Recent Orders</h3>
-                <Link href="/reseller/orders" className="text-xs text-[var(--accent)] hover:underline flex items-center gap-1">
-                  View all <ArrowRight size={12} />
-                </Link>
               </div>
-              <div className="divide-y divide-[var(--card-border)]">
-                {recentOrders.length === 0 ? (
-                  <div className="py-12 text-center">
-                    <ShoppingCart size={36} className="mx-auto text-[var(--muted)] mb-3 opacity-40" />
-                    <p className="text-[var(--muted)] text-sm">No orders yet</p>
-                    <Link href="/reseller/services" className="text-xs text-[var(--accent)] hover:underline mt-1 inline-block">Browse Services</Link>
-                  </div>
-                ) : (
-                  recentOrders.map((order: OrderItem) => (
-                    <div key={order.id} className="flex items-center justify-between px-6 py-3.5 hover:bg-white/5 transition-colors">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center flex-shrink-0">
-                          <ShoppingCart size={14} className="text-[var(--accent)]" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-[var(--foreground)] truncate">{order.service?.name || 'N/A'}</p>
-                          <p className="text-xs text-[var(--muted)]">{order.orderNumber}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 flex-shrink-0">
-                        <span className="text-sm font-bold text-[var(--foreground)]">${order.sellingPrice?.toFixed(2)}</span>
-                        <StatusBadge status={order.status} />
-                      </div>
-                    </div>
-                  ))
-                )}
+              {recentOrders.length === 0 ? (
+                <div className="py-12 text-center">
+                  <ShoppingCart size={36} className="mx-auto text-[var(--muted)] mb-3 opacity-40" />
+                  <p className="text-[var(--muted)] text-sm">No orders yet</p>
+                  <Link href="/reseller/services" className="text-xs text-[var(--accent)] hover:underline mt-1 inline-block">Browse Services</Link>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-[var(--card-border)]">
+                        <th className="text-left px-6 py-3 text-[var(--muted)] font-medium text-xs uppercase tracking-wider">Order ID</th>
+                        <th className="text-left px-6 py-3 text-[var(--muted)] font-medium text-xs uppercase tracking-wider">Service Name</th>
+                        <th className="text-left px-6 py-3 text-[var(--muted)] font-medium text-xs uppercase tracking-wider">IMEI / SN</th>
+                        <th className="text-left px-6 py-3 text-[var(--muted)] font-medium text-xs uppercase tracking-wider">Status</th>
+                        <th className="text-right px-6 py-3 text-[var(--muted)] font-medium text-xs uppercase tracking-wider">Price</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recentOrders.map((order: OrderItem) => (
+                        <tr key={order.id} className="hover:bg-white/5 transition-colors border-b border-[var(--card-border)]">
+                          <td className="px-6 py-3.5">
+                            <Link
+                              href={`/reseller/orders/${order.id}`}
+                              className="text-[var(--accent)] hover:underline cursor-pointer font-mono text-sm"
+                            >
+                              {order.orderNumber}
+                            </Link>
+                          </td>
+                          <td className="px-6 py-3.5 text-sm text-[var(--foreground)]">{order.service?.name || 'N/A'}</td>
+                          <td className="px-6 py-3.5 text-sm text-[var(--muted)] font-mono">{order.imei || '—'}</td>
+                          <td className="px-6 py-3.5">
+                            <StatusBadge status={order.status} />
+                          </td>
+                          <td className="px-6 py-3.5 text-sm font-bold text-[var(--foreground)] text-right">
+                            ${order.sellingPrice?.toFixed(2)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              <div className="px-6 py-4 border-t border-[var(--card-border)]">
+                <Link
+                  href="/reseller/orders"
+                  className="inline-flex items-center gap-1.5 text-xs text-[var(--accent)] hover:underline font-medium"
+                >
+                  View All Orders <ArrowRight size={12} />
+                </Link>
               </div>
             </GlassCard>
           </motion.div>
