@@ -1,108 +1,114 @@
-<!-- BEGIN:nextjs-agent-rules -->
-# This is NOT the Next.js you know
+# SmartBD Unlock - AI Agent Instructions
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
-<!-- END:nextjs-agent-rules -->
+## Repository
+https://github.com/morshedgtc-lang/smartbdunlock.git
 
-# SmartBD Unlock — Agent Instructions
+## Live Production
+https://www.smartbdunlock.com
 
-## Project State
-GSM service client management platform. Dev server on localhost:3000.
+## Technology Stack
+- Next.js 16.2.10 (App Router + Turbopack)
+- React 19
+- TypeScript 5
+- Tailwind CSS v4
+- Prisma 5.22.0
+- PostgreSQL (Railway)
+- framer-motion
+- jose (JWT auth)
+- bcryptjs (password hashing)
+- Zod v4 validation
 
-## Quick Start
-1. `npm run dev`
-2. Login: Admin `admin@smartbdunlock.com` / `admin123`
-3. Login: Client `reseller@smartbdunlock.com` / `reseller123`
+## Deployment
+Platform: Railway
+Build Command: npx prisma generate && next build
+Start Command: bash scripts/start.sh
 
-## Commands
-- `npm run dev` — dev server (Turbopack)
-- `npm run build` — production build (Turbopack)
-- `npm run lint` — ESLint (0 errors, ~87 warnings from `no-explicit-any` in client components)
-- `npx prisma generate` — regenerate Prisma client after schema changes
-- `npx prisma db push` — sync schema to DB (dev only; prod uses `migrate deploy`)
-
-Build, lint, and typecheck all pass. No test suite exists — verify changes with `npm run build` and `npm run lint`.
-
-## Stack
-- Next.js 16.2.10 (App Router, Turbopack), React 19, TypeScript 5
-- Prisma 5.22.0 (PostgreSQL), Tailwind 4, framer-motion, lucide-react
-- JWT auth via `jose` (httpOnly cookie `sb_session`, 7-day expiry)
-- Zod v4 for API input validation (`src/lib/validations.ts`)
-- Deployed on Railway (`railway.toml`)
-
-## Architecture
-
-### Route Structure
-- `src/app/(dashboard)/admin/` — Admin dashboard (protected, `requireAdmin()`)
-- `src/app/(dashboard)/reseller/` — Client dashboard (protected, `requireAuth()`)
-- `src/app/api/` — REST API endpoints (13 route groups)
-- `src/app/login/` — Login page
-- `src/app/page.tsx` — Public landing page
-
-### API Endpoints
-`auth/login`, `auth/logout`, `auth/session`, `dashboard`, `health`, `logs`, `audit-logs`, `orders`, `services`, `service-categories`, `suppliers`, `users`, `wallet`, `upload`
-
-### Key Lib Files
-- `src/lib/auth.ts` — JWT session management (`createSession`, `getSession`, `requireAuth`, `requireAdmin`). `getSession()` auto-refreshes JWT when DB role/name differs from token.
-- `src/lib/prisma.ts` — Prisma singleton (global in dev) + `withRetry()` for connection errors
-- `src/lib/validations.ts` — Zod schemas for all API inputs + `validateBody`/`validateQuery` helpers
-- `src/lib/audit.ts` — Audit logging utility (`auditLog`, `getClientIp`, `getClientUserAgent`)
-- `src/lib/api.tsx` — React context for auth (`AuthProvider`, `useAuth`, `ProtectedRoute`)
-- `src/lib/logger.ts` — DB-backed application logging
-
-### Middleware (`src/middleware.ts`)
-- Rate limiting: 100 requests/minute per IP (in-memory map), returns `X-RateLimit-*` and `Retry-After` headers
-- CORS: same-origin only (validates `Origin` header matches `Host`)
-- Body size limit: 5MB on POST/PUT/PATCH
-- Security headers: HSTS, CSP, X-Frame-Options: DENY, X-XSS-Protection, Referrer-Policy, Permissions-Policy, COOP
-- Crash protection: entire middleware wrapped in try/catch (won't kill all routes)
-- Applies to all routes except `_next/static`, `_next/image`, `favicon.ico`
+## Authentication
+- JWT stored in httpOnly cookie: sb_session
+- Session expiry: 7 days
+- Roles: admin, reseller
+- Password hashing: bcryptjs (12 rounds)
 
 ## Database
-PostgreSQL. 10 models: User, ServiceCategory, Service, ServiceCustomField, Supplier, Order, OrderCustomFieldValue, Transaction, Log, AuditLog.
+PostgreSQL with 15 tables:
+User, ServiceCategory, Service, ServiceCustomField, Supplier, Order, OrderNote, OrderCustomFieldValue, Transaction, Log, AuditLog, Notification, ApiKey
 
-### Auth
-- JWT via `jose`, stored in httpOnly cookie `sb_session`
-- Two roles: `admin`, `reseller` (DB role stays `reseller`, UI label is "Client")
-- `requireAuth()` throws `Error('Unauthorized')`, `requireAdmin()` throws `Error('Forbidden')`
-- `getSession()` validates JWT, then checks DB for current role/status — auto-issues new JWT if stale
-- In dev, falls back to insecure JWT_SECRET if not set
+## Security Rules
+- Never expose supplier API keys
+- Never expose service cost to reseller/client APIs
+- Only return clientVisible=true and status=active services to clients
+- All API keys must be SHA-256 hashed
+- Maintain audit logging for sensitive actions
+- Keep rate limiting enabled (100 req/min)
+- Preserve security headers in middleware
 
-### Key Conventions
-- Order statuses: `pending`, `processing`, `completed`, `failed`, `cancelled` (all lowercase)
-- StatusBadge component is case-insensitive (converts to lowercase internally)
-- Wallet: admin can deposit/transfer; client can view only
-- Order reply notes saved to `notes` field via PATCH `/api/orders`
-- Audit logs track all CRUD actions across users, orders, services, suppliers, categories, wallet, and auth
-- Supplier API keys are masked in all responses (`••••••••`)
+## Business Rules
+- One reseller can manage multiple client accounts
+- Orders deduct wallet balance using Transaction records
+- Refunds create order_refund transactions
+- Order timeline must be preserved
+- Internal notes are admin-only
+- Visible notes are client-facing
+- Deleting orders must cascade to notes and custom field values
 
-## Validation Pattern
-All API routes use Zod schemas from `src/lib/validations.ts`:
-```ts
-import { validateBody, loginSchema } from '@/lib/validations'
-const result = validateBody(loginSchema, body)
-if (!result.success) return NextResponse.json({ error: result.error }, { status: 400 })
-```
-Note: This project uses **Zod v4** which has different API from v3 (e.g., `z.enum()` takes a string message, not `{ errorMap }`).
+## Current Features
+- Client dashboard with glass UI
+- Service marketplace
+- Order creation with dynamic fields
+- Order details page with timeline
+- Wallet system
+- Notification system (SSE real-time)
+- API key management
+- External REST API
+- Audit trail with CSV export
+- Reporting dashboard
+- File management with UUID filenames
+- Change password modal
+- Profile dropdown
 
-## Error Handling
-- All API routes use `catch (error: unknown)` with `instanceof Error` checks — never leak internal messages
-- `error.message === 'Unauthorized'` / `'Forbidden'` are the only safe strings to match on
-- Client-side: global `error.tsx` boundary, custom `not-found.tsx`, route-level `loading.tsx`
-- Prisma connection errors retry via `withRetry()` from `src/lib/prisma.ts`
+## Development Rules
+1. Maintain TypeScript strict mode
+2. Keep build at 0 errors / 0 warnings
+3. Remove dead code when replacing features
+4. Use existing glass UI components
+5. Add audit logs for admin actions
+6. Add notifications for important user events
+7. Preserve responsive design
+8. Do not break Railway deployment
 
-## Deploy
-- Platform: Railway
-- Build: `npx prisma generate && next build`
-- Start: `bash scripts/start.sh` (handles first-deploy migration bootstrap)
-- `scripts/start.sh` tries `prisma migrate deploy`; on failure falls back to `db push` + `migrate resolve --applied`
-- Prisma migrations live in `prisma/migrations/`
+## Important API Endpoints
+/api/orders
+/api/orders/[id]/notes
+/api/orders/[id]/timeline
+/api/notifications
+/api/notifications/stream
+/api/api-keys
+/api/external/services
+/api/external/orders
+/api/reporting
+/api/audit-logs
+/api/upload
+/api/files
+/api/auth/change-password
 
-## Gotchas
-- `@/*` path alias maps to `src/*`
-- `prisma.ts` uses global singleton pattern — don't create new PrismaClient instances elsewhere
-- Auth functions throw errors (not return responses) — catch them in route handlers
-- ESLint: `no-explicit-any` is `warn`, not `error` — client components still use `any` in `.map()` callbacks
-- No test suite — verify changes with `npm run build` and `npm run lint`
-- `.env*` files are gitignored — see `.env.example` for required vars (`DATABASE_URL`, `JWT_SECRET`)
-- Rate limiting is per-process (in-memory) — Railway scaling multiplies effective limit by instance count
+## Future Priority
+1. Supplier automation
+2. Multi-currency wallet
+3. Bulk order upload
+4. Webhook integrations
+5. Advanced analytics
+6. Team/staff permissions
+7. Mobile PWA support
+8. AI-assisted order processing
+
+## Current Production Status
+- Build: Clean (0 errors, 0 warnings)
+- Deployment: Live on Railway
+- Database: PostgreSQL connected
+- Notifications: SSE working
+- API Keys: Working
+- External API: Working
+- Reporting: Working
+- Client Dashboard: Upgraded
+- Order Timeline: Working
+- Security Audit: Completed

@@ -1,0 +1,310 @@
+@startuml SmartBD_Unlock_ERD
+!theme plain
+skinparam linetype ortho
+skinparam backgroundColor #FEFEFE
+skinparam defaultFontSize 12
+skinparam EntityFontSize 14
+skinparam EntityBackgroundColor #F0F4FF
+skinparam EntityBorderColor #3B82F6
+skinparam ArrowColor #64748B
+skinparam NoteBackgroundColor #FFFBEB
+skinparam NoteBorderColor #F59E0B
+
+title SmartBD Unlock — Entity Relationship Diagram\nPostgreSQL · 15 Tables · Prisma 5.22.0
+
+' ─── Module: Auth & Users ───
+entity "User" as User {
+    * **id** : TEXT <<PK>>
+    --
+    * email : TEXT <<UNIQUE>>
+    * password : TEXT
+    * name : TEXT
+    * role : TEXT <<admin | reseller>>
+    phone : TEXT <<nullable>>
+    * status : TEXT <<active | suspended | banned>>
+    * walletBalance : FLOAT <<default 0>>
+    resellerId : TEXT <<FK → User.id, nullable>>
+    * createdAt : TIMESTAMP(3)
+    * updatedAt : TIMESTAMP(3)
+}
+
+' ─── Module: Catalog ───
+entity "ServiceCategory" as SC {
+    * **id** : TEXT <<PK>>
+    --
+    * name : TEXT <<UNIQUE>>
+    * createdAt : TIMESTAMP(3)
+    * updatedAt : TIMESTAMP(3)
+}
+
+entity "Service" as Svc {
+    * **id** : TEXT <<PK>>
+    --
+    * name : TEXT
+    description : TEXT <<nullable>>
+    * type : TEXT <<unlock | flash | repair | imei>>
+    * cost : FLOAT <<default 0>>
+    * sellingPrice : FLOAT <<default 0>>
+    processingTime : TEXT <<nullable>>
+    * status : TEXT <<active | inactive>>
+    * clientVisible : BOOLEAN <<default true>>
+    categoryId : TEXT <<FK → ServiceCategory.id, nullable>>
+    supplierId : TEXT <<FK → Supplier.id, nullable>>
+    * createdAt : TIMESTAMP(3)
+    * updatedAt : TIMESTAMP(3)
+}
+
+entity "ServiceCustomField" as SCF {
+    * **id** : TEXT <<PK>>
+    --
+    * serviceId : TEXT <<FK → Service.id>>
+    * fieldType : TEXT <<text|textarea|number|select|multiselect|checkbox|file|image|imei_single|imei_multi|serial_single|serial_multi>>
+    * label : TEXT
+    placeholder : TEXT <<nullable>>
+    options : TEXT <<nullable, JSON array>>
+    * required : BOOLEAN <<default false>>
+    * visibleToClient : BOOLEAN <<default true>>
+    * order : INTEGER <<default 0>>
+    * createdAt : TIMESTAMP(3)
+    * updatedAt : TIMESTAMP(3)
+}
+
+' ─── Module: Suppliers ───
+entity "Supplier" as Sup {
+    * **id** : TEXT <<PK>>
+    --
+    * name : TEXT
+    email : TEXT <<nullable>>
+    phone : TEXT <<nullable>>
+    website : TEXT <<nullable>>
+    * type : TEXT <<api | manual | reseller>>
+    * status : TEXT <<active | inactive>>
+    * successRate : FLOAT <<default 100>>
+    * totalOrders : INTEGER <<default 0>>
+    * priority : INTEGER <<default 1, 1=highest>>
+    apiKey : TEXT <<nullable, masked in responses>>
+    config : TEXT <<nullable, JSON>>
+    * createdAt : TIMESTAMP(3)
+    * updatedAt : TIMESTAMP(3)
+}
+
+' ─── Module: Orders ───
+entity "Order" as Ord {
+    * **id** : TEXT <<PK>>
+    --
+    * orderNumber : TEXT <<UNIQUE, ORD-YYYYMMDD-NNNN>>
+    * userId : TEXT <<FK → User.id>>
+    * serviceId : TEXT <<FK → Service.id>>
+    supplierId : TEXT <<FK → Supplier.id, nullable>>
+    imei : TEXT <<nullable>>
+    deviceInfo : TEXT <<nullable>>
+    * status : TEXT <<pending | processing | completed | failed | cancelled>>
+    * priority : TEXT <<low | normal | high | urgent>>
+    assignedTo : TEXT <<nullable, no FK>>
+    * cost : FLOAT
+    * sellingPrice : FLOAT
+    * profit : FLOAT <<default 0>>
+    notes : TEXT <<nullable, client-visible>>
+    internalNotes : TEXT <<nullable, admin-only>>
+    result : TEXT <<nullable, JSON from supplier>>
+    completedAt : TIMESTAMP(3) <<nullable>>
+    * createdAt : TIMESTAMP(3)
+    * updatedAt : TIMESTAMP(3)
+}
+
+entity "OrderNote" as ON {
+    * **id** : TEXT <<PK>>
+    --
+    * orderId : TEXT <<FK → Order.id>>
+    * authorId : TEXT <<no FK, survives user deletion>>
+    * authorName : TEXT <<denormalized>>
+    * content : TEXT
+    * visible : BOOLEAN <<true=client sees, false=admin only>>
+    * createdAt : TIMESTAMP(3)
+}
+
+entity "OrderCustomFieldValue" as OCFV {
+    * **id** : TEXT <<PK>>
+    --
+    * orderId : TEXT <<FK → Order.id>>
+    * customFieldId : TEXT <<FK → ServiceCustomField.id>>
+    * value : TEXT <<plain text or JSON>>
+    * createdAt : TIMESTAMP(3)
+}
+
+' ─── Module: Finance ───
+entity "Transaction" as Tx {
+    * **id** : TEXT <<PK>>
+    --
+    * userId : TEXT <<FK → User.id>>
+    orderId : TEXT <<FK → Order.id, nullable>>
+    * type : TEXT <<deposit | withdraw | transfer | order_payment | order_refund>>
+    * amount : FLOAT
+    * balanceAfter : FLOAT
+    description : TEXT <<nullable>>
+    * status : TEXT <<pending | completed | failed>>
+    reference : TEXT <<nullable>>
+    * createdAt : TIMESTAMP(3)
+}
+
+' ─── Module: Audit & Logs ───
+entity "Log" as Log {
+    * **id** : TEXT <<PK>>
+    --
+    * level : TEXT <<info | warn | error | debug>>
+    * message : TEXT
+    source : TEXT <<nullable>>
+    details : TEXT <<nullable, JSON>>
+    userId : TEXT <<FK → User.id, nullable>>
+    ip : TEXT <<nullable>>
+    userAgent : TEXT <<nullable>>
+    * createdAt : TIMESTAMP(3)
+}
+
+entity "AuditLog" as AL {
+    * **id** : TEXT <<PK>>
+    --
+    userId : TEXT <<no FK>>
+    userEmail : TEXT <<nullable>>
+    * action : TEXT <<e.g. user.create, order.update>>
+    * entityType : TEXT <<e.g. user, order, service>>
+    entityId : TEXT <<nullable>>
+    description : TEXT <<nullable>>
+    module : TEXT <<nullable>>
+    oldValues : TEXT <<nullable, JSON>>
+    newValues : TEXT <<nullable, JSON>>
+    ip : TEXT <<nullable>>
+    userAgent : TEXT <<nullable>>
+    * createdAt : TIMESTAMP(3)
+}
+
+' ─── Module: Notifications ───
+entity "Notification" as Notif {
+    * **id** : TEXT <<PK>>
+    --
+    * userId : TEXT <<no FK>>
+    * title : TEXT
+    * message : TEXT
+    * type : TEXT <<info | success | warning | error>>
+    * read : BOOLEAN <<default false>>
+    link : TEXT <<nullable>>
+    * createdAt : TIMESTAMP(3)
+}
+
+' ─── Module: API Access ───
+entity "ApiKey" as AK {
+    * **id** : TEXT <<PK>>
+    --
+    * name : TEXT
+    * keyHash : TEXT <<UNIQUE, SHA-256>>
+    * keyPrefix : TEXT <<first 8 chars>>
+    * userId : TEXT <<no FK>>
+    * status : TEXT <<active | revoked | disabled>>
+    * permissions : TEXT <<read | write | admin>>
+    * requestLimit : INTEGER <<default 100, per minute>>
+    * totalRequests : INTEGER <<default 0>>
+    lastUsedAt : TIMESTAMP(3) <<nullable>>
+    expiresAt : TIMESTAMP(3) <<nullable>>
+    * createdAt : TIMESTAMP(3)
+    * updatedAt : TIMESTAMP(3)
+}
+
+' ═══════════════════════════════════════
+' RELATIONSHIPS
+' ═══════════════════════════════════════
+
+' ── Self-relation (Reseller → Client) ──
+User ||--o{ User : "reseller manages\nclients\nON DELETE SET NULL"
+
+' ── Catalog ──
+SC ||--o{ Service : "contains\nON DELETE SET NULL"
+Sup ||--o{ Service : "supplies\nON DELETE SET NULL"
+Svc ||--o{ SCF : "defines fields\nON DELETE CASCADE"
+
+' ── Orders ──
+User ||--o{ Ord : "places orders\nON DELETE RESTRICT"
+Svc ||--o{ Ord : "fulfills\nON DELETE RESTRICT"
+Sup ||--o{ Ord : "processes\nON DELETE SET NULL"
+Ord ||--o{ ON : "has notes\nON DELETE CASCADE"
+Ord ||--o{ OCFV : "has custom values\nON DELETE CASCADE"
+SCF ||--o{ OCFV : "defines\nON DELETE RESTRICT"
+
+' ── Finance ──
+User ||--o{ Tx : "has transactions\nON DELETE RESTRICT"
+Ord ||--o{ Tx : "linked to\nON DELETE SET NULL"
+
+' ── Logging ──
+User ||--o{ Log : "generates logs\nON DELETE SET NULL"
+
+' ── No FK constraints (app-level references) ──
+User ||--o{ AL : "audit trail (no FK)"
+User ||--o{ Notif : "notifications (no FK)"
+User ||--o{ AK : "api keys (no FK)"
+
+' ═══════════════════════════════════════
+' INDEXES (displayed as notes)
+' ═══════════════════════════════════════
+
+note bottom of User
+  INDEXES:
+  · UNIQUE(email)
+  · BTREE(email)
+  · BTREE(role)
+  · FK(resellerId) → User.id
+end note
+
+note bottom of Svc
+  INDEXES:
+  · COMPOSITE(supplierId, status)
+  · FK(categoryId) → ServiceCategory.id
+  · FK(supplierId) → Supplier.id
+end note
+
+note bottom of Ord
+  INDEXES:
+  · UNIQUE(orderNumber)
+  · COMPOSITE(userId, status, createdAt)
+  · BTREE(status)
+  · BTREE(assignedTo) — no FK
+  · BTREE(priority)
+end note
+
+note bottom of ON
+  INDEXES:
+  · BTREE(orderId)
+  · BTREE(authorId) — no FK
+end note
+
+note bottom of Tx
+  INDEXES:
+  · COMPOSITE(userId, type, createdAt)
+end note
+
+note bottom of Log
+  INDEXES:
+  · COMPOSITE(level, createdAt)
+  · BTREE(source)
+end note
+
+note bottom of AL
+  INDEXES:
+  · BTREE(userId)
+  · COMPOSITE(entityType, entityId)
+  · BTREE(action)
+  · BTREE(module)
+  · BTREE(createdAt)
+end note
+
+note bottom of Notif
+  INDEXES:
+  · COMPOSITE(userId, read)
+  · BTREE(createdAt)
+end note
+
+note bottom of AK
+  INDEXES:
+  · UNIQUE(keyHash)
+  · BTREE(userId)
+end note
+
+@enduml

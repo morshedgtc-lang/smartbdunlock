@@ -1,0 +1,204 @@
+erDiagram
+    User {
+        TEXT id PK
+        TEXT email UK
+        TEXT password
+        TEXT name
+        TEXT role
+        TEXT phone
+        TEXT status
+        FLOAT walletBalance
+        TEXT resellerId FK_Nullable
+        TIMESTAMP3 createdAt
+        TIMESTAMP3 updatedAt
+    }
+
+    ServiceCategory {
+        TEXT id PK
+        TEXT name UK
+        TIMESTAMP3 createdAt
+        TIMESTAMP3 updatedAt
+    }
+
+    Service {
+        TEXT id PK
+        TEXT name
+        TEXT description
+        TEXT type
+        FLOAT cost
+        FLOAT sellingPrice
+        TEXT processingTime
+        TEXT status
+        BOOLEAN clientVisible
+        TEXT categoryId FK_Nullable
+        TEXT supplierId FK_Nullable
+        TIMESTAMP3 createdAt
+        TIMESTAMP3 updatedAt
+    }
+
+    ServiceCustomField {
+        TEXT id PK
+        TEXT serviceId FK
+        TEXT fieldType
+        TEXT label
+        TEXT placeholder
+        TEXT options
+        BOOLEAN required
+        BOOLEAN visibleToClient
+        INT order
+        TIMESTAMP3 createdAt
+        TIMESTAMP3 updatedAt
+    }
+
+    Supplier {
+        TEXT id PK
+        TEXT name
+        TEXT email
+        TEXT phone
+        TEXT website
+        TEXT type
+        TEXT status
+        FLOAT successRate
+        INT totalOrders
+        INT priority
+        TEXT apiKey
+        TEXT config
+        TIMESTAMP3 createdAt
+        TIMESTAMP3 updatedAt
+    }
+
+    Order {
+        TEXT id PK
+        TEXT orderNumber UK
+        TEXT userId FK
+        TEXT serviceId FK
+        TEXT supplierId FK_Nullable
+        TEXT imei
+        TEXT deviceInfo
+        TEXT status
+        TEXT priority
+        TEXT assignedTo
+        FLOAT cost
+        FLOAT sellingPrice
+        FLOAT profit
+        TEXT notes
+        TEXT internalNotes
+        TEXT result
+        TIMESTAMP3 completedAt
+        TIMESTAMP3 createdAt
+        TIMESTAMP3 updatedAt
+    }
+
+    OrderNote {
+        TEXT id PK
+        TEXT orderId FK
+        TEXT authorId
+        TEXT authorName
+        TEXT content
+        BOOLEAN visible
+        TIMESTAMP3 createdAt
+    }
+
+    OrderCustomFieldValue {
+        TEXT id PK
+        TEXT orderId FK
+        TEXT customFieldId FK
+        TEXT value
+        TIMESTAMP3 createdAt
+    }
+
+    Transaction {
+        TEXT id PK
+        TEXT userId FK
+        TEXT orderId FK_Nullable
+        TEXT type
+        FLOAT amount
+        FLOAT balanceAfter
+        TEXT description
+        TEXT status
+        TEXT reference
+        TIMESTAMP3 createdAt
+    }
+
+    Log {
+        TEXT id PK
+        TEXT level
+        TEXT message
+        TEXT source
+        TEXT details
+        TEXT userId FK_Nullable
+        TEXT ip
+        TEXT userAgent
+        TIMESTAMP3 createdAt
+    }
+
+    AuditLog {
+        TEXT id PK
+        TEXT userId
+        TEXT userEmail
+        TEXT action
+        TEXT entityType
+        TEXT entityId
+        TEXT description
+        TEXT module
+        TEXT oldValues
+        TEXT newValues
+        TEXT ip
+        TEXT userAgent
+        TIMESTAMP3 createdAt
+    }
+
+    Notification {
+        TEXT id PK
+        TEXT userId
+        TEXT title
+        TEXT message
+        TEXT type
+        BOOLEAN read
+        TEXT link
+        TIMESTAMP3 createdAt
+    }
+
+    ApiKey {
+        TEXT id PK
+        TEXT name
+        TEXT keyHash UK
+        TEXT keyPrefix
+        TEXT userId
+        TEXT status
+        TEXT permissions
+        INT requestLimit
+        INT totalRequests
+        TIMESTAMP3 lastUsedAt
+        TIMESTAMP3 expiresAt
+        TIMESTAMP3 createdAt
+        TIMESTAMP3 updatedAt
+    }
+
+    %% ── Self-relation ──
+    User ||--o{ User : "reseller manages clients"
+
+    %% ── Catalog ──
+    ServiceCategory ||--o{ Service : "contains"
+    Supplier ||--o{ Service : "supplies"
+    Service ||--o{ ServiceCustomField : "defines fields"
+
+    %% ── Orders ──
+    User ||--o{ Order : "places"
+    Service ||--o{ Order : "fulfills"
+    Supplier ||--o{ Order : "processes"
+    Order ||--o{ OrderNote : "has notes"
+    Order ||--o{ OrderCustomFieldValue : "has values"
+    ServiceCustomField ||--o{ OrderCustomFieldValue : "defines"
+
+    %% ── Finance ──
+    User ||--o{ Transaction : "has transactions"
+    Order ||--o{ Transaction : "linked to"
+
+    %% ── Logging ──
+    User ||--o{ Log : "generates"
+
+    %% ── No FK constraints (app-level) ──
+    AuditLog }o--|| User : "tracked by (no FK)"
+    Notification }o--|| User : "sent to (no FK)"
+    ApiKey }o--|| User : "owned by (no FK)"
