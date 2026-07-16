@@ -19,11 +19,13 @@ model User {
   resellerId    String?   // admin or reseller this user is assigned to
   reseller      User?     @relation("ResellerAssignment", fields: [resellerId], references: [id])
   clients       User[]    @relation("ResellerAssignment")
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  orders        Order[]
-  transactions  Transaction[]
-  logs          Log[]
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  orders             Order[]
+  transactions       Transaction[]
+  logs               Log[]
+  depositRequests    DepositRequest[]
+  bulkBatches        BulkOrderBatch[]
 
   @@index([email])
   @@index([role])
@@ -53,6 +55,7 @@ model Service {
   supplier       Supplier?           @relation(fields: [supplierId], references: [id])
   orders         Order[]
   customFields   ServiceCustomField[]
+  bulkBatches    BulkOrderBatch[]
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
 
@@ -88,10 +91,11 @@ model Supplier {
   priority    Int       @default(1) // 1=highest
   apiKey      String?
   config      String?   // JSON config for supplier
-  services    Service[]
-  orders      Order[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  services     Service[]
+  orders       Order[]
+  supplierJobs SupplierJob[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 }
 
 model Order {
@@ -118,6 +122,7 @@ model Order {
   transactions  Transaction[]
   customValues  OrderCustomFieldValue[]
   orderNotes    OrderNote[]
+  supplierJobs  SupplierJob[]
   createdAt     DateTime               @default(now())
   updatedAt     DateTime               @updatedAt
 
@@ -237,4 +242,65 @@ model ApiKey {
 
   @@index([keyHash])
   @@index([userId])
+}
+
+model DepositRequest {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id])
+  amount       Float
+  method       String    // bkash, nagad, usdt, bank
+  transactionId String?
+  screenshot   String?   // base64 data URL
+  status       String    @default("pending") // pending, approved, rejected
+  adminNote    String?
+  approvedBy   String?
+  approvedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([userId, status])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model SupplierJob {
+  id               String    @id @default(cuid())
+  orderId          String
+  order            Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  supplierId       String
+  supplier         Supplier  @relation(fields: [supplierId], references: [id])
+  externalOrderId  String?
+  status           String    @default("queued") // queued, sent, processing, completed, failed
+  requestPayload   String?   // JSON request sent to supplier
+  responsePayload  String?   // JSON response from supplier
+  attempts         Int       @default(0)
+  lastAttemptAt    DateTime?
+  completedAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([orderId])
+  @@index([supplierId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model BulkOrderBatch {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id])
+  serviceId         String
+  service           Service  @relation(fields: [serviceId], references: [id])
+  fileName          String
+  totalRecords      Int
+  successfulRecords Int      @default(0)
+  failedRecords     Int      @default(0)
+  status            String   @default("processing") // processing, completed, failed
+  createdAt         DateTime @default(now())
+  completedAt       DateTime?
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
 }

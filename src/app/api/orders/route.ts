@@ -5,6 +5,7 @@ import { requireAuth } from '@/lib/auth'
 import { ordersQuerySchema, createOrderSchema, updateOrderSchema, validateBody, validateQuery } from '@/lib/validations'
 import { auditLog, getClientIp, getClientUserAgent } from '@/lib/audit'
 import { createOrderNotification, createWalletNotification } from '@/lib/notifications'
+import { createSupplierJob, submitToSupplier } from '@/lib/suppliers'
 
 export async function GET(request: Request) {
   try {
@@ -213,6 +214,19 @@ export async function POST(request: Request) {
       serviceName: service.name,
       userId: user.id,
     })
+
+    if (service.supplierId) {
+      try {
+        const job = await createSupplierJob({
+          orderId: orderResult?.id as string,
+          supplierId: service.supplierId,
+          requestPayload: JSON.stringify({ imei, deviceInfo, serviceType: service.type }),
+        })
+        await submitToSupplier(job.id)
+      } catch (err) {
+        console.error('Supplier job creation failed:', err)
+      }
+    }
 
     return NextResponse.json(result, { status: 201 })
   } catch (error: unknown) {

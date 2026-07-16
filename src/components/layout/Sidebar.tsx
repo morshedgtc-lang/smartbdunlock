@@ -20,6 +20,8 @@ import {
   Shield,
   Key,
   BarChart3,
+  BadgeDollarSign,
+  Upload,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '@/lib/api'
@@ -31,6 +33,7 @@ const adminLinks = [
   { href: '/admin/orders', label: 'Orders', icon: ShoppingCart },
   { href: '/admin/suppliers', label: 'Suppliers', icon: Plug },
   { href: '/admin/wallet', label: 'Wallet', icon: Wallet },
+  { href: '/admin/deposit-requests', label: 'Deposit Requests', icon: BadgeDollarSign },
   { href: '/admin/reporting', label: 'Reporting', icon: BarChart3 },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
   { href: '/admin/logs', label: 'Logs', icon: FileText },
@@ -42,7 +45,9 @@ const clientLinks = [
   { href: '/reseller/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/reseller/services', label: 'Services', icon: Package },
   { href: '/reseller/orders', label: 'Orders', icon: ShoppingCart },
+  { href: '/reseller/bulk-orders', label: 'Bulk Orders', icon: Upload },
   { href: '/reseller/wallet', label: 'Wallet', icon: Wallet },
+  { href: '/reseller/deposit-request', label: 'Deposit Request', icon: BadgeDollarSign },
 ]
 
 export function Sidebar() {

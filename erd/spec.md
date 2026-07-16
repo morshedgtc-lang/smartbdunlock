@@ -1,6 +1,6 @@
 # SmartBD Unlock — Database Specification
 
-**Database:** PostgreSQL | **ORM:** Prisma 5.22.0 | **Tables:** 15 | **PKs:** TEXT (cuid) | **Datetimes:** TIMESTAMP(3)
+**Database:** PostgreSQL | **ORM:** Prisma 5.22.0 | **Tables:** 18 | **PKs:** TEXT (cuid) | **Datetimes:** TIMESTAMP(3)
 
 ---
 
@@ -10,9 +10,9 @@
 |---|---|
 | Auth & Users | `User` |
 | Catalog | `ServiceCategory`, `Service`, `ServiceCustomField` |
-| Suppliers | `Supplier` |
-| Orders | `Order`, `OrderNote`, `OrderCustomFieldValue` |
-| Finance | `Transaction` |
+| Suppliers | `Supplier`, `SupplierJob` |
+| Orders | `Order`, `OrderNote`, `OrderCustomFieldValue`, `BulkOrderBatch` |
+| Finance | `Transaction`, `DepositRequest` |
 | Audit & Logs | `Log`, `AuditLog` |
 | Notifications | `Notification` |
 | API Access | `ApiKey` |
@@ -408,4 +408,98 @@ ServiceCustomField (1) ── (N) OrderCustomFieldValue
 Order (1) ──────── (N) OrderNote
 Order (1) ──────── (N) OrderCustomFieldValue
 Order (1) ──────── (N) Transaction
+Order (1) ──────── (N) SupplierJob
+
+User (1) ──────── (N) DepositRequest
+User (1) ──────── (N) BulkOrderBatch
+Service (1) ──────── (N) BulkOrderBatch
+Supplier (1) ──────── (N) SupplierJob
 ```
+
+---
+
+## Table 14: `DepositRequest`
+
+| Column | Type | Nullable | Default |
+|---|---|---|---|
+| **id** | TEXT | NO | `cuid()` |
+| userId | TEXT | NO | — |
+| amount | FLOAT | NO | — |
+| method | TEXT | NO | — |
+| transactionId | TEXT | YES | — |
+| screenshot | TEXT | YES | — |
+| status | TEXT | NO | `'pending'` |
+| adminNote | TEXT | YES | — |
+| approvedBy | TEXT | YES | — |
+| approvedAt | TIMESTAMP(3) | YES | — |
+| createdAt | TIMESTAMP(3) | NO | `now()` |
+| updatedAt | TIMESTAMP(3) | NO | — |
+
+**method values:** `bkash`, `nagad`, `usdt`, `bank`
+**status values:** `pending`, `approved`, `rejected`
+
+**Indexes:** PK(`id`), COMPOSITE BTREE(`userId`, `status`), BTREE(`status`), BTREE(`createdAt`)
+
+**FKs:**
+
+| Column | References | ON DELETE | ON UPDATE |
+|---|---|---|---|
+| `userId` | `User(id)` | **RESTRICT** | CASCADE |
+
+---
+
+## Table 15: `SupplierJob`
+
+| Column | Type | Nullable | Default |
+|---|---|---|---|
+| **id** | TEXT | NO | `cuid()` |
+| orderId | TEXT | NO | — |
+| supplierId | TEXT | NO | — |
+| externalOrderId | TEXT | YES | — |
+| status | TEXT | NO | `'queued'` |
+| requestPayload | TEXT | YES | — |
+| responsePayload | TEXT | YES | — |
+| attempts | INTEGER | NO | `0` |
+| lastAttemptAt | TIMESTAMP(3) | YES | — |
+| completedAt | TIMESTAMP(3) | YES | — |
+| createdAt | TIMESTAMP(3) | NO | `now()` |
+| updatedAt | TIMESTAMP(3) | NO | — |
+
+**status values:** `queued`, `sent`, `processing`, `completed`, `failed`
+
+**Indexes:** PK(`id`), BTREE(`orderId`), BTREE(`supplierId`), BTREE(`status`), BTREE(`createdAt`)
+
+**FKs:**
+
+| Column | References | ON DELETE | ON UPDATE |
+|---|---|---|---|
+| `orderId` | `Order(id)` | **CASCADE** | CASCADE |
+| `supplierId` | `Supplier(id)` | **RESTRICT** | CASCADE |
+
+---
+
+## Table 16: `BulkOrderBatch`
+
+| Column | Type | Nullable | Default |
+|---|---|---|---|
+| **id** | TEXT | NO | `cuid()` |
+| userId | TEXT | NO | — |
+| serviceId | TEXT | NO | — |
+| fileName | TEXT | NO | — |
+| totalRecords | INTEGER | NO | — |
+| successfulRecords | INTEGER | NO | `0` |
+| failedRecords | INTEGER | NO | `0` |
+| status | TEXT | NO | `'processing'` |
+| createdAt | TIMESTAMP(3) | NO | `now()` |
+| completedAt | TIMESTAMP(3) | YES | — |
+
+**status values:** `processing`, `completed`, `failed`
+
+**Indexes:** PK(`id`), BTREE(`userId`), BTREE(`status`), BTREE(`createdAt`)
+
+**FKs:**
+
+| Column | References | ON DELETE | ON UPDATE |
+|---|---|---|---|
+| `userId` | `User(id)` | **RESTRICT** | CASCADE |
+| `serviceId` | `Service(id)` | **RESTRICT** | CASCADE |

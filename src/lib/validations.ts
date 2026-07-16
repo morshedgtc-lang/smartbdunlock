@@ -175,6 +175,35 @@ export const changePasswordSchema = z.object({
   path: ['confirmPassword'],
 })
 
+export const depositRequestSchema = z.object({
+  amount: z.number().positive('Amount must be positive'),
+  method: z.enum(['bkash', 'nagad', 'usdt', 'bank'], 'Invalid payment method'),
+  transactionId: z.string().optional(),
+  screenshot: z.string().optional(),
+})
+
+export const depositRequestQuerySchema = z.object({
+  status: z.enum(['pending', 'approved', 'rejected']).optional(),
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+})
+
+export const depositRequestUpdateSchema = z.object({
+  id: z.string().min(1, 'Request ID is required'),
+  status: z.enum(['approved', 'rejected'], 'Status must be approved or rejected'),
+  adminNote: z.string().optional(),
+})
+
+export const bulkOrderProcessSchema = z.object({
+  serviceId: z.string().min(1, 'Service ID is required'),
+  imeis: z.array(z.string().min(15, 'IMEI must be 15 digits').max(15, 'IMEI must be 15 digits')).min(1, 'At least one IMEI required'),
+})
+
+export const bulkOrderQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+})
+
 export function validateBody<T extends z.ZodType>(schema: T, data: unknown) {
   const result = schema.safeParse(data)
   if (!result.success) {
