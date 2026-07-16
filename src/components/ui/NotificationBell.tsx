@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import { Bell, CheckCheck } from 'lucide-react'
+import { Dropdown } from '@/components/ui/Dropdown'
 
 interface Notification {
   id: string
@@ -116,16 +116,6 @@ export function NotificationBell() {
     }
   }, [fetchNotifications])
 
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
-        setIsOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
   const markAllRead = async () => {
     try {
       await fetch('/api/notifications', {
@@ -158,31 +148,30 @@ export function NotificationBell() {
 
   return (
     <div ref={wrapperRef} className="relative">
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 rounded-xl text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-white/10 dark:hover:bg-white/5 transition-colors"
+      <Dropdown
+        open={isOpen}
+        onToggle={setIsOpen}
+        align="right"
+        menuClassName="w-[380px] p-0"
       >
-        <Bell size={20} />
-        {!connected && (
-          <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full shadow-lg shadow-red-500/30" />
-        )}
-        {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-red-500 rounded-full shadow-lg shadow-red-500/30">
-            {unreadCount > 99 ? '99+' : unreadCount}
-          </span>
-        )}
-      </button>
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="relative p-2 rounded-xl text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--accent)]/5 transition-colors cursor-pointer"
+        >
+          <Bell size={20} />
+          {!connected && (
+            <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full shadow-lg shadow-red-500/30" />
+          )}
+          {unreadCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-red-500 rounded-full shadow-lg shadow-red-500/30">
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </span>
+          )}
+        </button>
 
-      <AnimatePresence>
         {isOpen && (
-          <motion.div
-            className="glass-dropdown-panel w-[380px] right-0 !p-0 overflow-hidden"
-            initial={{ opacity: 0, y: -8, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -8, scale: 0.96 }}
-            transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
-          >
+          <div className="absolute right-0 top-full mt-2 w-[380px] bg-white dark:bg-[#12121f] border border-[var(--card-border)] rounded-xl shadow-xl z-[9999]">
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--card-border)]">
               <span className="text-sm font-semibold text-[var(--foreground)]">
@@ -195,7 +184,7 @@ export function NotificationBell() {
                 <button
                   type="button"
                   onClick={markAllRead}
-                  className="flex items-center gap-1.5 text-xs text-[var(--accent)] hover:text-[var(--foreground)] transition-colors"
+                  className="flex items-center gap-1.5 text-xs text-[var(--accent)] hover:text-[var(--foreground)] transition-colors cursor-pointer"
                 >
                   <CheckCheck size={14} />
                   Mark all read
@@ -225,7 +214,7 @@ export function NotificationBell() {
                       }
                       setIsOpen(false)
                     }}
-                    className={`w-full text-left px-4 py-3 border-b border-[var(--card-border)] last:border-b-0 transition-colors hover:bg-white/5 dark:hover:bg-white/[0.03] ${
+                    className={`w-full text-left px-4 py-3 border-b border-[var(--card-border)] last:border-b-0 transition-colors hover:bg-[var(--accent)]/5 cursor-pointer ${
                       !notification.read ? 'bg-[var(--accent)]/[0.04]' : ''
                     }`}
                   >
@@ -256,9 +245,9 @@ export function NotificationBell() {
                 ))
               )}
             </div>
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
+      </Dropdown>
     </div>
   )
 }

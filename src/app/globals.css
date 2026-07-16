@@ -693,7 +693,7 @@ img[loading="lazy"]:not([src=""]) {
   -webkit-backdrop-filter: blur(40px) saturate(180%) brightness(1.1);
   border: 1px solid var(--card-border);
   border-radius: 20px;
-  overflow: hidden;
+  clip-path: inset(0 round 20px);
   transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
@@ -743,8 +743,6 @@ img[loading="lazy"]:not([src=""]) {
   gap: 10px;
   padding: 14px 22px;
   background: var(--card-bg);
-  backdrop-filter: blur(40px) saturate(180%);
-  -webkit-backdrop-filter: blur(40px) saturate(180%);
   border: 1px solid var(--card-border);
   border-radius: 16px;
   color: var(--foreground);
@@ -752,49 +750,25 @@ img[loading="lazy"]:not([src=""]) {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  overflow: hidden;
-}
-
-.glass-dropdown-trigger::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent 10%, rgba(255,255,255,0.25) 50%, transparent 90%);
-  z-index: 2;
 }
 
 .glass-dropdown-trigger:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.18);
-  transform: translateY(-2px);
+  border-color: rgba(99, 102, 241, 0.3);
 }
 
 .dark .glass-dropdown-trigger:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.06);
 }
 
-.glass-dropdown-trigger .arrow {
-  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
-  font-size: 9px;
-  opacity: 0.5;
-}
 
-.glass-dropdown.open .glass-dropdown-trigger .arrow {
-  transform: rotate(180deg);
-}
 
-/* Dropdown panel */
+/* Dropdown panel — managed by Dropdown component via Tailwind, kept for legacy glass-dropdown class */
 .glass-dropdown-panel {
   position: absolute;
   top: calc(100% + 10px);
   left: 0;
   min-width: 240px;
-  background: var(--surface);
-  backdrop-filter: blur(60px) saturate(200%) brightness(1.15);
-  -webkit-backdrop-filter: blur(60px) saturate(200%) brightness(1.15);
+  background: white;
   border: 1px solid var(--card-border);
   border-radius: 20px;
   padding: 10px;
@@ -802,12 +776,12 @@ img[loading="lazy"]:not([src=""]) {
   visibility: hidden;
   transform: translateY(-12px) scale(0.96);
   transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  z-index: 100;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.3), 0 32px 80px rgba(0,0,0,0.2);
+  z-index: 9999;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12), 0 32px 80px rgba(0,0,0,0.08);
 }
 
 .dark .glass-dropdown-panel {
-  background: rgba(20, 20, 25, 0.95);
+  background: #12121f;
   box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 32px 80px rgba(0,0,0,0.4);
 }
 
@@ -1008,7 +982,6 @@ img[loading="lazy"]:not([src=""]) {
    ============================================ */
 .glass,
 .glass-premium,
-.glass-dropdown-panel,
 .glass-search-results,
 .glass-search-box,
 .glass-btn,
@@ -1029,13 +1002,11 @@ img[loading="lazy"]:not([src=""]) {
    ============================================ */
 @media (max-width: 768px) {
   .glass,
-  .glass-premium,
-  .glass-dropdown-trigger {
+  .glass-premium {
     backdrop-filter: blur(20px) saturate(150%) !important;
     -webkit-backdrop-filter: blur(20px) saturate(150%) !important;
   }
 
-  .glass-dropdown-panel,
   .glass-search-results {
     backdrop-filter: blur(30px) saturate(180%) !important;
     -webkit-backdrop-filter: blur(30px) saturate(180%) !important;
@@ -1112,10 +1083,6 @@ img[loading="lazy"]:not([src=""]) {
   background: linear-gradient(180deg, transparent 10%, rgba(255,255,255,0.2) 50%, transparent 90%);
   pointer-events: none;
   z-index: 2;
-}
-
-.glass-dropdown-panel {
-  overflow: hidden;
 }
 
 /* ============================================
