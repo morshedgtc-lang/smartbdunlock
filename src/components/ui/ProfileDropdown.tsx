@@ -60,7 +60,7 @@ export function ProfileDropdown() {
 
         {open && (
           <div
-            className="absolute right-0 top-full mt-2 w-64 border rounded-xl shadow-xl z-[9999]"
+            className="absolute right-0 top-full mt-2 w-64 border rounded-xl shadow-xl z-50"
             style={menuBg}
           >
             {/* Header */}

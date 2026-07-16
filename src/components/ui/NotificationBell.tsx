@@ -182,7 +182,7 @@ export function NotificationBell() {
 
         {isOpen && (
           <div
-            className="absolute right-0 top-full mt-2 w-[380px] border rounded-xl shadow-xl z-[9999]"
+            className="absolute right-0 top-full mt-2 w-[380px] border rounded-xl shadow-xl z-50"
             style={menuBg}
           >
             {/* Header */}

@@ -157,58 +157,60 @@ export function Dropdown({
         </button>
       )}
 
-      {/* Menu */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            className={`absolute top-full mt-2 z-[9999] min-w-[200px] border rounded-xl shadow-xl py-1 ${alignClass} ${menuClassName}`}
-            style={{
-              background: 'var(--card-bg)',
-              backdropFilter: 'blur(20px) saturate(180%)',
-              WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-              borderColor: 'var(--card-border)',
-            }}
-            initial={{ opacity: 0, y: -4, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -4, scale: 0.97 }}
-            transition={{ duration: 0.15, ease: 'easeOut' }}
-          >
-            {options.map((option, idx) => (
-              <button
-                key={option.value}
-                type="button"
-                className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition-colors cursor-pointer ${
-                  value === option.value
-                    ? 'text-[var(--accent)]'
-                    : 'text-[var(--foreground)]'
-                } ${option.disabled ? 'opacity-40 cursor-not-allowed' : ''} ${
-                  selectedIndex === idx ? 'bg-[var(--accent)]/5' : ''
-                }`}
-                style={{
-                  background: value === option.value || selectedIndex === idx
-                    ? 'rgba(99, 102, 241, 0.08)'
-                    : undefined,
-                }}
-                onMouseEnter={(e) => {
-                  if (value !== option.value && selectedIndex !== idx) {
-                    e.currentTarget.style.background = 'rgba(99, 102, 241, 0.05)'
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (value !== option.value && selectedIndex !== idx) {
-                    e.currentTarget.style.background = ''
-                  }
-                }}
-                onClick={() => handleSelect(option)}
-                disabled={option.disabled}
-              >
-                {option.icon && <option.icon size={15} className="flex-shrink-0 text-[var(--muted)]" />}
-                <span className="truncate">{option.label}</span>
-              </button>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Menu — only render when no custom children are provided */}
+      {!children && (
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              className={`absolute top-full mt-2 z-[9999] min-w-[200px] border rounded-xl shadow-xl py-1 ${alignClass} ${menuClassName}`}
+              style={{
+                background: 'var(--card-bg)',
+                backdropFilter: 'blur(20px) saturate(180%)',
+                WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+                borderColor: 'var(--card-border)',
+              }}
+              initial={{ opacity: 0, y: -4, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -4, scale: 0.97 }}
+              transition={{ duration: 0.15, ease: 'easeOut' }}
+            >
+              {options.map((option, idx) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition-colors cursor-pointer ${
+                    value === option.value
+                      ? 'text-[var(--accent)]'
+                      : 'text-[var(--foreground)]'
+                  } ${option.disabled ? 'opacity-40 cursor-not-allowed' : ''} ${
+                    selectedIndex === idx ? 'bg-[var(--accent)]/5' : ''
+                  }`}
+                  style={{
+                    background: value === option.value || selectedIndex === idx
+                      ? 'rgba(99, 102, 241, 0.08)'
+                      : undefined,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (value !== option.value && selectedIndex !== idx) {
+                      e.currentTarget.style.background = 'rgba(99, 102, 241, 0.05)'
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (value !== option.value && selectedIndex !== idx) {
+                      e.currentTarget.style.background = ''
+                    }
+                  }}
+                  onClick={() => handleSelect(option)}
+                  disabled={option.disabled}
+                >
+                  {option.icon && <option.icon size={15} className="flex-shrink-0 text-[var(--muted)]" />}
+                  <span className="truncate">{option.label}</span>
+                </button>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      )}
 
       {error && (
         <p className="text-xs text-red-500 pl-1 mt-1">{error}</p>
