@@ -17,7 +17,7 @@ export async function GET(request: Request) {
     }
     const { search, role, limit } = validation.data
 
-    const where: Prisma.UserWhereInput = {}
+    const where: Prisma.UserWhereInput = { status: { not: 'deleted' } }
     if (search) {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
@@ -163,10 +163,7 @@ export async function DELETE(request: Request) {
   try {
     await requireAdmin()
     const { searchParams } = new URL(request.url)
-    const id = searchParams.get('id') || ''
-
-    const body = await request.json().catch(() => ({}))
-    const userId = id || ((body as Record<string, unknown>).id as string) || ''
+    const userId = searchParams.get('id') || ''
 
     if (!userId) return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
 
@@ -175,8 +172,10 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Cannot delete your own account' }, { status: 400 })
     }
 
-    const deleted = await prisma.user.findUnique({ where: { id: userId }, select: { email: true, name: true, role: true } })
-    await prisma.user.delete({ where: { id: userId } })
+    const existing = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, email: true, name: true, role: true, status: true } })
+    if (!existing) return NextResponse.json({ error: 'User not found' }, { status: 404 })
+
+    await prisma.user.update({ where: { id: userId }, data: { status: 'deleted', email: `deleted_${Date.now()}_${existing.email}` } })
 
     await auditLog({
       userId: admin.id,
@@ -184,7 +183,7 @@ export async function DELETE(request: Request) {
       action: 'user.delete',
       entityType: 'user',
       entityId: userId,
-      oldValues: deleted || {},
+      oldValues: { name: existing.name, email: existing.email, role: existing.role },
       ip: getClientIp(request),
       userAgent: getClientUserAgent(request),
     })
