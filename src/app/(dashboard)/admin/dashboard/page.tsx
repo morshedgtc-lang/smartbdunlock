@@ -1,23 +1,28 @@
 'use client'
 
 import { Header } from '@/components/layout/Header'
-import { StatCard } from '@/components/ui/StatCard'
 import { GlassCard } from '@/components/ui/GlassCard'
+import { GlassButton } from '@/components/ui/GlassButton'
+import { StatCard } from '@/components/ui/StatCard'
 import { StatusBadge } from '@/components/ui/StatusBadge'
-import { SkeletonCard, SkeletonStat } from '@/components/ui/Skeleton'
+import { SkeletonStat, SkeletonCard, SkeletonTable } from '@/components/ui/Skeleton'
+import { OrderDetailDrawer, DetailOrder } from '@/components/admin/OrderDetailDrawer'
 import { useApi } from '@/hooks/useApi'
 import { useToast } from '@/components/ui/Toast'
-import { OrderDetailDrawer, DetailOrder } from '@/components/admin/OrderDetailDrawer'
+import { useAuth } from '@/lib/api'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
+import { useState, useMemo } from 'react'
 import {
   Users, ShoppingCart, DollarSign, Clock, CheckCircle, XCircle,
   TrendingUp, Wallet, Package, BarChart3, Crown, Zap, Activity,
-  ArrowUpRight, RefreshCw, RotateCcw,
+  ArrowUpRight, RefreshCw, RotateCcw, AlertTriangle, Server,
+  Database, Wifi, Shield, Bell, FileText, Eye, Reply, Settings,
+  Send, MessageSquare, UserPlus, CreditCard, Upload, Radio,
+  Globe, HardDrive, Layers, Play, CircleDot, Plus,
 } from 'lucide-react'
-import { useState, useMemo } from 'react'
 
-interface DashboardStats {
+interface DashboardData {
   totalUsers: number
   totalOrders: number
   revenueToday: number
@@ -52,28 +57,72 @@ interface DashboardOrder {
   userName?: string
 }
 
+interface ReportingData {
+  summary: {
+    revenue: number
+    profit: number
+    totalOrders: number
+    completedOrders: number
+    pendingOrders: number
+    failedOrders: number
+    cancelledOrders: number
+    activeUsers: number
+    totalUsers: number
+    activeServices: number
+    totalSuppliers: number
+    avgOrderValue: number
+    conversionRate: string
+  }
+  dailyRevenue: { date: string; revenue: number; orders: number }[]
+  topServices: { name: string; orders: number; revenue: number; profit: number }[]
+  topUsers: { name: string; email: string; orders: number; spent: number }[]
+  statusDistribution: { status: string; count: number }[]
+}
+
+interface OrderSummary {
+  total: number
+  counts: { pending: number; processing: number; completed: number; failed: number; cancelled: number; rejected: number; refunded: number }
+  todayRevenue: number
+}
+
+interface OrdersData {
+  orders: {
+    id: string; orderNumber: string; status: string; priority: string;
+    imei?: string | null; deviceInfo?: string | null; sellingPrice: number;
+    createdAt: string; serviceName?: string; serviceType?: string;
+    userName?: string; userEmail?: string; supplierName?: string;
+  }[]
+  pagination: { page: number; limit: number; total: number; pages: number }
+}
+
+interface NotificationItem {
+  id: string; title: string; message: string; type: string; read: boolean; link?: string; createdAt: string
+}
+
+interface NotificationData {
+  notifications: NotificationItem[]
+  unreadCount: number
+}
+
+interface DepositRequest {
+  id: string; userId: string; amount: number; method: string; status: string;
+  createdAt: string; userName?: string; userEmail?: string; userPublicId?: string
+}
+
+interface DepositData {
+  requests: DepositRequest[]
+  pagination: { total: number }
+}
+
 interface SupplierItem {
-  id: string
-  name: string
-  status: string
+  id: string; name: string; status: string; type: string; successRate: number;
+  totalOrders: number; priority: number; orderCount?: number; serviceCount?: number
 }
 
-interface CustomerAgg {
-  name: string
-  orders: number
-  totalSpent: number
-}
-
-interface ServiceAgg {
-  name: string
-  orders: number
-  totalRevenue: number
-}
-
-interface DayRevenue {
-  label: string
-  shortLabel: string
-  revenue: number
+interface AuditLog {
+  id: string; userId?: string | null; userEmail?: string | null; action: string;
+  entityType: string; entityId?: string | null; description?: string | null;
+  module?: string | null; createdAt: string
 }
 
 const fadeUp = { initial: { opacity: 0, y: 16 }, animate: { opacity: 1, y: 0 } }
@@ -86,84 +135,79 @@ function timeAgo(dateStr: string): string {
   if (min < 60) return `${min}m ago`
   const hr = Math.floor(min / 60)
   if (hr < 24) return `${hr}h ago`
-  const day = Math.floor(hr / 24)
-  return `${day}d ago`
+  return `${Math.floor(hr / 24)}d ago`
 }
 
 function statusIcon(status: string) {
   switch (status) {
-    case 'completed': return <CheckCircle size={13} className="text-emerald-500" />
-    case 'processing': return <RefreshCw size={13} className="text-blue-500 animate-spin" />
-    case 'pending': return <Clock size={13} className="text-amber-500" />
-    case 'failed': case 'rejected': return <XCircle size={13} className="text-red-500" />
-    default: return <Activity size={13} className="text-[var(--muted)]" />
+    case 'completed': return <CheckCircle size={12} className="text-emerald-500" />
+    case 'processing': return <RefreshCw size={12} className="text-blue-500 animate-spin" />
+    case 'pending': return <Clock size={12} className="text-amber-500" />
+    case 'failed': case 'rejected': return <XCircle size={12} className="text-red-500" />
+    default: return <Activity size={12} className="text-[var(--muted)]" />
   }
 }
 
-function computeDailyRevenue(orders: DashboardOrder[]): DayRevenue[] {
-  const days: DayRevenue[] = []
-  const now = new Date()
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(now); d.setDate(d.getDate() - i); d.setHours(0, 0, 0, 0)
-    const next = new Date(d); next.setDate(next.getDate() + 1)
-    const revenue = orders
-      .filter((o) => {
-        if (o.status !== 'completed' || !o.completedAt) return false
-        const t = new Date(o.completedAt).getTime()
-        return t >= d.getTime() && t < next.getTime()
-      })
-      .reduce((sum, o) => sum + (o.sellingPrice || 0), 0)
-    days.push({
-      label: `${d.toLocaleDateString('en-US', { weekday: 'short' })} (${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`,
-      shortLabel: d.toLocaleDateString('en-US', { weekday: 'short' }),
-      revenue: Math.round(revenue * 100) / 100,
-    })
-  }
-  return days
+function auditActionLabel(action: string): { label: string; color: string } {
+  if (action.includes('order.create') || action.includes('order.place')) return { label: 'New Order', color: 'text-blue-500 bg-blue-500/10' }
+  if (action.includes('order.update') || action.includes('order.status')) return { label: 'Order Updated', color: 'text-amber-500 bg-amber-500/10' }
+  if (action.includes('wallet.deposit') || action.includes('deposit.approve')) return { label: 'Deposit', color: 'text-emerald-500 bg-emerald-500/10' }
+  if (action.includes('wallet.transfer')) return { label: 'Transfer', color: 'text-purple-500 bg-purple-500/10' }
+  if (action.includes('wallet.withdraw')) return { label: 'Withdrawal', color: 'text-red-500 bg-red-500/10' }
+  if (action.includes('user.create')) return { label: 'User Created', color: 'text-cyan-500 bg-cyan-500/10' }
+  if (action.includes('user.delete')) return { label: 'User Deleted', color: 'text-red-500 bg-red-500/10' }
+  if (action.includes('service')) return { label: 'Service Change', color: 'text-indigo-500 bg-indigo-500/10' }
+  if (action.includes('supplier')) return { label: 'Supplier Action', color: 'text-pink-500 bg-pink-500/10' }
+  return { label: 'Activity', color: 'text-[var(--muted)] bg-white/5' }
 }
 
-function computeTopCustomers(orders: DashboardOrder[]): CustomerAgg[] {
-  const map = new Map<string, CustomerAgg>()
-  for (const o of orders) {
-    const name = o.userName || 'Unknown'
-    const e = map.get(name)
-    if (e) { e.orders++; e.totalSpent += o.sellingPrice || 0 }
-    else map.set(name, { name, orders: 1, totalSpent: o.sellingPrice || 0 })
-  }
-  return Array.from(map.values()).sort((a, b) => b.totalSpent - a.totalSpent).slice(0, 5)
-}
-
-function computeTopServices(orders: DashboardOrder[]): ServiceAgg[] {
-  const map = new Map<string, ServiceAgg>()
-  for (const o of orders) {
-    const name = o.serviceName || 'Unknown Service'
-    const e = map.get(name)
-    if (e) { e.orders++; e.totalRevenue += o.sellingPrice || 0 }
-    else map.set(name, { name, orders: 1, totalRevenue: o.sellingPrice || 0 })
-  }
-  return Array.from(map.values()).sort((a, b) => b.totalRevenue - a.totalRevenue).slice(0, 5)
-}
+const QUICK_ACTIONS = [
+  { label: 'Create Order', href: '/admin/orders', icon: ShoppingCart, gradient: 'from-indigo-500 to-blue-500' },
+  { label: 'Add Service', href: '/admin/services', icon: Package, gradient: 'from-purple-500 to-pink-500' },
+  { label: 'Create User', href: '/admin/users', icon: UserPlus, gradient: 'from-emerald-500 to-teal-500' },
+  { label: 'Deposits', href: '/admin/deposit-requests', icon: CreditCard, gradient: 'from-amber-500 to-orange-500' },
+  { label: 'Wallet', href: '/admin/wallet', icon: Wallet, gradient: 'from-cyan-500 to-blue-500' },
+  { label: 'Suppliers', href: '/admin/suppliers', icon: Globe, gradient: 'from-pink-500 to-rose-500' },
+  { label: 'Reports', href: '/admin/reporting', icon: BarChart3, gradient: 'from-violet-500 to-purple-500' },
+  { label: 'Settings', href: '/admin/settings', icon: Settings, gradient: 'from-slate-500 to-gray-500' },
+]
 
 export default function AdminDashboard() {
   const { toast } = useToast()
-  const { data: stats, loading: statsLoading, error: statsError } = useApi<DashboardStats>({ url: '/api/dashboard' })
+  const { user } = useAuth()
+  const { data: dash, loading: dashLoading, error: dashError } = useApi<DashboardData>({ url: '/api/dashboard' })
+  const { data: report } = useApi<ReportingData>({ url: '/api/reporting?range=30d' })
+  const { data: summary } = useApi<OrderSummary>({ url: '/api/orders/summary' })
+  const { data: ordersRes } = useApi<OrdersData>({ url: '/api/orders?limit=10' })
+  const { data: notifRes } = useApi<NotificationData>({ url: '/api/notifications?limit=15' })
+  const { data: depositsRes } = useApi<DepositData>({ url: '/api/deposit-requests?status=pending&limit=5' })
   const { data: suppliersRes } = useApi<{ suppliers: SupplierItem[] }>({ url: '/api/suppliers' })
+  const { data: usersRes } = useApi<{ users: { id: string; userId: string; name: string; email: string; walletBalance: number; orderCount?: number; status: string }[] }>({ url: '/api/users' })
+  const { data: auditRes } = useApi<{ logs: AuditLog[] }>({ url: '/api/audit-logs?limit=12' })
+
   const [viewOrder, setViewOrder] = useState<DetailOrder | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
 
-  const s = stats || {
-    totalUsers: 0, totalOrders: 0, revenueToday: 0, pendingOrders: 0,
-    completedToday: 0, failedOrders: 0, revenueThisMonth: 0, walletBalance: 0,
-    totalServices: 0, totalSuppliers: 0, processingOrders: 0, completedOrders: 0,
-    rejectedOrders: 0, refundedOrders: 0, totalProfit: 0, todaySpending: 0,
-    recentOrders: [],
-  }
+  const s = dash
+  const r = report
+  const sc = summary
+  const orders = ordersRes?.orders || []
+  const notifications = notifRes?.notifications || []
+  const unreadCount = notifRes?.unreadCount || 0
+  const pendingDeposits = depositsRes?.requests || []
+  const pendingDepositCount = depositsRes?.pagination?.total || 0
+  const suppliers = suppliersRes?.suppliers || []
+  const users = usersRes?.users || []
+  const auditLogs = auditRes?.logs || []
 
-  const recentOrders = useMemo(() => stats?.recentOrders || [], [stats])
-  const dailyRevenue = useMemo(() => computeDailyRevenue(recentOrders), [recentOrders])
-  const topCustomers = useMemo(() => computeTopCustomers(recentOrders), [recentOrders])
-  const topServices = useMemo(() => computeTopServices(recentOrders), [recentOrders])
-  const maxDailyRevenue = useMemo(() => Math.max(...dailyRevenue.map((d) => d.revenue), 1), [dailyRevenue])
+  const dailyRevenue = useMemo(() => r?.dailyRevenue || [], [r])
+  const topServices = useMemo(() => r?.topServices?.slice(0, 5) || [], [r])
+  const topUsers = useMemo(() => r?.topUsers?.slice(0, 5) || [], [r])
+  const maxDailyRev = useMemo(() => Math.max(...dailyRevenue.map(d => d.revenue), 1), [dailyRevenue])
+
+  const isLoading = dashLoading
+  const now = new Date()
+  const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
 
   const loadDetail = async (id: string) => {
     setDetailLoading(true)
@@ -175,13 +219,13 @@ export default function AdminDashboard() {
     finally { setDetailLoading(false) }
   }
 
-  if (statsLoading) {
+  if (isLoading) {
     return (
       <div>
-        <Header title="Dashboard" subtitle="Welcome back, Admin" />
+        <Header title="Dashboard" subtitle="Loading..." />
         <div className="p-4 space-y-4">
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-3">
-            {Array.from({ length: 4 }).map((_, i) => <SkeletonStat key={i} />)}
+            {Array.from({ length: 8 }).map((_, i) => <SkeletonStat key={i} />)}
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <SkeletonCard className="lg:col-span-2 h-64" />
@@ -192,87 +236,108 @@ export default function AdminDashboard() {
     )
   }
 
-  if (statsError) {
+  if (dashError) {
     return (
       <div>
-        <Header title="Dashboard" subtitle="Welcome back, Admin" />
+        <Header title="Dashboard" />
         <div className="p-4 flex flex-col items-center justify-center py-20 gap-4">
-          <p className="text-red-400 text-sm">{statsError}</p>
+          <p className="text-red-400 text-sm">{dashError}</p>
           <Link href="/login" className="text-[var(--accent)] text-sm hover:underline">Go to Login</Link>
         </div>
       </div>
     )
   }
 
-  const orderStatusData = [
-    { label: 'Pending', count: s.pendingOrders, color: 'bg-amber-500', text: 'text-amber-500', icon: Clock },
-    { label: 'Processing', count: s.processingOrders, color: 'bg-blue-500', text: 'text-blue-500', icon: RefreshCw },
-    { label: 'Completed', count: s.completedToday, color: 'bg-emerald-500', text: 'text-emerald-500', icon: CheckCircle },
-    { label: 'Failed', count: s.failedOrders, color: 'bg-red-500', text: 'text-red-500', icon: XCircle },
-    { label: 'Rejected', count: s.rejectedOrders, color: 'bg-red-600', text: 'text-red-600', icon: XCircle },
-    { label: 'Refunded', count: s.refundedOrders, color: 'bg-purple-500', text: 'text-purple-500', icon: RotateCcw },
+  const pendingOrders = sc?.counts?.pending || s?.pendingOrders || 0
+  const processingOrders = sc?.counts?.processing || s?.processingOrders || 0
+  const completedToday = s?.completedToday || 0
+  const rejectedToday = (sc?.counts?.rejected || s?.rejectedOrders || 0) + (sc?.counts?.failed || s?.failedOrders || 0)
+  const refundedOrders = sc?.counts?.refunded || s?.refundedOrders || 0
+  const cancelledOrders = sc?.counts?.cancelled || 0
+  const totalOrders = sc?.total || s?.totalOrders || 0
+  const successRate = totalOrders > 0 ? Math.round(((sc?.counts?.completed || s?.completedOrders || 0) / totalOrders) * 100) : 0
+
+  const pendingTasks = [
+    { label: 'Pending Deposits', count: pendingDepositCount, href: '/admin/deposit-requests?status=pending', icon: CreditCard, color: 'text-amber-500' },
+    { label: 'Unassigned Orders', count: pendingOrders, href: '/admin/orders?status=pending', icon: ShoppingCart, color: 'text-blue-500' },
+    { label: 'Processing Orders', count: processingOrders, href: '/admin/orders?status=processing', icon: RefreshCw, color: 'text-purple-500' },
+    { label: 'Rejected Orders', count: rejectedToday, href: '/admin/orders?status=rejected', icon: XCircle, color: 'text-red-500' },
   ]
 
   return (
     <div>
-      <Header title="Dashboard" subtitle="Welcome back, Admin" />
+      <Header title="Dashboard" subtitle={`${dateStr}`} />
       <div className="p-4 space-y-4">
 
-        {/* Row 1: 4 Key Metrics */}
-        <motion.div className="grid grid-cols-2 lg:grid-cols-4 gap-3" {...fadeUp}>
+        {/* SECTION 2: Business Overview — 8 Stat Cards */}
+        <motion.div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-3" {...fadeUp}>
           <Link href="/admin/orders">
-            <StatCard title="Revenue Today" value={`$${s.revenueToday.toLocaleString()}`} icon={DollarSign} color="green" />
+            <StatCard title="Revenue Today" value={`$${(s?.revenueToday || 0).toLocaleString()}`} icon={DollarSign} color="green" change={`Month: $${(s?.revenueThisMonth || 0).toLocaleString()}`} changeType="up" />
           </Link>
           <Link href="/admin/orders">
-            <StatCard title="Pending Orders" value={s.pendingOrders} icon={Clock} color="amber" />
+            <StatCard title="Today's Profit" value={`$${(s?.totalProfit || 0).toLocaleString()}`} icon={TrendingUp} color="emerald" change={`${successRate}% success`} changeType="up" />
           </Link>
-          <Link href="/admin/orders">
-            <StatCard title="Completed Today" value={s.completedToday} icon={CheckCircle} color="blue" />
+          <Link href="/admin/orders?status=pending">
+            <StatCard title="Pending Orders" value={pendingOrders} icon={Clock} color="amber" change="Needs attention" changeType={pendingOrders > 0 ? 'down' : 'neutral'} />
+          </Link>
+          <Link href="/admin/orders?status=processing">
+            <StatCard title="Processing" value={processingOrders} icon={RefreshCw} color="blue" change="In progress" changeType="neutral" />
+          </Link>
+        </motion.div>
+        <motion.div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-3" {...fadeUp} transition={{ delay: 0.04 }}>
+          <StatCard title="Completed Today" value={completedToday} icon={CheckCircle} color="green" change="Keep it up" changeType="up" />
+          <StatCard title="Rejected Today" value={rejectedToday} icon={XCircle} color="red" change={rejectedToday > 0 ? 'Needs review' : 'All clear'} changeType={rejectedToday > 0 ? 'down' : 'up'} />
+          <Link href="/admin/wallet">
+            <StatCard title="Wallet Balance" value={`$${(s?.walletBalance || 0).toLocaleString()}`} icon={Wallet} color="purple" />
           </Link>
           <Link href="/admin/users">
-            <StatCard title="Total Users" value={s.totalUsers} icon={Users} color="purple" />
+            <StatCard title="Total Users" value={s?.totalUsers || 0} icon={Users} color="indigo" change={`${r?.summary?.activeUsers || 0} active`} changeType="neutral" />
           </Link>
         </motion.div>
 
-        {/* Row 2: 4 Secondary Metrics */}
-        <motion.div className="grid grid-cols-2 lg:grid-cols-4 gap-3" {...fadeUp} transition={{ delay: 0.05 }}>
-          <StatCard title="Total Orders" value={s.totalOrders.toLocaleString()} icon={ShoppingCart} color="indigo" />
-          <StatCard title="Monthly Revenue" value={`$${s.revenueThisMonth.toLocaleString()}`} icon={TrendingUp} color="indigo" />
-          <StatCard title="Profit" value={`$${s.totalProfit.toLocaleString()}`} icon={Zap} color="green" />
-          <Link href="/admin/wallet">
-            <StatCard title="Wallet Balance" value={`$${s.walletBalance.toLocaleString()}`} icon={Wallet} color="pink" />
-          </Link>
+        {/* SECTION 3: Quick Actions */}
+        <motion.div {...fadeUp} transition={{ delay: 0.08 }}>
+          <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+            {QUICK_ACTIONS.map((action) => (
+              <Link key={action.label} href={action.href}>
+                <GlassCard hover padding="p-3" className="group cursor-pointer text-center">
+                  <div className={`w-10 h-10 mx-auto rounded-xl bg-gradient-to-br ${action.gradient} shadow-lg flex items-center justify-center mb-2 group-hover:scale-110 transition-transform`}>
+                    <action.icon size={18} className="text-white" />
+                  </div>
+                  <span className="text-[10px] font-medium text-[var(--foreground)] leading-tight block">{action.label}</span>
+                </GlassCard>
+              </Link>
+            ))}
+          </div>
         </motion.div>
 
-        {/* Row 3: Revenue Chart + Order Status Breakdown */}
+        {/* SECTION 4: Order Overview — Revenue Chart + Order Status */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Revenue Chart */}
-          <motion.div className="lg:col-span-2" {...fadeUp} transition={{ delay: 0.1 }}>
+          <motion.div className="lg:col-span-2" {...fadeUp} transition={{ delay: 0.12 }}>
             <GlassCard padding="p-0" className="h-full">
               <div className="flex items-center justify-between px-4 pt-4 pb-2">
                 <div className="flex items-center gap-2">
                   <BarChart3 size={16} className="text-[var(--accent)]" />
-                  <h3 className="text-sm font-bold text-[var(--foreground)]">Revenue Trend (7 Days)</h3>
+                  <h3 className="text-sm font-bold text-[var(--foreground)]">Revenue Trend (30 Days)</h3>
                 </div>
-                <span className="text-[10px] text-[var(--muted)]">Completed orders</span>
+                <div className="flex items-center gap-2 text-[10px] text-[var(--muted)]">
+                  <span className="font-bold text-[var(--foreground)]">${(r?.summary?.revenue || 0).toLocaleString()}</span> revenue
+                  <span className="text-[var(--card-border)]">|</span>
+                  <span className="font-bold text-emerald-500">${(r?.summary?.profit || 0).toLocaleString()}</span> profit
+                </div>
               </div>
               <div className="px-4 pb-4">
-                <div className="flex items-end gap-1.5 h-40">
-                  {dailyRevenue.map((day, i) => {
-                    const heightPct = maxDailyRevenue > 0 ? (day.revenue / maxDailyRevenue) * 100 : 0
+                <div className="flex items-end gap-[3px] h-36">
+                  {dailyRevenue.slice(-30).map((day, i) => {
+                    const h = maxDailyRev > 0 ? (day.revenue / maxDailyRev) * 100 : 0
                     return (
-                      <div key={i} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
-                        <span className="text-[10px] font-medium text-[var(--muted)] truncate max-w-full">
-                          {day.revenue > 0 ? `$${day.revenue.toLocaleString()}` : '—'}
-                        </span>
+                      <div key={i} className="flex-1 flex flex-col items-center h-full justify-end group/col" title={`${day.date}: $${day.revenue.toLocaleString()} (${day.orders} orders)`}>
                         <motion.div
-                          className="w-full rounded-t-md bg-gradient-to-t from-[var(--accent)] to-[var(--accent-light, var(--accent))] opacity-80 hover:opacity-100 transition-opacity cursor-pointer min-h-[2px]"
+                          className="w-full rounded-t-sm bg-gradient-to-t from-[var(--accent)] to-[var(--accent-light, var(--accent))] opacity-75 hover:opacity-100 transition-all cursor-pointer min-h-[1px]"
                           initial={{ height: 0 }}
-                          animate={{ height: `${Math.max(heightPct, 2)}%` }}
-                          transition={{ delay: 0.2 + i * 0.04, duration: 0.4, ease: 'easeOut' }}
-                          title={`${day.label}: $${day.revenue.toLocaleString()}`}
+                          animate={{ height: `${Math.max(h, 1)}%` }}
+                          transition={{ delay: 0.15 + i * 0.015, duration: 0.35 }}
                         />
-                        <span className="text-[10px] text-[var(--muted)] font-medium">{day.shortLabel}</span>
                       </div>
                     )
                   })}
@@ -281,173 +346,204 @@ export default function AdminDashboard() {
             </GlassCard>
           </motion.div>
 
-          {/* Order Status Breakdown */}
-          <motion.div {...fadeUp} transition={{ delay: 0.15 }}>
+          <motion.div {...fadeUp} transition={{ delay: 0.16 }}>
             <GlassCard className="h-full">
               <div className="flex items-center gap-2 mb-3">
                 <Activity size={16} className="text-[var(--accent)]" />
                 <h3 className="text-sm font-bold text-[var(--foreground)]">Order Status</h3>
               </div>
-              <div className="space-y-2.5">
-                {orderStatusData.map((st) => {
-                  const total = s.totalOrders || 1
-                  const pct = Math.round((st.count / total) * 100)
-                  return (
-                    <div key={st.label} className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-2 h-2 rounded-full ${st.color}`} />
-                          <span className="text-xs text-[var(--muted)]">{st.label}</span>
-                        </div>
-                        <span className="text-xs font-bold text-[var(--foreground)]">{st.count}</span>
-                      </div>
-                      <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
-                        <motion.div
-                          className={`h-full rounded-full ${st.color}`}
-                          initial={{ width: 0 }}
-                          animate={{ width: `${pct}%` }}
-                          transition={{ delay: 0.3, duration: 0.5 }}
-                        />
-                      </div>
-                    </div>
-                  )
-                })}
+              <div className="space-y-2">
+                {[
+                  { label: 'Pending', count: sc?.counts?.pending || 0, color: 'bg-amber-500', w: totalOrders },
+                  { label: 'Assigned', count: 0, color: 'bg-blue-400', w: totalOrders },
+                  { label: 'Processing', count: sc?.counts?.processing || 0, color: 'bg-blue-500', w: totalOrders },
+                  { label: 'Completed', count: sc?.counts?.completed || 0, color: 'bg-emerald-500', w: totalOrders },
+                  { label: 'Failed', count: sc?.counts?.failed || 0, color: 'bg-red-500', w: totalOrders },
+                  { label: 'Rejected', count: sc?.counts?.rejected || 0, color: 'bg-red-600', w: totalOrders },
+                  { label: 'Refunded', count: sc?.counts?.refunded || 0, color: 'bg-purple-500', w: totalOrders },
+                  { label: 'Cancelled', count: sc?.counts?.cancelled || 0, color: 'bg-gray-500', w: totalOrders },
+                ].map(st => (
+                  <div key={st.label} className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${st.color} shrink-0`} />
+                    <span className="text-[11px] text-[var(--muted)] flex-1">{st.label}</span>
+                    <span className="text-[11px] font-bold text-[var(--foreground)] w-6 text-right">{st.count}</span>
+                  </div>
+                ))}
               </div>
-              <div className="mt-3 pt-3 border-t border-[var(--card-border)]">
-                <div className="flex items-center justify-between text-xs">
+              <div className="mt-3 pt-3 border-t border-[var(--card-border)] space-y-1.5">
+                <div className="flex items-center justify-between text-[11px]">
                   <span className="text-[var(--muted)]">Success Rate</span>
-                  <span className="font-bold text-emerald-500">
-                    {s.totalOrders > 0 ? Math.round(((s.completedOrders || 0) / s.totalOrders) * 100) : 0}%
-                  </span>
+                  <span className="font-bold text-emerald-500">{successRate}%</span>
+                </div>
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-[var(--muted)]">Avg Order Value</span>
+                  <span className="font-bold text-[var(--foreground)]">${(r?.summary?.avgOrderValue || 0).toFixed(2)}</span>
+                </div>
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-[var(--muted)]">Conversion</span>
+                  <span className="font-bold text-[var(--foreground)]">{r?.summary?.conversionRate || '0'}%</span>
                 </div>
               </div>
             </GlassCard>
           </motion.div>
         </div>
 
-        {/* Row 4: Recent Orders (left 2/3) + Top Customers (right 1/3) */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Recent Orders Table */}
-          <motion.div className="lg:col-span-2" {...fadeUp} transition={{ delay: 0.2 }}>
-            <GlassCard padding="p-0" className="h-full">
-              <div className="flex items-center justify-between px-4 pt-4 pb-2">
-                <div className="flex items-center gap-2">
-                  <ShoppingCart size={16} className="text-[var(--accent)]" />
-                  <h3 className="text-sm font-bold text-[var(--foreground)]">Recent Orders</h3>
-                </div>
-                <Link href="/admin/orders" className="text-xs text-[var(--accent)] hover:underline flex items-center gap-1">
-                  View all <ArrowUpRight size={11} />
-                </Link>
+        {/* SECTION 5: Recent Orders Table */}
+        <motion.div {...fadeUp} transition={{ delay: 0.2 }}>
+          <GlassCard padding="p-0">
+            <div className="flex items-center justify-between px-4 pt-4 pb-2">
+              <div className="flex items-center gap-2">
+                <ShoppingCart size={16} className="text-[var(--accent)]" />
+                <h3 className="text-sm font-bold text-[var(--foreground)]">Recent Orders</h3>
+                <span className="text-[10px] text-[var(--muted)]">({ordersRes?.pagination?.total || 0} total)</span>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-[var(--card-border)]">
-                      <th className="text-left py-2.5 px-4 text-[var(--muted)] font-medium text-xs">Order</th>
-                      <th className="text-left py-2.5 px-2 text-[var(--muted)] font-medium text-xs">User</th>
-                      <th className="text-left py-2.5 px-2 text-[var(--muted)] font-medium text-xs">Service</th>
-                      <th className="text-left py-2.5 px-2 text-[var(--muted)] font-medium text-xs">Status</th>
-                      <th className="text-right py-2.5 px-2 text-[var(--muted)] font-medium text-xs">Price</th>
-                      <th className="text-left py-2.5 px-4 text-[var(--muted)] font-medium text-xs">Time</th>
+              <Link href="/admin/orders" className="text-xs text-[var(--accent)] hover:underline flex items-center gap-1">
+                View all <ArrowUpRight size={11} />
+              </Link>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[var(--card-border)]">
+                    <th className="text-left py-2 px-4 text-[var(--muted)] font-medium text-[10px] uppercase tracking-wider">Order</th>
+                    <th className="text-left py-2 px-2 text-[var(--muted)] font-medium text-[10px] uppercase tracking-wider">Customer</th>
+                    <th className="text-left py-2 px-2 text-[var(--muted)] font-medium text-[10px] uppercase tracking-wider">Service</th>
+                    <th className="text-left py-2 px-2 text-[var(--muted)] font-medium text-[10px] uppercase tracking-wider">IMEI/SN</th>
+                    <th className="text-left py-2 px-2 text-[var(--muted)] font-medium text-[10px] uppercase tracking-wider">Supplier</th>
+                    <th className="text-left py-2 px-2 text-[var(--muted)] font-medium text-[10px] uppercase tracking-wider">Status</th>
+                    <th className="text-right py-2 px-2 text-[var(--muted)] font-medium text-[10px] uppercase tracking-wider">Price</th>
+                    <th className="text-left py-2 px-2 text-[var(--muted)] font-medium text-[10px] uppercase tracking-wider">Time</th>
+                    <th className="text-center py-2 px-4 text-[var(--muted)] font-medium text-[10px] uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {orders.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="py-10 text-center">
+                        <ShoppingCart size={32} className="mx-auto text-[var(--muted)] mb-2 opacity-40" />
+                        <p className="text-sm text-[var(--muted)] font-medium">No orders yet</p>
+                        <p className="text-xs text-[var(--muted)] mt-1">Create your first order to get started</p>
+                        <Link href="/admin/orders"><GlassButton size="sm" className="mt-3"><Plus size={14} /> Create Order</GlassButton></Link>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {recentOrders.slice(0, 8).map((order) => (
-                      <tr
-                        key={order.id}
-                        className="border-b border-[var(--card-border)] hover:bg-white/5 transition-colors cursor-pointer"
-                        onClick={() => loadDetail(order.id)}
-                      >
-                        <td className="py-2.5 px-4 font-mono font-medium text-[var(--foreground)] text-xs">{order.orderNumber}</td>
-                        <td className="py-2.5 px-2 text-[var(--foreground)] text-xs truncate max-w-[100px]">{order.userName || 'N/A'}</td>
-                        <td className="py-2.5 px-2 text-[var(--foreground)] text-xs truncate max-w-[120px]">{order.serviceName || 'N/A'}</td>
-                        <td className="py-2.5 px-2"><StatusBadge status={order.status} /></td>
-                        <td className="py-2.5 px-2 text-right font-medium text-[var(--foreground)] text-xs">${(order.sellingPrice || 0).toFixed(2)}</td>
-                        <td className="py-2.5 px-4 text-xs text-[var(--muted)] whitespace-nowrap">{timeAgo(order.createdAt)}</td>
-                      </tr>
-                    ))}
-                    {recentOrders.length === 0 && (
-                      <tr><td colSpan={6} className="py-8 text-center text-[var(--muted)] text-xs">No orders yet</td></tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </GlassCard>
-          </motion.div>
+                  ) : orders.map((order) => (
+                    <tr key={order.id} className="border-b border-[var(--card-border)] hover:bg-white/5 transition-colors cursor-pointer" onClick={() => loadDetail(order.id)}>
+                      <td className="py-2.5 px-4 font-mono font-medium text-[var(--foreground)] text-xs">{order.orderNumber}</td>
+                      <td className="py-2.5 px-2 text-xs text-[var(--foreground)] truncate max-w-[100px]">{order.userName || 'N/A'}</td>
+                      <td className="py-2.5 px-2 text-xs text-[var(--foreground)] truncate max-w-[120px]">{order.serviceName || 'N/A'}</td>
+                      <td className="py-2.5 px-2 font-mono text-[10px] text-[var(--muted)] truncate max-w-[100px]">{order.imei || order.deviceInfo || '—'}</td>
+                      <td className="py-2.5 px-2 text-xs text-[var(--muted)] truncate max-w-[80px]">{order.supplierName || '—'}</td>
+                      <td className="py-2.5 px-2"><StatusBadge status={order.status} /></td>
+                      <td className="py-2.5 px-2 text-right font-medium text-xs text-[var(--foreground)]">${(order.sellingPrice || 0).toFixed(2)}</td>
+                      <td className="py-2.5 px-2 text-[10px] text-[var(--muted)] whitespace-nowrap">{timeAgo(order.createdAt)}</td>
+                      <td className="py-2.5 px-4">
+                        <div className="flex items-center justify-center gap-1">
+                          <button className="p-1 rounded hover:bg-white/10 text-[var(--muted)] hover:text-[var(--accent)] transition-colors" title="View"><Eye size={12} /></button>
+                          <button className="p-1 rounded hover:bg-white/10 text-[var(--muted)] hover:text-[var(--accent)] transition-colors" title="Reply"><Reply size={12} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </GlassCard>
+        </motion.div>
 
+        {/* SECTION 6: Pending Tasks */}
+        <motion.div {...fadeUp} transition={{ delay: 0.24 }}>
+          <GlassCard>
+            <div className="flex items-center gap-2 mb-3">
+              <AlertTriangle size={16} className="text-amber-500" />
+              <h3 className="text-sm font-bold text-[var(--foreground)]">Pending Tasks</h3>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {pendingTasks.map(task => (
+                <Link key={task.label} href={task.href}>
+                  <div className="p-3 rounded-xl bg-white/5 border border-[var(--card-border)] hover:bg-white/8 hover:border-[var(--accent)]/30 transition-all cursor-pointer group">
+                    <div className="flex items-center justify-between mb-2">
+                      <task.icon size={16} className={`${task.color} group-hover:scale-110 transition-transform`} />
+                      <span className="text-lg font-bold text-[var(--foreground)]">{task.count}</span>
+                    </div>
+                    <p className="text-[11px] text-[var(--muted)] font-medium">{task.label}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </GlassCard>
+        </motion.div>
+
+        {/* SECTION 7+8+9: Top Customers + Top Services + Supplier Status */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Top Customers */}
-          <motion.div {...fadeUp} transition={{ delay: 0.25 }}>
+          <motion.div {...fadeUp} transition={{ delay: 0.28 }}>
             <GlassCard className="h-full">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <Crown size={16} className="text-amber-500" />
                   <h3 className="text-sm font-bold text-[var(--foreground)]">Top Customers</h3>
                 </div>
-                <Link href="/admin/users" className="text-xs text-[var(--accent)] hover:underline flex items-center gap-1">
-                  View all <ArrowUpRight size={11} />
-                </Link>
+                <Link href="/admin/users" className="text-[10px] text-[var(--accent)] hover:underline flex items-center gap-1">View all <ArrowUpRight size={10} /></Link>
               </div>
-              <div className="space-y-2.5">
-                {topCustomers.length === 0 && (
-                  <p className="text-xs text-[var(--muted)] text-center py-4">No customer data yet</p>
-                )}
-                {topCustomers.map((c, i) => (
-                  <div key={c.name} className="flex items-center gap-2.5">
+              <div className="space-y-2">
+                {topUsers.length === 0 ? (
+                  <div className="py-6 text-center">
+                    <Users size={24} className="mx-auto text-[var(--muted)] mb-2 opacity-40" />
+                    <p className="text-xs text-[var(--muted)]">No customer data yet</p>
+                  </div>
+                ) : topUsers.map((u, i) => (
+                  <div key={u.email} className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-white/5 transition-colors">
                     <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[var(--accent)] to-[var(--accent-light, var(--accent))] flex items-center justify-center text-[10px] font-bold text-[var(--background)] shrink-0">
                       {i + 1}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-[var(--foreground)] truncate">{c.name}</p>
-                      <p className="text-[10px] text-[var(--muted)]">{c.orders} order{c.orders !== 1 ? 's' : ''}</p>
+                      <p className="text-xs font-medium text-[var(--foreground)] truncate">{u.name}</p>
+                      <p className="text-[10px] text-[var(--muted)]">{u.orders} orders</p>
                     </div>
-                    <span className="text-xs font-bold text-[var(--foreground)] whitespace-nowrap">${c.totalSpent.toLocaleString()}</span>
+                    <span className="text-xs font-bold text-[var(--foreground)]">${u.spent.toLocaleString()}</span>
                   </div>
                 ))}
               </div>
             </GlassCard>
           </motion.div>
-        </div>
 
-        {/* Row 5: Top Services + Activity Feed + Suppliers */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Top Services */}
-          <motion.div {...fadeUp} transition={{ delay: 0.3 }}>
+          <motion.div {...fadeUp} transition={{ delay: 0.32 }}>
             <GlassCard className="h-full">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <TrendingUp size={16} className="text-blue-500" />
                   <h3 className="text-sm font-bold text-[var(--foreground)]">Top Services</h3>
                 </div>
-                <Link href="/admin/services" className="text-xs text-[var(--accent)] hover:underline flex items-center gap-1">
-                  View all <ArrowUpRight size={11} />
-                </Link>
+                <Link href="/admin/services" className="text-[10px] text-[var(--accent)] hover:underline flex items-center gap-1">View all <ArrowUpRight size={10} /></Link>
               </div>
-              <div className="space-y-2.5">
-                {topServices.length === 0 && (
-                  <p className="text-xs text-[var(--muted)] text-center py-4">No service data yet</p>
-                )}
-                {topServices.map((svc, i) => {
-                  const maxRev = topServices[0]?.totalRevenue || 1
-                  const barPct = Math.round((svc.totalRevenue / maxRev) * 100)
+              <div className="space-y-2">
+                {topServices.length === 0 ? (
+                  <div className="py-6 text-center">
+                    <Package size={24} className="mx-auto text-[var(--muted)] mb-2 opacity-40" />
+                    <p className="text-xs text-[var(--muted)]">No service data yet</p>
+                  </div>
+                ) : topServices.map((svc, i) => {
+                  const maxRev = topServices[0]?.revenue || 1
                   return (
-                    <div key={svc.name} className="space-y-1">
+                    <div key={svc.name} className="space-y-1 p-2 rounded-lg hover:bg-white/5 transition-colors">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className="w-4 text-[10px] font-bold text-[var(--muted)] shrink-0">#{i + 1}</span>
+                          <span className="w-4 text-[10px] font-bold text-[var(--muted)]">#{i + 1}</span>
                           <span className="text-xs font-medium text-[var(--foreground)] truncate">{svc.name}</span>
                         </div>
-                        <span className="text-[10px] font-bold text-[var(--foreground)] whitespace-nowrap">${svc.totalRevenue.toLocaleString()}</span>
+                        <span className="text-[10px] font-bold text-[var(--foreground)]">${svc.revenue.toLocaleString()}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="flex-1 h-1.5 rounded-full bg-white/5 overflow-hidden">
                           <motion.div
                             className="h-full rounded-full bg-gradient-to-r from-[var(--accent)] to-[var(--accent-light, var(--accent))]"
                             initial={{ width: 0 }}
-                            animate={{ width: `${barPct}%` }}
-                            transition={{ delay: 0.4 + i * 0.04, duration: 0.4 }}
+                            animate={{ width: `${Math.round((svc.revenue / maxRev) * 100)}%` }}
+                            transition={{ delay: 0.4, duration: 0.4 }}
                           />
                         </div>
-                        <span className="text-[10px] text-[var(--muted)] w-10 text-right shrink-0">{svc.orders} ord.</span>
+                        <span className="text-[10px] text-[var(--muted)] w-12 text-right">{svc.orders} ord.</span>
                       </div>
                     </div>
                   )
@@ -456,117 +552,184 @@ export default function AdminDashboard() {
             </GlassCard>
           </motion.div>
 
-          {/* Activity Feed */}
-          <motion.div {...fadeUp} transition={{ delay: 0.35 }}>
+          {/* Supplier Status */}
+          <motion.div {...fadeUp} transition={{ delay: 0.36 }}>
+            <GlassCard className="h-full">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Globe size={16} className="text-emerald-500" />
+                  <h3 className="text-sm font-bold text-[var(--foreground)]">Suppliers</h3>
+                </div>
+                <Link href="/admin/suppliers" className="text-[10px] text-[var(--accent)] hover:underline flex items-center gap-1">Manage <ArrowUpRight size={10} /></Link>
+              </div>
+              <div className="space-y-2">
+                {suppliers.length === 0 ? (
+                  <div className="py-6 text-center">
+                    <Globe size={24} className="mx-auto text-[var(--muted)] mb-2 opacity-40" />
+                    <p className="text-xs text-[var(--muted)]">No suppliers configured</p>
+                    <Link href="/admin/suppliers"><GlassButton size="sm" className="mt-2"><Plus size={12} /> Add Supplier</GlassButton></Link>
+                  </div>
+                ) : suppliers.map((sup) => (
+                  <div key={sup.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${sup.status === 'active' ? 'bg-emerald-500/15' : 'bg-red-500/15'}`}>
+                      <Radio size={14} className={sup.status === 'active' ? 'text-emerald-500' : 'text-red-500'} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-[var(--foreground)] truncate">{sup.name}</p>
+                      <p className="text-[10px] text-[var(--muted)]">{sup.type} &middot; {sup.orderCount || sup.totalOrders || 0} orders</p>
+                    </div>
+                    <div className="text-right">
+                      <span className={`text-[10px] font-bold ${sup.successRate >= 80 ? 'text-emerald-500' : sup.successRate >= 50 ? 'text-amber-500' : 'text-red-500'}`}>{sup.successRate}%</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </GlassCard>
+          </motion.div>
+        </div>
+
+        {/* SECTION 10+11: Recent Activity + Notifications */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Recent Activity */}
+          <motion.div {...fadeUp} transition={{ delay: 0.4 }}>
             <GlassCard className="h-full">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <Activity size={16} className="text-emerald-500" />
-                  <h3 className="text-sm font-bold text-[var(--foreground)]">Activity Feed</h3>
+                  <h3 className="text-sm font-bold text-[var(--foreground)]">Recent Activity</h3>
                 </div>
-                <Link href="/admin/orders" className="text-xs text-[var(--accent)] hover:underline flex items-center gap-1">
-                  View all <ArrowUpRight size={11} />
-                </Link>
+                <Link href="/admin/audit" className="text-[10px] text-[var(--accent)] hover:underline flex items-center gap-1">View all <ArrowUpRight size={10} /></Link>
               </div>
               <div className="relative">
                 <div className="absolute left-[13px] top-2 bottom-2 w-px bg-[var(--card-border)]" />
-                <div className="space-y-0 max-h-[280px] overflow-y-auto">
-                  {recentOrders.slice(0, 10).map((order) => (
-                    <div
-                      key={order.id}
-                      className="relative flex items-start gap-2.5 py-2 px-1 cursor-pointer hover:bg-white/5 rounded-lg transition-colors"
-                      onClick={() => loadDetail(order.id)}
-                    >
-                      <div className="relative z-10 mt-0.5 shrink-0 w-6 h-6 rounded-full bg-[var(--card-bg)] flex items-center justify-center border border-[var(--card-border)]">
-                        {statusIcon(order.status)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[11px] font-mono font-medium text-[var(--foreground)]">{order.orderNumber}</span>
-                          <StatusBadge status={order.status} />
-                        </div>
-                        <p className="text-[10px] text-[var(--muted)] truncate mt-0.5">
-                          {order.userName || 'Unknown'} &middot; {order.serviceName || 'Service'}
-                        </p>
-                      </div>
-                      <span className="text-[10px] text-[var(--muted)] whitespace-nowrap shrink-0 mt-0.5">{timeAgo(order.createdAt)}</span>
+                <div className="space-y-0 max-h-[300px] overflow-y-auto">
+                  {auditLogs.length === 0 ? (
+                    <div className="py-6 text-center">
+                      <Activity size={24} className="mx-auto text-[var(--muted)] mb-2 opacity-40" />
+                      <p className="text-xs text-[var(--muted)]">No activity yet</p>
                     </div>
-                  ))}
-                  {recentOrders.length === 0 && (
-                    <p className="text-xs text-[var(--muted)] text-center py-6">No activity yet</p>
-                  )}
+                  ) : auditLogs.slice(0, 12).map((log) => {
+                    const actionInfo = auditActionLabel(log.action)
+                    return (
+                      <div key={log.id} className="relative flex items-start gap-2.5 py-2 px-1">
+                        <div className="relative z-10 mt-0.5 shrink-0 w-6 h-6 rounded-full bg-[var(--card-bg)] flex items-center justify-center border border-[var(--card-border)]">
+                          <span className={`text-[8px] font-bold px-1 ${actionInfo.color} rounded-full`}>
+                            {log.action.split('.')[0]?.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[11px] font-medium text-[var(--foreground)]">{actionInfo.label}</span>
+                          </div>
+                          <p className="text-[10px] text-[var(--muted)] truncate">
+                            {log.userEmail || 'System'} &middot; {log.entityType}{log.entityId ? ` #${log.entityId.slice(0, 8)}` : ''}
+                          </p>
+                        </div>
+                        <span className="text-[10px] text-[var(--muted)] whitespace-nowrap shrink-0 mt-0.5">{timeAgo(log.createdAt)}</span>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             </GlassCard>
           </motion.div>
 
-          {/* Suppliers + Quick Actions */}
-          <motion.div className="space-y-4" {...fadeUp} transition={{ delay: 0.4 }}>
-            <GlassCard>
+          {/* Notifications */}
+          <motion.div {...fadeUp} transition={{ delay: 0.44 }}>
+            <GlassCard className="h-full">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <Package size={16} className="text-[var(--accent)]" />
-                  <h3 className="text-sm font-bold text-[var(--foreground)]">Suppliers</h3>
+                  <Bell size={16} className="text-[var(--accent)]" />
+                  <h3 className="text-sm font-bold text-[var(--foreground)]">Notifications</h3>
+                  {unreadCount > 0 && (
+                    <span className="px-1.5 py-0.5 rounded-full bg-[var(--accent)]/20 text-[var(--accent)] text-[10px] font-bold">{unreadCount}</span>
+                  )}
                 </div>
-                <Link href="/admin/suppliers" className="text-xs text-[var(--accent)] hover:underline flex items-center gap-1">
-                  Manage <ArrowUpRight size={11} />
-                </Link>
               </div>
-              <div className="space-y-2">
-                {(suppliersRes?.suppliers || []).length === 0 && (
-                  <p className="text-xs text-[var(--muted)]">No suppliers configured</p>
-                )}
-                {(suppliersRes?.suppliers || []).slice(0, 4).map((supplier: SupplierItem) => (
-                  <div key={supplier.id} className="flex items-center justify-between">
-                    <span className="text-xs text-[var(--foreground)]">{supplier.name}</span>
-                    <span className={`flex items-center gap-1.5 text-xs ${supplier.status === 'active' ? 'text-emerald-500' : 'text-red-500'}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${supplier.status === 'active' ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
-                      {supplier.status === 'active' ? 'Online' : 'Offline'}
+              <div className="max-h-[300px] overflow-y-auto">
+                {notifications.length === 0 ? (
+                  <div className="py-6 text-center">
+                    <Bell size={24} className="mx-auto text-[var(--muted)] mb-2 opacity-40" />
+                    <p className="text-xs text-[var(--muted)]">No notifications</p>
+                  </div>
+                ) : notifications.slice(0, 10).map((n) => {
+                  const iconMap: Record<string, typeof Bell> = { success: CheckCircle, warning: AlertTriangle, error: XCircle, info: Bell }
+                  const colorMap: Record<string, string> = { success: 'text-emerald-400 bg-emerald-500/10', warning: 'text-amber-400 bg-amber-500/10', error: 'text-red-400 bg-red-500/10', info: 'text-blue-400 bg-blue-500/10' }
+                  const Icon = iconMap[n.type] || Bell
+                  const cc = colorMap[n.type] || colorMap.info
+                  return (
+                    <div key={n.id} className={`flex items-start gap-2.5 p-2.5 rounded-lg transition-colors ${n.read ? 'opacity-60' : 'bg-white/5 border border-[var(--card-border)]'}`}>
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${cc}`}>
+                        <Icon size={12} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium text-[var(--foreground)] truncate">{n.title}</p>
+                        <p className="text-[10px] text-[var(--muted)] truncate">{n.message}</p>
+                        <p className="text-[9px] text-[var(--muted)] mt-0.5">{timeAgo(n.createdAt)}</p>
+                      </div>
+                      {!n.read && <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] mt-1.5 flex-shrink-0" />}
+                    </div>
+                  )
+                })}
+              </div>
+            </GlassCard>
+          </motion.div>
+        </div>
+
+        {/* SECTION 12: System Health + SECTION 13: Announcements */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* System Health */}
+          <motion.div {...fadeUp} transition={{ delay: 0.48 }}>
+            <GlassCard>
+              <div className="flex items-center gap-2 mb-3">
+                <Server size={16} className="text-emerald-500" />
+                <h3 className="text-sm font-bold text-[var(--foreground)]">System Health</h3>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { label: 'API Status', status: 'healthy', icon: Wifi },
+                  { label: 'Database', status: 'healthy', icon: Database },
+                  { label: 'Storage', status: 'healthy', icon: HardDrive },
+                  { label: 'Queue', status: 'healthy', icon: Layers },
+                  { label: 'Background Jobs', status: 'healthy', icon: Play },
+                  { label: 'Railway', status: 'healthy', icon: Server },
+                ].map(item => (
+                  <div key={item.label} className="flex items-center gap-2.5 p-2 rounded-lg bg-white/5">
+                    <item.icon size={14} className="text-[var(--muted)]" />
+                    <div className="flex-1">
+                      <p className="text-[11px] font-medium text-[var(--foreground)]">{item.label}</p>
+                    </div>
+                    <span className={`flex items-center gap-1 text-[10px] font-medium ${item.status === 'healthy' ? 'text-emerald-500' : item.status === 'warning' ? 'text-amber-500' : 'text-red-500'}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${item.status === 'healthy' ? 'bg-emerald-500' : item.status === 'warning' ? 'bg-amber-500' : 'bg-red-500'} ${item.status === 'healthy' ? 'animate-pulse' : ''}`} />
+                      {item.status === 'healthy' ? 'Online' : item.status === 'warning' ? 'Warning' : 'Error'}
                     </span>
                   </div>
                 ))}
               </div>
             </GlassCard>
+          </motion.div>
 
-            {/* Quick Actions */}
-            <GlassCard padding="p-3">
-              <div className="grid grid-cols-2 gap-2">
-                <Link href="/admin/orders" className="flex items-center gap-2 p-2.5 rounded-xl bg-white/5 hover:bg-white/8 transition-colors">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center shadow-md shadow-indigo-500/20 shrink-0">
-                    <Zap size={14} className="text-white" />
+          {/* Announcements */}
+          <motion.div {...fadeUp} transition={{ delay: 0.52 }}>
+            <GlassCard>
+              <div className="flex items-center gap-2 mb-3">
+                <MessageSquare size={16} className="text-amber-500" />
+                <h3 className="text-sm font-bold text-[var(--foreground)]">Announcements</h3>
+              </div>
+              <div className="space-y-2">
+                {notifications.filter(n => n.type === 'warning' || n.type === 'info').length === 0 ? (
+                  <div className="py-6 text-center">
+                    <MessageSquare size={24} className="mx-auto text-[var(--muted)] mb-2 opacity-40" />
+                    <p className="text-xs text-[var(--muted)]">No announcements</p>
+                    <p className="text-[10px] text-[var(--muted)] mt-1">System updates and notices will appear here</p>
                   </div>
-                  <div>
-                    <p className="text-[11px] font-bold text-[var(--foreground)]">New Order</p>
-                    <p className="text-[9px] text-[var(--muted)]">Create order</p>
+                ) : notifications.filter(n => n.type === 'warning' || n.type === 'info').slice(0, 4).map(n => (
+                  <div key={n.id} className="p-2.5 rounded-lg bg-amber-500/5 border border-amber-500/10">
+                    <p className="text-xs font-medium text-[var(--foreground)]">{n.title}</p>
+                    <p className="text-[10px] text-[var(--muted)] mt-0.5 line-clamp-2">{n.message}</p>
+                    <p className="text-[9px] text-[var(--muted)] mt-1">{timeAgo(n.createdAt)}</p>
                   </div>
-                </Link>
-                <Link href="/admin/services" className="flex items-center gap-2 p-2.5 rounded-xl bg-white/5 hover:bg-white/8 transition-colors">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-md shadow-purple-500/20 shrink-0">
-                    <Package size={14} className="text-white" />
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-bold text-[var(--foreground)]">Services</p>
-                    <p className="text-[9px] text-[var(--muted)]">Manage</p>
-                  </div>
-                </Link>
-                <Link href="/admin/users" className="flex items-center gap-2 p-2.5 rounded-xl bg-white/5 hover:bg-white/8 transition-colors">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-md shadow-emerald-500/20 shrink-0">
-                    <Users size={14} className="text-white" />
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-bold text-[var(--foreground)]">Users</p>
-                    <p className="text-[9px] text-[var(--muted)]">Manage</p>
-                  </div>
-                </Link>
-                <Link href="/admin/deposit-requests" className="flex items-center gap-2 p-2.5 rounded-xl bg-white/5 hover:bg-white/8 transition-colors">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-md shadow-amber-500/20 shrink-0">
-                    <DollarSign size={14} className="text-white" />
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-bold text-[var(--foreground)]">Deposits</p>
-                    <p className="text-[9px] text-[var(--muted)]">Review</p>
-                  </div>
-                </Link>
+                ))}
               </div>
             </GlassCard>
           </motion.div>
