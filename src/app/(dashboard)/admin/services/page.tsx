@@ -3,6 +3,7 @@
 import { Header } from '@/components/layout/Header'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GlassButton } from '@/components/ui/GlassButton'
+import { GlassDropdown } from '@/components/ui/GlassDropdown'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { useApi } from '@/hooks/useApi'
@@ -243,10 +244,13 @@ export default function ServicesPage() {
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
               <input className="glass-input pl-9 w-64" placeholder="Search services..." value={search} onChange={e => setSearch(e.target.value)} />
             </div>
-            <select className="glass-input w-auto" value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}>
-              <option value="">All Categories</option>
-              {categories.map((c: CategoryItem) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+            <GlassDropdown
+              options={[{ value: '', label: 'All Categories' }, ...categories.map((c: CategoryItem) => ({ value: c.id, label: c.name }))]}
+              value={categoryFilter}
+              onChange={setCategoryFilter}
+              className="w-auto"
+              size="sm"
+            />
           </div>
           <div className="flex gap-2">
             <GlassButton size="sm" variant="secondary" onClick={() => setShowCatModal(true)}><Settings size={16} /> Categories</GlassButton>
@@ -276,26 +280,35 @@ export default function ServicesPage() {
                 {/* Basic Info */}
                 <div>
                   <label className="block text-xs text-[var(--muted)] mb-1">Category</label>
-                  <select className="glass-input w-full" value={form.categoryId} onChange={e => setForm({ ...form, categoryId: e.target.value })}>
-                    <option value="">No Category</option>
-                    {categories.map((c: CategoryItem) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
+                  <GlassDropdown
+                    options={[{ value: '', label: 'No Category' }, ...categories.map((c: CategoryItem) => ({ value: c.id, label: c.name }))]}
+                    value={form.categoryId}
+                    onChange={(v) => setForm({ ...form, categoryId: v })}
+                  />
                 </div>
 
                 <input className="glass-input w-full" placeholder="Service name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
                 <textarea className="glass-input w-full h-16 resize-none" placeholder="Description (optional)" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
 
                 <div className="grid grid-cols-2 gap-3">
-                  <select className="glass-input" value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}>
-                    <option value="unlock">Unlock</option>
-                    <option value="flash">Flash</option>
-                    <option value="repair">Repair</option>
-                    <option value="imei">IMEI Check</option>
-                  </select>
-                  <select className="glass-input" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
+                  <GlassDropdown
+                    options={[
+                      { value: 'unlock', label: 'Unlock' },
+                      { value: 'flash', label: 'Flash' },
+                      { value: 'repair', label: 'Repair' },
+                      { value: 'imei', label: 'IMEI Check' },
+                    ]}
+                    value={form.type}
+                    onChange={(v) => setForm({ ...form, type: v })}
+                  />
+                  <GlassDropdown
+                    options={[
+                      { value: 'active', label: 'Active' },
+                      { value: 'inactive', label: 'Inactive' },
+                    ]}
+                    value={form.status}
+                    onChange={(v) => setForm({ ...form, status: v })}
+                  />
                 </div>
 
                 <label className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-[var(--card-border)] cursor-pointer hover:bg-white/8 transition-colors">
@@ -324,10 +337,11 @@ export default function ServicesPage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <input className="glass-input w-full" placeholder="Processing time (e.g. 24-48 hours)" value={form.processingTime} onChange={e => setForm({ ...form, processingTime: e.target.value })} />
-                  <select className="glass-input w-full" value={form.supplierId} onChange={e => setForm({ ...form, supplierId: e.target.value })}>
-                    <option value="">No supplier</option>
-                    {suppliers.map((s: SupplierItem) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                  </select>
+                  <GlassDropdown
+                    options={[{ value: '', label: 'No supplier' }, ...suppliers.map((s: SupplierItem) => ({ value: s.id, label: s.name }))]}
+                    value={form.supplierId}
+                    onChange={(v) => setForm({ ...form, supplierId: v })}
+                  />
                 </div>
 
                 {form.cost && form.sellingPrice && (
@@ -375,9 +389,12 @@ export default function ServicesPage() {
                         <div className="grid grid-cols-2 gap-3 mb-3">
                           <div>
                             <label className="block text-xs text-[var(--muted)] mb-1">Field Type</label>
-                            <select className="glass-input w-full text-sm" value={field.fieldType} onChange={e => updateField(index, { fieldType: e.target.value })}>
-                              {FIELD_TYPES.map(ft => <option key={ft.value} value={ft.value}>{ft.label}</option>)}
-                            </select>
+                            <GlassDropdown
+                              options={FIELD_TYPES.map(ft => ({ value: ft.value, label: ft.label }))}
+                              value={field.fieldType}
+                              onChange={(v) => updateField(index, { fieldType: v })}
+                              size="sm"
+                            />
                           </div>
                           <div>
                             <label className="block text-xs text-[var(--muted)] mb-1">Label</label>

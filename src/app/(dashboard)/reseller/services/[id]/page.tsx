@@ -3,6 +3,7 @@
 import { Header } from '@/components/layout/Header'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GlassButton } from '@/components/ui/GlassButton'
+import { GlassDropdown } from '@/components/ui/GlassDropdown'
 import { AlertModal } from '@/components/ui/ConfirmDialog'
 import { useApi } from '@/hooks/useApi'
 import { useToast } from '@/components/ui/Toast'
@@ -398,10 +399,11 @@ function CustomFieldInput({ field, value, onChange, onImeiMultiChange, imeiCount
           <label className="block text-sm font-medium text-[var(--foreground)] mb-1.5">
             {field.label} {field.required && '*'}
           </label>
-          <select className="glass-input w-full" value={value} onChange={e => onChange(e.target.value)}>
-            <option value="">Select...</option>
-            {options.map((opt: string) => <option key={opt} value={opt}>{opt}</option>)}
-          </select>
+          <GlassDropdown
+            options={[{ value: '', label: 'Select...' }, ...options.map((opt: string) => ({ value: opt, label: opt }))]}
+            value={value}
+            onChange={(v) => onChange(v)}
+          />
         </div>
       )
     }

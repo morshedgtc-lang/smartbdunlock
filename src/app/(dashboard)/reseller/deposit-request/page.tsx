@@ -3,6 +3,7 @@
 import { Header } from '@/components/layout/Header'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GlassButton } from '@/components/ui/GlassButton'
+import { GlassDropdown } from '@/components/ui/GlassDropdown'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { useApi } from '@/hooks/useApi'
 import { useToast } from '@/components/ui/Toast'
@@ -114,9 +115,11 @@ export default function DepositRequestPage() {
                 </div>
                 <div>
                   <label className="block text-xs text-[var(--muted)] mb-1">Payment Method</label>
-                  <select className="glass-input w-full" value={method} onChange={e => setMethod(e.target.value)}>
-                    {METHODS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-                  </select>
+                  <GlassDropdown
+                    options={METHODS.map(m => ({ value: m.value, label: m.label }))}
+                    value={method}
+                    onChange={setMethod}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs text-[var(--muted)] mb-1">Transaction ID (optional)</label>

@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useRef, useEffect, ReactNode } from 'react'
+import { useState, useRef, useEffect, ReactNode, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronDown, LucideIcon } from 'lucide-react'
+import { ChevronDown, LucideIcon, Check } from 'lucide-react'
 
 export interface DropdownOption {
   value: string
@@ -54,6 +54,8 @@ export function Dropdown({
 
   const [selectedIndex, setSelectedIndex] = useState(-1)
   const wrapperRef = useRef<HTMLDivElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+  const mouseGlowRef = useRef<HTMLDivElement>(null)
 
   const selected = options.find((o) => o.value === value)
 
@@ -101,6 +103,20 @@ export function Dropdown({
     if (!isOpen) setSelectedIndex(-1)
   }, [isOpen])
 
+  const handleMouseGlow = useCallback((e: React.MouseEvent) => {
+    if (!panelRef.current || !mouseGlowRef.current) return
+    const rect = panelRef.current.getBoundingClientRect()
+    mouseGlowRef.current.style.left = `${e.clientX - rect.left}px`
+    mouseGlowRef.current.style.top = `${e.clientY - rect.top}px`
+    mouseGlowRef.current.style.opacity = '1'
+  }, [])
+
+  const handleMouseGlowLeave = useCallback(() => {
+    if (mouseGlowRef.current) {
+      mouseGlowRef.current.style.opacity = '0'
+    }
+  }, [])
+
   const handleSelect = (option: DropdownOption) => {
     if (option.disabled) return
     onChange?.(option.value)
@@ -109,8 +125,14 @@ export function Dropdown({
 
   const sizeClasses = {
     sm: 'px-3 py-1.5 text-xs gap-1.5',
-    md: 'px-4 py-2 text-sm gap-2',
-    lg: 'px-5 py-2.5 text-base gap-2.5',
+    md: 'px-4 py-2.5 text-sm gap-2',
+    lg: 'px-5 py-3 text-base gap-2.5',
+  }
+
+  const panelSizeClasses = {
+    sm: 'min-w-[180px]',
+    md: 'min-w-[220px]',
+    lg: 'min-w-[260px]',
   }
 
   const alignClass = align === 'right' ? 'right-0' : 'left-0'
@@ -118,7 +140,7 @@ export function Dropdown({
   return (
     <div className={`relative ${className}`} ref={wrapperRef}>
       {label && (
-        <label className="block text-sm font-medium text-[var(--foreground)] pl-1 mb-1.5">
+        <label className="block text-xs font-semibold text-[var(--muted)] uppercase tracking-wider pl-1 mb-1.5">
           {label}
         </label>
       )}
@@ -131,15 +153,11 @@ export function Dropdown({
       ) : (
         <button
           type="button"
-          className={`inline-flex items-center justify-between gap-2 rounded-xl border text-sm font-medium cursor-pointer transition-colors ${sizeClasses[size]} ${
+          className={`glass-dropdown-trigger inline-flex items-center justify-between gap-2 rounded-xl text-sm font-medium cursor-pointer transition-all duration-300 ${sizeClasses[size]} ${
             disabled ? 'opacity-50 cursor-not-allowed' : ''
           } ${
-            isOpen ? 'border-[var(--accent)]' : 'border-[var(--card-border)] hover:border-[var(--accent)]/30'
+            isOpen ? 'glass-dropdown-trigger-active' : ''
           } ${triggerClassName}`}
-          style={{
-            background: isOpen ? 'var(--card-bg)' : 'var(--input-bg)',
-            color: 'var(--foreground)',
-          }}
           onClick={() => !disabled && setIsOpen(!isOpen)}
           disabled={disabled}
         >
@@ -152,61 +170,75 @@ export function Dropdown({
           </div>
           <ChevronDown
             size={14}
-            className={`text-[var(--muted)] flex-shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+            className={`text-[var(--muted)] flex-shrink-0 transition-transform duration-300 ease-[var(--ease-spring)] ${isOpen ? 'rotate-180' : ''}`}
           />
         </button>
       )}
 
-      {/* Menu — only render when no custom children are provided */}
+      {/* Menu */}
       {!children && (
         <AnimatePresence>
           {isOpen && (
             <motion.div
-              className={`absolute top-full mt-2 z-50 min-w-[200px] border rounded-xl shadow-xl py-1 ${alignClass} ${menuClassName}`}
+              ref={panelRef}
+              className={`absolute top-full mt-2 z-[9999] border rounded-2xl shadow-2xl py-1.5 overflow-hidden ${alignClass} ${panelSizeClasses[size]} ${menuClassName}`}
               style={{
                 background: 'var(--card-bg)',
-                backdropFilter: 'blur(20px) saturate(180%)',
-                WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+                backdropFilter: 'blur(24px) saturate(180%)',
+                WebkitBackdropFilter: 'blur(24px) saturate(180%)',
                 borderColor: 'var(--card-border)',
+                boxShadow: '0 8px 32px var(--shadow-color), 0 32px 80px var(--shadow-color), inset 0 1px 0 rgba(255,255,255,0.06)',
               }}
-              initial={{ opacity: 0, y: -4, scale: 0.97 }}
+              initial={{ opacity: 0, y: -8, scale: 0.96 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -4, scale: 0.97 }}
-              transition={{ duration: 0.15, ease: 'easeOut' }}
+              exit={{ opacity: 0, y: -8, scale: 0.96 }}
+              transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
+              onMouseMove={handleMouseGlow}
+              onMouseLeave={handleMouseGlowLeave}
             >
-              {options.map((option, idx) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition-colors cursor-pointer ${
-                    value === option.value
-                      ? 'text-[var(--accent)]'
-                      : 'text-[var(--foreground)]'
-                  } ${option.disabled ? 'opacity-40 cursor-not-allowed' : ''} ${
-                    selectedIndex === idx ? 'bg-[var(--accent)]/5' : ''
-                  }`}
-                  style={{
-                    background: value === option.value || selectedIndex === idx
-                      ? 'rgba(99, 102, 241, 0.08)'
-                      : undefined,
-                  }}
-                  onMouseEnter={(e) => {
-                    if (value !== option.value && selectedIndex !== idx) {
-                      e.currentTarget.style.background = 'rgba(99, 102, 241, 0.05)'
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (value !== option.value && selectedIndex !== idx) {
-                      e.currentTarget.style.background = ''
-                    }
-                  }}
-                  onClick={() => handleSelect(option)}
-                  disabled={option.disabled}
-                >
-                  {option.icon && <option.icon size={15} className="flex-shrink-0 text-[var(--muted)]" />}
-                  <span className="truncate">{option.label}</span>
-                </button>
-              ))}
+              {/* Mouse glow effect */}
+              <div
+                ref={mouseGlowRef}
+                className="dropdown-mouse-glow"
+                aria-hidden="true"
+              />
+              {/* Specular edge highlight */}
+              <div className="dropdown-specular-left" aria-hidden="true" />
+
+              {options.map((option, idx) => {
+                const isSelected = value === option.value
+                const isHighlighted = selectedIndex === idx
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={`relative z-[2] w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition-all duration-200 cursor-pointer mx-1.5 rounded-lg ${
+                      isSelected
+                        ? 'text-[var(--accent)] font-medium'
+                        : 'text-[var(--foreground)]'
+                    } ${option.disabled ? 'opacity-40 cursor-not-allowed' : ''} ${
+                      isHighlighted ? 'glass-dropdown-item-hover' : ''
+                    }`}
+                    style={{
+                      width: 'calc(100% - 12px)',
+                    }}
+                    onClick={() => handleSelect(option)}
+                    disabled={option.disabled}
+                  >
+                    {option.icon && <option.icon size={15} className="flex-shrink-0 text-[var(--muted)]" />}
+                    <span className="truncate flex-1">{option.label}</span>
+                    {isSelected && (
+                      <Check size={14} className="flex-shrink-0 text-[var(--accent)]" />
+                    )}
+                  </button>
+                )
+              })}
+
+              {options.length === 0 && (
+                <div className="px-4 py-3 text-sm text-[var(--muted)] text-center relative z-[2]">
+                  No options
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>

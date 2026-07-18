@@ -3,6 +3,7 @@
 import { Header } from '@/components/layout/Header'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GlassButton } from '@/components/ui/GlassButton'
+import { GlassDropdown } from '@/components/ui/GlassDropdown'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { AlertModal } from '@/components/ui/ConfirmDialog'
 import { useApi } from '@/hooks/useApi'
@@ -167,12 +168,11 @@ export default function ClientOrdersPage() {
               <form onSubmit={handleCreateOrder} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-[var(--foreground)] mb-1.5">Service *</label>
-                  <select className="glass-input w-full" value={orderForm.serviceId} onChange={e => { setOrderForm({ ...orderForm, serviceId: e.target.value }); setCustomValues({}); setImeiCount({}) }} required>
-                    <option value="">Select a service...</option>
-                    {services.filter((s: ServiceItem) => s.status === 'active').map((service: ServiceItem) => (
-                      <option key={service.id} value={service.id}>{service.name} — ${service.sellingPrice} ({service.processingTime || 'N/A'})</option>
-                    ))}
-                  </select>
+                  <GlassDropdown
+                    options={[{ value: '', label: 'Select a service...' }, ...services.filter((s: ServiceItem) => s.status === 'active').map((service: ServiceItem) => ({ value: service.id, label: `${service.name} — $${service.sellingPrice} (${service.processingTime || 'N/A'})` }))]}
+                    value={orderForm.serviceId}
+                    onChange={(v) => { setOrderForm({ ...orderForm, serviceId: v }); setCustomValues({}); setImeiCount({}) }}
+                  />
                 </div>
                 {selectedService && (
                   <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20">
@@ -415,10 +415,11 @@ function CustomFieldInput({ field, value, onChange, onImeiMultiChange, imeiCount
       return (
         <div>
           <label className="block text-sm font-medium text-[var(--foreground)] mb-1.5">{field.label} {field.required && '*'}</label>
-          <select className="glass-input w-full" value={value} onChange={e => onChange(e.target.value)}>
-            <option value="">Select...</option>
-            {options.map((opt: string) => <option key={opt} value={opt}>{opt}</option>)}
-          </select>
+          <GlassDropdown
+            options={[{ value: '', label: 'Select...' }, ...options.map((opt: string) => ({ value: opt, label: opt }))]}
+            value={value}
+            onChange={(v) => onChange(v)}
+          />
         </div>
       )
     }

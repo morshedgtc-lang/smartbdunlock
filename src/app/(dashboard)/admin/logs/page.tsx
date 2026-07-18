@@ -3,6 +3,7 @@
 import { Header } from '@/components/layout/Header'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GlassButton } from '@/components/ui/GlassButton'
+import { GlassDropdown } from '@/components/ui/GlassDropdown'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
 import { useApi } from '@/hooks/useApi'
@@ -149,12 +150,16 @@ export default function LogsPage() {
             <motion.div className="glass p-6 w-full max-w-md mx-4" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
               <h3 className="text-lg font-bold text-[var(--foreground)] mb-4">Add Log Entry</h3>
               <form onSubmit={handleAddLog} className="space-y-3">
-                <select className="glass-input w-full" value={newLog.level} onChange={(e) => setNewLog({ ...newLog, level: e.target.value })}>
-                  <option value="info">Info</option>
-                  <option value="warn">Warning</option>
-                  <option value="error">Error</option>
-                  <option value="debug">Debug</option>
-                </select>
+                <GlassDropdown
+                  options={[
+                    { value: 'info', label: 'Info' },
+                    { value: 'warn', label: 'Warning' },
+                    { value: 'error', label: 'Error' },
+                    { value: 'debug', label: 'Debug' },
+                  ]}
+                  value={newLog.level}
+                  onChange={(v) => setNewLog({ ...newLog, level: v })}
+                />
                 <input className="glass-input w-full" placeholder="Source (e.g., auth, order)" value={newLog.source} onChange={(e) => setNewLog({ ...newLog, source: e.target.value })} />
                 <textarea className="glass-input w-full" placeholder="Message" value={newLog.message} onChange={(e) => setNewLog({ ...newLog, message: e.target.value })} required rows={3} />
                 <div className="flex gap-3 pt-2">

@@ -3,6 +3,7 @@
 import { Header } from '@/components/layout/Header'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GlassButton } from '@/components/ui/GlassButton'
+import { GlassDropdown } from '@/components/ui/GlassDropdown'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
@@ -190,11 +191,15 @@ export default function ApiKeysPage() {
               </div>
               <form onSubmit={handleGenerate} className="space-y-3">
                 <input className="glass-input w-full" placeholder="Key name (e.g. Production Server)" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
-                <select className="glass-input w-full" value={form.permissions} onChange={e => setForm({ ...form, permissions: e.target.value })}>
-                  <option value="read">Read Only</option>
-                  <option value="write">Read & Write</option>
-                  <option value="admin">Full Admin</option>
-                </select>
+                <GlassDropdown
+                  options={[
+                    { value: 'read', label: 'Read Only' },
+                    { value: 'write', label: 'Read & Write' },
+                    { value: 'admin', label: 'Full Admin' },
+                  ]}
+                  value={form.permissions}
+                  onChange={(v) => setForm({ ...form, permissions: v })}
+                />
                 <input className="glass-input w-full" type="number" placeholder="Request limit (per minute)" value={form.requestLimit} onChange={e => setForm({ ...form, requestLimit: parseInt(e.target.value) || 100 })} min={1} max={10000} />
                 <div className="flex gap-3 pt-2">
                   <GlassButton type="button" variant="secondary" className="flex-1" onClick={() => setShowModal(false)}>Cancel</GlassButton>

@@ -3,6 +3,7 @@
 import { Header } from '@/components/layout/Header'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GlassButton } from '@/components/ui/GlassButton'
+import { GlassDropdown } from '@/components/ui/GlassDropdown'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { useToast } from '@/components/ui/Toast'
 import { useApi } from '@/hooks/useApi'
@@ -164,14 +165,22 @@ export default function UsersPage() {
                 <input className="glass-input w-full" placeholder="Phone (optional)" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
                 <input className="glass-input w-full" type="password" placeholder={editing ? 'New password (leave blank to keep)' : 'Password'} value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} required={!editing} minLength={8} />
                 <div className="grid grid-cols-2 gap-3">
-                  <select className="glass-input" value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}>
-                    <option value="reseller">Client</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                  <select className="glass-input" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
-                    <option value="active">Active</option>
-                    <option value="suspended">Suspended</option>
-                  </select>
+                  <GlassDropdown
+                    options={[
+                      { value: 'reseller', label: 'Client' },
+                      { value: 'admin', label: 'Admin' },
+                    ]}
+                    value={form.role}
+                    onChange={(v) => setForm({ ...form, role: v })}
+                  />
+                  <GlassDropdown
+                    options={[
+                      { value: 'active', label: 'Active' },
+                      { value: 'suspended', label: 'Suspended' },
+                    ]}
+                    value={form.status}
+                    onChange={(v) => setForm({ ...form, status: v })}
+                  />
                 </div>
                 <div className="flex gap-3 pt-2">
                   <GlassButton type="button" variant="secondary" className="flex-1" onClick={() => setShowModal(false)}>Cancel</GlassButton>

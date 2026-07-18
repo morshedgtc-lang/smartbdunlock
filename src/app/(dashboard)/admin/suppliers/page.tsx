@@ -3,6 +3,7 @@
 import { Header } from '@/components/layout/Header'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GlassButton } from '@/components/ui/GlassButton'
+import { GlassDropdown } from '@/components/ui/GlassDropdown'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useApi } from '@/hooks/useApi'
@@ -161,15 +162,23 @@ export default function SuppliersPage() {
                 </div>
                 <input className="glass-input w-full" placeholder="Website URL (optional)" value={form.website} onChange={e => setForm({ ...form, website: e.target.value })} />
                 <div className="grid grid-cols-3 gap-3">
-                  <select className="glass-input" value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}>
-                    <option value="api">API</option>
-                    <option value="manual">Manual</option>
-                    <option value="reseller">Client</option>
-                  </select>
-                  <select className="glass-input" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
+                  <GlassDropdown
+                    options={[
+                      { value: 'api', label: 'API' },
+                      { value: 'manual', label: 'Manual' },
+                      { value: 'reseller', label: 'Client' },
+                    ]}
+                    value={form.type}
+                    onChange={(v) => setForm({ ...form, type: v })}
+                  />
+                  <GlassDropdown
+                    options={[
+                      { value: 'active', label: 'Active' },
+                      { value: 'inactive', label: 'Inactive' },
+                    ]}
+                    value={form.status}
+                    onChange={(v) => setForm({ ...form, status: v })}
+                  />
                   <div>
                     <label className="block text-xs text-[var(--muted)] mb-1">Priority</label>
                     <input className="glass-input w-full" type="number" min="1" max="10" value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })} />

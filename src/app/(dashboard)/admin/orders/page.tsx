@@ -3,6 +3,7 @@
 import { Header } from '@/components/layout/Header'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GlassButton } from '@/components/ui/GlassButton'
+import { GlassDropdown } from '@/components/ui/GlassDropdown'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { Modal } from '@/components/ui/Modal'
 import { useApi } from '@/hooks/useApi'
@@ -313,12 +314,12 @@ export default function OrdersPage() {
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
               <input className="glass-input pl-9 w-64" placeholder="Search IMEI, order ID..." value={search} onChange={e => setSearch(e.target.value)} />
             </div>
-            <select className="glass-input w-auto" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-              <option value="ALL">All Status</option>
-              {STATUS_OPTIONS.map(s => (
-                <option key={s.value} value={s.value}>{s.label}</option>
-              ))}
-            </select>
+            <GlassDropdown
+              options={[{ value: 'ALL', label: 'All Status' }, ...STATUS_OPTIONS.map(s => ({ value: s.value, label: s.label }))]}
+              value={statusFilter}
+              onChange={setStatusFilter}
+              size="sm"
+            />
           </div>
         </div>
 
@@ -419,17 +420,12 @@ export default function OrdersPage() {
                 </div>
                 <div className="p-3 rounded-xl bg-white/5 border border-[var(--card-border)]">
                   <label className="text-xs font-medium text-[var(--muted)] mb-2 block">Assigned To</label>
-                  <select
-                    className="glass-input w-full text-sm"
+                  <GlassDropdown
+                    options={[{ value: '', label: 'Unassigned' }, ...adminUsers.map((u: AdminUser) => ({ value: u.id, label: u.name }))]}
                     value={viewOrder.assignedTo || ''}
-                    onChange={e => updateAssignment(e.target.value)}
+                    onChange={(v) => updateAssignment(v)}
                     disabled={updating}
-                  >
-                    <option value="">Unassigned</option>
-                    {adminUsers.map((u: AdminUser) => (
-                      <option key={u.id} value={u.id}>{u.name}</option>
-                    ))}
-                  </select>
+                  />
                 </div>
               </div>
 

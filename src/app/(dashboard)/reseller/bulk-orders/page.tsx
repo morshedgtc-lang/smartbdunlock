@@ -3,6 +3,7 @@
 import { Header } from '@/components/layout/Header'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GlassButton } from '@/components/ui/GlassButton'
+import { GlassDropdown } from '@/components/ui/GlassDropdown'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { useApi } from '@/hooks/useApi'
 import { useAuth } from '@/lib/api'
@@ -199,16 +200,12 @@ export default function BulkOrdersPage() {
               )}
 
               <div className="flex flex-col sm:flex-row gap-3">
-                <select
-                  className="glass-input flex-1"
+                <GlassDropdown
+                  options={[{ value: '', label: 'Select service...' }, ...services.map((s: ServiceItem) => ({ value: s.id, label: `${s.name} - $${s.sellingPrice.toFixed(2)}` }))]}
                   value={selectedService}
-                  onChange={e => setSelectedService(e.target.value)}
-                >
-                  <option value="">Select service...</option>
-                  {services.map((s: ServiceItem) => (
-                    <option key={s.id} value={s.id}>{s.name} - ${s.sellingPrice.toFixed(2)}</option>
-                  ))}
-                </select>
+                  onChange={setSelectedService}
+                  className="flex-1"
+                />
                 <GlassButton onClick={handleProcess} disabled={processing || !selectedService || preview.validCount === 0}>
                   {processing ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
                   Process {preview.validCount} Orders
