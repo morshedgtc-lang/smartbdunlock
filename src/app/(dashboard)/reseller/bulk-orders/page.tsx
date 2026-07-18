@@ -5,12 +5,13 @@ import { GlassCard } from '@/components/ui/GlassCard'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { GlassDropdown } from '@/components/ui/GlassDropdown'
 import { StatusBadge } from '@/components/ui/StatusBadge'
+import { FileUpload, FileData } from '@/components/ui/FileUpload'
 import { useApi } from '@/hooks/useApi'
 import { useAuth } from '@/lib/api'
 import { useToast } from '@/components/ui/Toast'
 import { motion } from 'framer-motion'
-import { Upload, Loader2, FileText, CheckCircle, XCircle, Download } from 'lucide-react'
-import { useState, useRef } from 'react'
+import { Loader2, FileText, CheckCircle, Download } from 'lucide-react'
+import { useState } from 'react'
 
 interface BulkBatch {
   id: string
@@ -43,13 +44,13 @@ interface ServiceItem {
 export default function BulkOrdersPage() {
   const { user } = useAuth()
   const { toast } = useToast()
-  const fileRef = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState<UploadPreview | null>(null)
   const [selectedService, setSelectedService] = useState('')
   const [uploading, setUploading] = useState(false)
   const [processing, setProcessing] = useState(false)
   const [fileName, setFileName] = useState('')
   const [page, setPage] = useState(1)
+  const [uploadedFiles, setUploadedFiles] = useState<FileData[]>([])
 
   const { data: batchesData, loading, refetch } = useApi<{ batches: BulkBatch[]; pagination: { total: number; pages: number } }>({ url: `/api/bulk-orders?page=${page}&limit=10` })
   const { data: servicesData } = useApi<{ services: ServiceItem[] }>({ url: '/api/services?status=active' })
@@ -58,9 +59,10 @@ export default function BulkOrdersPage() {
   const services = (servicesData?.services || []).filter((s: ServiceItem) => s.status === 'active')
   const balance = user?.walletBalance ?? 0
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+  const handleFileUpload = async (files: FileData[]) => {
+    setUploadedFiles(files)
+    if (files.length === 0) return
+    const file = files[files.length - 1]
     setFileName(file.name)
 
     const ext = file.name.split('.').pop()?.toLowerCase()
@@ -71,20 +73,15 @@ export default function BulkOrdersPage() {
 
     setUploading(true)
     try {
-      const reader = new FileReader()
-      reader.onload = async () => {
-        const base64 = reader.result as string
-        const res = await fetch('/api/bulk-orders/upload', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ fileContent: base64, fileName: file.name }),
-        })
-        const data = await res.json()
-        if (!res.ok) throw new Error(data.error)
-        setPreview(data)
-        setUploading(false)
-      }
-      reader.readAsDataURL(file)
+      const res = await fetch('/api/bulk-orders/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileContent: file.dataUrl, fileName: file.name }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      setPreview(data)
+      setUploading(false)
     } catch (err: unknown) {
       toast('error', err instanceof Error ? err.message : 'Upload failed')
       setUploading(false)
@@ -142,17 +139,20 @@ export default function BulkOrdersPage() {
       <div className="p-6 space-y-6">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <GlassCard glow>
-            <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center justify-between flex-wrap gap-4 mb-4">
               <div>
                 <p className="text-sm text-[var(--muted)] mb-1">Available Balance</p>
                 <p className="text-3xl font-bold text-[var(--foreground)]">${balance.toLocaleString()}</p>
               </div>
-              <GlassButton onClick={() => fileRef.current?.click()} disabled={uploading}>
-                {uploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
-                Upload CSV/TXT
-              </GlassButton>
-              <input ref={fileRef} type="file" accept=".csv,.txt" className="hidden" onChange={handleFileSelect} />
+              {uploading && <Loader2 size={20} className="animate-spin text-[var(--accent)]" />}
             </div>
+            <FileUpload
+              onChange={handleFileUpload}
+              maxFiles={1}
+              maxSizeMB={5}
+              accept={['text/csv', 'text/plain']}
+              value={uploadedFiles}
+            />
           </GlassCard>
         </motion.div>
 
@@ -210,7 +210,7 @@ export default function BulkOrdersPage() {
                   {processing ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
                   Process {preview.validCount} Orders
                 </GlassButton>
-                <GlassButton variant="secondary" onClick={() => { setPreview(null); setFileName('') }}>
+                <GlassButton variant="secondary" onClick={() => { setPreview(null); setFileName(''); setUploadedFiles([]) }}>
                   Cancel
                 </GlassButton>
               </div>

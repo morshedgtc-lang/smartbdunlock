@@ -22,7 +22,7 @@ export const createOrderSchema = z.object({
 
 export const updateOrderSchema = z.object({
   id: z.string().min(1, 'Order ID is required'),
-  status: z.enum(['pending', 'processing', 'completed', 'failed', 'cancelled']).optional(),
+  status: z.enum(['pending', 'processing', 'completed', 'failed', 'cancelled', 'rejected', 'refunded']).optional(),
   notes: z.string().optional(),
   result: z.string().optional(),
   priority: z.enum(['low', 'normal', 'high', 'urgent']).optional(),
@@ -122,6 +122,7 @@ export const createSupplierSchema = z.object({
   phone: z.string().optional().nullable(),
   website: z.string().url().optional().nullable(),
   apiKey: z.string().optional().nullable(),
+  config: z.string().optional().nullable(),
   priority: z.number().int().min(1).optional().default(1),
 })
 
@@ -133,6 +134,7 @@ export const updateSupplierSchema = z.object({
   phone: z.string().optional().nullable(),
   website: z.string().url().optional().nullable(),
   apiKey: z.string().optional().nullable(),
+  config: z.string().optional().nullable(),
   priority: z.number().int().min(1).optional(),
   status: z.enum(['active', 'inactive']).optional(),
 })

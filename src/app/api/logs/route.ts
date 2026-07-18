@@ -75,13 +75,14 @@ export async function DELETE(request: Request) {
     await requireAdmin()
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
-    if (!id) {
-      return NextResponse.json({ error: 'Log ID is required' }, { status: 400 })
+
+    if (id) {
+      await prisma.log.delete({ where: { id } })
+      return NextResponse.json({ message: 'Log deleted' })
     }
 
-    await prisma.log.delete({ where: { id } })
-
-    return NextResponse.json({ message: 'Log deleted' })
+    const result = await prisma.log.deleteMany()
+    return NextResponse.json({ message: 'All logs cleared', deleted: result.count })
   } catch (error: unknown) {
     if (error instanceof Error && error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
     if (error instanceof Error && error.message === 'Forbidden') return NextResponse.json({ error: error.message }, { status: 403 })

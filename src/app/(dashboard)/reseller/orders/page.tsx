@@ -8,15 +8,16 @@ import { StatusBadge } from '@/components/ui/StatusBadge'
 import { AlertModal } from '@/components/ui/ConfirmDialog'
 import { useApi } from '@/hooks/useApi'
 import { useToast } from '@/components/ui/Toast'
+import { OrderDetailDrawer, DetailOrder } from '@/components/admin/OrderDetailDrawer'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Search, Loader2, X, Smartphone, Upload, AlertCircle, ArrowRight, Package, ChevronDown, ChevronUp } from 'lucide-react'
 import Link from 'next/link'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 
 const STATUS_STEPS = ['pending', 'processing', 'completed']
 const STATUS_COLORS: Record<string, string> = {
   pending: 'bg-amber-500', processing: 'bg-blue-500', completed: 'bg-green-500',
-  failed: 'bg-red-500', cancelled: 'bg-gray-500',
+  failed: 'bg-red-500', cancelled: 'bg-gray-500', rejected: 'bg-red-600', refunded: 'bg-purple-500',
 }
 
 interface ServiceItem {
@@ -61,6 +62,7 @@ interface WalletData {
 
 export default function ClientOrdersPage() {
   const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<string>('ALL')
   const [showCreate, setShowCreate] = useState(false)
   const [creating, setCreating] = useState(false)
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null)
@@ -68,6 +70,8 @@ export default function ClientOrdersPage() {
   const [customValues, setCustomValues] = useState<Record<string, string>>({})
   const [imeiCount, setImeiCount] = useState<Record<string, number>>({})
   const [alertState, setAlertState] = useState<{ title: string; message: string } | null>(null)
+  const [viewOrder, setViewOrder] = useState<DetailOrder | null>(null)
+  const [detailLoading, setDetailLoading] = useState(false)
   const { toast } = useToast()
   const { data, loading, error, refetch } = useApi<{ orders: OrderItem[] }>({ url: '/api/orders' })
   const { data: servicesData } = useApi<{ services: ServiceItem[] }>({ url: '/api/services' })
@@ -76,12 +80,39 @@ export default function ClientOrdersPage() {
   const services = servicesData?.services || []
   const balance = walletData?.balance ?? 0
 
-  const filtered = allOrders.filter((o: OrderItem) =>
-    o.orderNumber.toLowerCase().includes(search.toLowerCase()) || o.imei?.toLowerCase().includes(search.toLowerCase()) || o.service?.name?.toLowerCase().includes(search.toLowerCase())
-  )
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const orderId = params.get('order')
+    const status = params.get('status')
+    if (orderId) {
+      loadDetail(orderId)
+      window.history.replaceState({}, '', '/reseller/orders')
+    }
+    if (status) setStatusFilter(status.toUpperCase())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const filtered = allOrders.filter((o: OrderItem) => {
+    const matchSearch = o.orderNumber.toLowerCase().includes(search.toLowerCase()) || o.imei?.toLowerCase().includes(search.toLowerCase()) || o.service?.name?.toLowerCase().includes(search.toLowerCase())
+    const matchStatus = statusFilter === 'ALL' || o.status.toUpperCase() === statusFilter
+    return matchSearch && matchStatus
+  })
 
   const selectedService = services.find((s: ServiceItem) => s.id === orderForm.serviceId)
   const customFields = selectedService?.customFields?.filter((f: CustomField) => f.visibleToClient) || []
+
+  const loadDetail = async (id: string) => {
+    setDetailLoading(true)
+    try {
+      const res = await fetch(`/api/orders/${id}`, { credentials: 'same-origin' })
+      if (res.ok) setViewOrder(await res.json())
+      else toast('error', 'Failed to load order')
+    } catch {
+      toast('error', 'Failed to load order')
+    } finally {
+      setDetailLoading(false)
+    }
+  }
 
   const handleCreateOrder = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -140,9 +171,18 @@ export default function ClientOrdersPage() {
       <Header title="My Orders" subtitle={`${allOrders.length} orders`} />
       <div className="p-6 space-y-6">
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-          <div className="relative">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
-            <input className="glass-input pl-9 w-64" placeholder="Search orders..." value={search} onChange={e => setSearch(e.target.value)} />
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="relative">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
+              <input className="glass-input pl-9 w-64" placeholder="Search orders..." value={search} onChange={e => setSearch(e.target.value)} />
+            </div>
+            <div className="flex gap-1.5 flex-wrap">
+              {['ALL', 'PENDING', 'PROCESSING', 'COMPLETED', 'FAILED', 'CANCELLED'].map(s => (
+                <button key={s} className={`filter-pill ${statusFilter === s ? 'active' : ''}`} onClick={() => setStatusFilter(s)}>
+                  {s === 'ALL' ? 'All' : s.charAt(0) + s.slice(1).toLowerCase()}
+                </button>
+              ))}
+            </div>
           </div>
           <Link href="/reseller/services">
             <GlassButton size="sm">
@@ -235,7 +275,7 @@ export default function ClientOrdersPage() {
               {filtered.map((order: OrderItem, i: number) => {
                 const isExpanded = expandedOrder === order.id
                 const currentStep = STATUS_STEPS.indexOf(order.status)
-                const isTerminal = order.status === 'failed' || order.status === 'cancelled'
+                const isTerminal = order.status === 'failed' || order.status === 'cancelled' || order.status === 'rejected' || order.status === 'refunded'
 
                 return (
                   <motion.div
@@ -312,7 +352,7 @@ export default function ClientOrdersPage() {
                                 })}
                                 {isTerminal && (
                                   <div className="flex items-center gap-3">
-                                    <div className={`w-3 h-3 rounded-full flex-shrink-0 ${STATUS_COLORS[order.status]}`} />
+                                    <div className={`w-3 h-3 rounded-full flex-shrink-0 ${STATUS_COLORS[order.status] || 'bg-gray-500'}`} />
                                     <div>
                                       <p className="text-sm capitalize font-bold text-[var(--foreground)]">{order.status}</p>
                                       <p className="text-xs text-[var(--muted)]">Final status</p>
@@ -364,6 +404,15 @@ export default function ClientOrdersPage() {
           </div>
         )}
       </div>
+
+      <OrderDetailDrawer
+        open={!!viewOrder}
+        onClose={() => setViewOrder(null)}
+        order={viewOrder}
+        loading={detailLoading}
+        role="client"
+        onUpdate={() => { if (viewOrder) loadDetail(viewOrder.id); refetch() }}
+      />
     </div>
   )
 }

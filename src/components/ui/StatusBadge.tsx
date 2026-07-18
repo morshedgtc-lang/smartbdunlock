@@ -8,6 +8,8 @@ export function StatusBadge({ status }: { status: string }) {
     pending: 'badge-warning',
     new: 'badge-info',
     failed: 'badge-danger',
+    rejected: 'badge-danger',
+    refunded: 'badge-purple',
     cancelled: 'badge-danger',
     suspended: 'badge-danger',
     disabled: 'badge-danger',

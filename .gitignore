@@ -54,3 +54,4 @@ deploy.zip
 public_html/
 
 /src/generated/prisma
+start-dev.sh

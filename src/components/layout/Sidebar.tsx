@@ -22,6 +22,13 @@ import {
   BarChart3,
   BadgeDollarSign,
   Upload,
+  PlusCircle,
+  CheckCircle2,
+  XCircle,
+  RotateCcw,
+  MessageSquare,
+  Bell,
+  Globe,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '@/lib/api'
@@ -41,13 +48,56 @@ const adminLinks = [
   { href: '/admin/api-keys', label: 'API Keys', icon: Key },
 ]
 
-const clientLinks = [
-  { href: '/reseller/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/reseller/services', label: 'Services', icon: Package },
-  { href: '/reseller/orders', label: 'Orders', icon: ShoppingCart },
-  { href: '/reseller/bulk-orders', label: 'Bulk Orders', icon: Upload },
-  { href: '/reseller/wallet', label: 'Wallet', icon: Wallet },
-  { href: '/reseller/deposit-request', label: 'Deposit Request', icon: BadgeDollarSign },
+interface SidebarLink {
+  href: string
+  label: string
+  icon: typeof LayoutDashboard
+  badge?: string
+  accent?: boolean
+}
+
+interface SidebarSection {
+  label?: string
+  links: SidebarLink[]
+}
+
+const clientSections: SidebarSection[] = [
+  {
+    links: [
+      { href: '/reseller/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    ],
+  },
+  {
+    label: 'Orders',
+    links: [
+      { href: '/reseller/services', label: 'New Order', icon: PlusCircle, accent: true },
+      { href: '/reseller/orders', label: 'My Orders', icon: ShoppingCart },
+      { href: '/reseller/orders?status=completed', label: 'Completed', icon: CheckCircle2 },
+      { href: '/reseller/orders?status=rejected', label: 'Rejected', icon: XCircle },
+      { href: '/reseller/orders?status=refunded', label: 'Refunded', icon: RotateCcw },
+      { href: '/reseller/bulk-orders', label: 'Bulk Orders', icon: Upload },
+    ],
+  },
+  {
+    label: 'Finance',
+    links: [
+      { href: '/reseller/wallet', label: 'Wallet', icon: Wallet },
+      { href: '/reseller/deposit-request', label: 'Deposit', icon: BadgeDollarSign },
+    ],
+  },
+  {
+    label: 'Support',
+    links: [
+      { href: '/reseller/orders', label: 'Support Tickets', icon: MessageSquare },
+      { href: '/reseller/services', label: 'Announcements', icon: Bell },
+    ],
+  },
+  {
+    label: 'Account',
+    links: [
+      { href: '/reseller/services', label: 'API Docs', icon: Globe },
+    ],
+  },
 ]
 
 export function Sidebar() {
@@ -57,7 +107,7 @@ export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false)
 
   const role = pathname.startsWith('/admin') ? 'admin' : 'reseller'
-  const links = role === 'admin' ? adminLinks : clientLinks
+  const adminLinksFlat = role === 'admin' ? adminLinks : null
   const userName = user?.name || (role === 'admin' ? 'Super Admin' : 'Client')
 
   const handleLogout = async () => {
@@ -86,7 +136,7 @@ export function Sidebar() {
 
       {/* Nav Links */}
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-        {links.map((link) => {
+        {role === 'admin' && adminLinksFlat?.map((link) => {
           const isActive = pathname === link.href
           return (
             <Link key={link.href} href={link.href}>
@@ -105,6 +155,34 @@ export function Sidebar() {
             </Link>
           )
         })}
+        {role === 'reseller' && clientSections.map((section, si) => (
+          <div key={si} className={si > 0 ? 'pt-2 mt-2 border-t border-[var(--card-border)]/50' : ''}>
+            {section.label && !collapsed && (
+              <p className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-[var(--muted)]/60">{section.label}</p>
+            )}
+            {section.links.map((link) => {
+              const isActive = pathname === link.href || (link.href.includes('?') && pathname === link.href.split('?')[0] && window.location.search.includes(link.href.split('?')[1] || ''))
+              return (
+                <Link key={link.href} href={link.href}>
+                  <motion.div
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm font-medium transition-all cursor-pointer ${
+                      link.accent
+                        ? 'bg-gradient-to-r from-[var(--accent)]/20 to-purple-500/10 text-[var(--accent)] border border-[var(--accent)]/20 shadow-lg shadow-[var(--accent-glow)] hover:shadow-[var(--accent)]/30'
+                        : isActive
+                          ? 'bg-gradient-to-r from-[var(--accent)]/20 to-purple-500/20 text-[var(--accent)] border border-[var(--accent)]/20 shadow-lg shadow-[var(--accent-glow)]'
+                          : 'text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-bg)] hover:border hover:border-[var(--card-border)]'
+                    }`}
+                    whileHover={{ x: 3 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <link.icon size={18} className="flex-shrink-0" />
+                    {!collapsed && <span>{link.label}</span>}
+                  </motion.div>
+                </Link>
+              )
+            })}
+          </div>
+        ))}
       </nav>
 
       {/* Bottom */}

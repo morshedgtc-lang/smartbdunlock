@@ -36,7 +36,15 @@ export async function GET(request: Request) {
         orderBy: { createdAt: 'desc' },
         skip: offset,
         take: limit,
-        include: {
+        select: {
+          id: true,
+          orderNumber: true,
+          status: true,
+          priority: true,
+          imei: true,
+          deviceInfo: true,
+          sellingPrice: true,
+          createdAt: true,
           service: { select: { name: true, type: true } },
           supplier: { select: { name: true } },
           user: { select: { name: true, email: true } },

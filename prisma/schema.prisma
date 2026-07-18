@@ -108,7 +108,7 @@ model Order {
   supplierId    String?
   imei          String?
   deviceInfo    String?
-  status        String                 @default("pending") // pending, processing, completed, failed, cancelled
+  status        String                 @default("pending") // pending, processing, completed, failed, cancelled, rejected, refunded
   priority      String                 @default("normal")  // low, normal, high, urgent
   assignedTo    String?                // admin user ID this order is assigned to
   cost          Float
@@ -123,6 +123,7 @@ model Order {
   supplier      Supplier?              @relation(fields: [supplierId], references: [id])
   transactions  Transaction[]
   customValues  OrderCustomFieldValue[]
+  attachments   OrderAttachment[]
   orderNotes    OrderNote[]
   supplierJobs  SupplierJob[]
   createdAt     DateTime               @default(now())
@@ -156,6 +157,21 @@ model OrderCustomFieldValue {
   customField    ServiceCustomField @relation(fields: [customFieldId], references: [id])
   value          String            // text value, or JSON for multi-select/files
   createdAt      DateTime          @default(now())
+}
+
+model OrderAttachment {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  fileName  String
+  fileUrl   String
+  fileType  String?  // mime type, e.g. image/png
+  fileSize  Int?     // bytes
+  uploadedById   String?
+  uploadedByName String?
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
 }
 
 model Transaction {

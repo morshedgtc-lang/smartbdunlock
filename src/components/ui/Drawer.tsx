@@ -11,7 +11,7 @@ interface DrawerProps {
   title?: string
   subtitle?: string
   side?: 'left' | 'right' | 'bottom'
-  size?: 'sm' | 'md' | 'lg'
+  size?: 'sm' | 'md' | 'lg' | 'xl'
   closeOnBackdrop?: boolean
   closeOnEscape?: boolean
   footer?: ReactNode
@@ -27,6 +27,7 @@ const sizeClasses = {
   sm: 'w-80',
   md: 'w-[420px]',
   lg: 'w-[560px]',
+  xl: 'w-[680px]',
 }
 
 export function Drawer({

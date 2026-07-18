@@ -8,10 +8,10 @@ import { StatusBadge } from '@/components/ui/StatusBadge'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useApi } from '@/hooks/useApi'
 import { useToast } from '@/components/ui/Toast'
-import { motion } from 'framer-motion'
-import { Plus, Edit, Trash2, Loader2, X, Plug, Wifi, WifiOff } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Plus, Edit, Trash2, Loader2, X, Plug, Wifi, WifiOff, Check, CircleAlert, FileCode } from 'lucide-react'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 
 interface SupplierItem {
   id: string
@@ -28,6 +28,14 @@ interface SupplierItem {
   totalOrders: number
 }
 
+interface TestResult {
+  websiteReachable?: boolean
+  websiteMs?: number
+  websiteError?: string
+  hasApiKey: boolean
+  apiMessage?: string
+}
+
 const emptySupplier = { name: '', email: '', phone: '', website: '', type: 'api', status: 'active', priority: '1', apiKey: '', config: '' }
 
 export default function SuppliersPage() {
@@ -37,9 +45,48 @@ export default function SuppliersPage() {
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null)
+  const [testingId, setTestingId] = useState<string | null>(null)
+  const [testResults, setTestResults] = useState<Record<string, { result: TestResult; ok: boolean; timestamp: number }>>({})
   const { toast } = useToast()
   const { data, loading, error, refetch } = useApi<{ suppliers: SupplierItem[] }>({ url: '/api/suppliers' })
   const suppliers = data?.suppliers || []
+  const testTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
+
+  useEffect(() => {
+    return () => {
+      Object.values(testTimers.current).forEach(clearTimeout)
+    }
+  }, [])
+
+  const handleTest = useCallback(async (supplier: SupplierItem) => {
+    setTestingId(supplier.id)
+    try {
+      const res = await fetch('/api/suppliers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'test', id: supplier.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      const ok = data.result.websiteReachable !== false
+      setTestResults(prev => ({
+        ...prev,
+        [supplier.id]: { result: data.result, ok, timestamp: Date.now() },
+      }))
+      if (testTimers.current[supplier.id]) clearTimeout(testTimers.current[supplier.id])
+      testTimers.current[supplier.id] = setTimeout(() => {
+        setTestResults(prev => {
+          const next = { ...prev }
+          delete next[supplier.id]
+          return next
+        })
+      }, 5000)
+    } catch (err: unknown) {
+      toast('error', err instanceof Error ? err.message : 'Test failed')
+    } finally {
+      setTestingId(null)
+    }
+  }, [toast])
 
   const openCreate = () => { setEditing(null); setForm(emptySupplier); setShowModal(true) }
   const openEdit = (supplier: SupplierItem) => {
@@ -103,6 +150,16 @@ export default function SuppliersPage() {
     } finally {
       setDeleting(null)
       setConfirmDelete(null)
+    }
+  }
+
+  const formatConfig = (config: string | null | undefined): Record<string, unknown> | null => {
+    if (!config) return null
+    try {
+      const parsed = JSON.parse(config)
+      return typeof parsed === 'object' && parsed !== null ? parsed : null
+    } catch {
+      return null
     }
   }
 
@@ -185,6 +242,15 @@ export default function SuppliersPage() {
                   </div>
                 </div>
                 <input className="glass-input w-full" placeholder="API Key (optional)" value={form.apiKey} onChange={e => setForm({ ...form, apiKey: e.target.value })} />
+                <div>
+                  <label className="block text-xs text-[var(--muted)] mb-1">JSON Config (optional)</label>
+                  <textarea
+                    className="glass-input w-full h-20 resize-none font-mono text-xs"
+                    placeholder='{"baseUrl": "https://api.example.com", "timeout": 30}'
+                    value={form.config}
+                    onChange={e => setForm({ ...form, config: e.target.value })}
+                  />
+                </div>
                 <div className="flex gap-3 pt-2">
                   <GlassButton type="button" variant="secondary" className="flex-1" onClick={() => setShowModal(false)}>Cancel</GlassButton>
                   <GlassButton type="submit" className="flex-1" disabled={saving}>
@@ -199,42 +265,113 @@ export default function SuppliersPage() {
 
         {/* Supplier Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {suppliers.map((supplier: SupplierItem, i: number) => (
-            <motion.div key={supplier.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
-              <GlassCard className="h-full">
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h3 className="font-bold text-[var(--foreground)] text-lg">{supplier.name}</h3>
-                    <p className="text-xs text-[var(--muted)] font-mono mt-1">{supplier.apiKey ? '••••••••' : 'No API key'}</p>
+          {suppliers.map((supplier: SupplierItem, i: number) => {
+            const test = testResults[supplier.id]
+            const isTesting = testingId === supplier.id
+            const parsedConfig = formatConfig(supplier.config)
+
+            return (
+              <motion.div key={supplier.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
+                <GlassCard className="h-full">
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <h3 className="font-bold text-[var(--foreground)] text-lg">{supplier.name}</h3>
+                      <p className="text-xs text-[var(--muted)] font-mono mt-1">{supplier.apiKey ? '••••••••' : 'No API key'}</p>
+                    </div>
+                    <StatusBadge status={supplier.status} />
                   </div>
-                  <StatusBadge status={supplier.status} />
-                </div>
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  <div className="text-center p-3 rounded-xl bg-white/5 dark:bg-white/5">
-                    <p className="text-2xl font-bold text-[var(--foreground)]">{supplier.successRate}%</p>
-                    <p className="text-xs text-[var(--muted)]">Success Rate</p>
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    <div className="text-center p-3 rounded-xl bg-white/5 dark:bg-white/5">
+                      <p className="text-2xl font-bold text-[var(--foreground)]">{supplier.successRate}%</p>
+                      <p className="text-xs text-[var(--muted)]">Success Rate</p>
+                    </div>
+                    <div className="text-center p-3 rounded-xl bg-white/5 dark:bg-white/5">
+                      <p className="text-2xl font-bold text-[var(--foreground)]">{supplier.totalOrders.toLocaleString()}</p>
+                      <p className="text-xs text-[var(--muted)]">Total Orders</p>
+                    </div>
                   </div>
-                  <div className="text-center p-3 rounded-xl bg-white/5 dark:bg-white/5">
-                    <p className="text-2xl font-bold text-[var(--foreground)]">{supplier.totalOrders.toLocaleString()}</p>
-                    <p className="text-xs text-[var(--muted)]">Total Orders</p>
+                  <div className="flex items-center justify-between text-sm mb-4">
+                    <span className="text-[var(--muted)]">Priority</span>
+                    <span className="font-medium text-[var(--foreground)]">#{supplier.priority}</span>
                   </div>
-                </div>
-                <div className="flex items-center justify-between text-sm mb-4">
-                  <span className="text-[var(--muted)]">Priority</span>
-                  <span className="font-medium text-[var(--foreground)]">#{supplier.priority}</span>
-                </div>
-                <div className="flex gap-2 pt-3 border-t border-[var(--card-border)]">
-                  <GlassButton variant="secondary" size="sm" className="flex-1" onClick={() => toast('info', 'Test connection — coming soon')}>
-                    {supplier.status === 'active' ? <Wifi size={14} /> : <WifiOff size={14} />} Test
-                  </GlassButton>
-                  <GlassButton variant="secondary" size="sm" className="flex-1" onClick={() => openEdit(supplier)}><Edit size={14} /> Edit</GlassButton>
-                  <GlassButton variant="danger" size="sm" onClick={() => handleDelete(supplier.id, supplier.name)} disabled={deleting === supplier.id}>
-                    {deleting === supplier.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                  </GlassButton>
-                </div>
-              </GlassCard>
-            </motion.div>
-          ))}
+
+                  {/* Config info */}
+                  {parsedConfig && (
+                    <div className="mb-4 p-3 rounded-xl bg-white/5 dark:bg-white/5">
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <FileCode size={12} className="text-[var(--muted)]" />
+                        <span className="text-xs font-medium text-[var(--muted)]">Configuration</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1">
+                        {Object.entries(parsedConfig).slice(0, 6).map(([key, val]) => (
+                          <div key={key} className="text-xs">
+                            <span className="text-[var(--muted)]">{key}: </span>
+                            <span className="text-[var(--foreground)] font-mono">{typeof val === 'string' ? val : JSON.stringify(val)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Inline test result */}
+                  <AnimatePresence>
+                    {test && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="mb-4 overflow-hidden"
+                      >
+                        <div className={`p-3 rounded-xl text-xs space-y-1 ${test.ok ? 'bg-green-500/10 border border-green-500/20' : 'bg-red-500/10 border border-red-500/20'}`}>
+                          <div className="flex items-center gap-1.5 font-medium">
+                            {test.ok ? <Check size={12} className="text-green-400" /> : <CircleAlert size={12} className="text-red-400" />}
+                            <span className={test.ok ? 'text-green-400' : 'text-red-400'}>
+                              {test.ok ? 'Connection OK' : 'Connection Failed'}
+                            </span>
+                            <span className="text-[var(--muted)] ml-auto">{new Date(test.timestamp).toLocaleTimeString()}</span>
+                          </div>
+                          {test.result.websiteReachable !== undefined && (
+                            <p className="text-[var(--muted)]">
+                              Website: {test.result.websiteReachable ? `Reachable (${test.result.websiteMs}ms)` : `Unreachable — ${test.result.websiteError || 'timeout'}`}
+                            </p>
+                          )}
+                          {test.result.hasApiKey && (
+                            <p className="text-[var(--muted)]">{test.result.apiMessage}</p>
+                          )}
+                          {!test.result.websiteReachable && !test.result.hasApiKey && (
+                            <p className="text-[var(--muted)]">No website or API key configured</p>
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  <div className="flex gap-2 pt-3 border-t border-[var(--card-border)]">
+                    <GlassButton
+                      variant="secondary"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => handleTest(supplier)}
+                      disabled={isTesting}
+                    >
+                      {isTesting ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : supplier.status === 'active' ? (
+                        <Wifi size={14} />
+                      ) : (
+                        <WifiOff size={14} />
+                      )}
+                      Test
+                    </GlassButton>
+                    <GlassButton variant="secondary" size="sm" className="flex-1" onClick={() => openEdit(supplier)}><Edit size={14} /> Edit</GlassButton>
+                    <GlassButton variant="danger" size="sm" onClick={() => handleDelete(supplier.id, supplier.name)} disabled={deleting === supplier.id}>
+                      {deleting === supplier.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                    </GlassButton>
+                  </div>
+                </GlassCard>
+              </motion.div>
+            )
+          })}
         </div>
       </div>
     </div>

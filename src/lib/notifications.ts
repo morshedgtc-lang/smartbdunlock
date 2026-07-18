@@ -51,7 +51,7 @@ export async function createOrderNotification(order: {
     await createNotification({
       userId: order.userId,
       ...notification,
-      link: `/orders`,
+      link: `/orders?order=${order.id}`,
     })
   }
 }

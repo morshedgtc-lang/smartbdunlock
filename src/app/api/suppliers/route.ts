@@ -37,6 +37,7 @@ export async function GET(request: Request) {
       suppliers: suppliers.map(s => ({
         ...s,
         apiKey: s.apiKey ? '••••••••' : null,
+        config: s.config || null,
         serviceCount: s._count.services,
         orderCount: s._count.orders,
       })),
@@ -54,11 +55,53 @@ export async function POST(request: Request) {
     if (user.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const body = await request.json()
+
+    if (body.action === 'test' && body.id) {
+      const supplier = await prisma.supplier.findUnique({ where: { id: body.id } })
+      if (!supplier) return NextResponse.json({ error: 'Supplier not found' }, { status: 404 })
+
+      const result: { websiteReachable?: boolean; websiteMs?: number; websiteError?: string; hasApiKey: boolean; apiMessage?: string } = {
+        hasApiKey: !!supplier.apiKey,
+      }
+
+      if (supplier.website) {
+        try {
+          const controller = new AbortController()
+          const timeout = setTimeout(() => controller.abort(), 5000)
+          const start = Date.now()
+          const res = await fetch(supplier.website, { signal: controller.signal, method: 'HEAD' })
+          clearTimeout(timeout)
+          result.websiteReachable = res.ok
+          result.websiteMs = Date.now() - start
+        } catch (err: unknown) {
+          result.websiteReachable = false
+          result.websiteError = err instanceof Error ? err.message : 'Connection failed'
+        }
+      }
+
+      if (supplier.apiKey) {
+        result.apiMessage = 'API key configured — external API testing not supported'
+      }
+
+      await auditLog({
+        userId: user.id,
+        userEmail: user.email,
+        action: 'supplier.test',
+        entityType: 'supplier',
+        entityId: supplier.id,
+        newValues: { result },
+        ip: getClientIp(request),
+        userAgent: getClientUserAgent(request),
+      })
+
+      return NextResponse.json({ success: true, result })
+    }
+
     const validation = validateBody(createSupplierSchema, body)
     if (!validation.success) {
       return NextResponse.json({ error: validation.error }, { status: 400 })
     }
-    const { name, type, email, phone, website, apiKey, priority } = validation.data
+    const { name, type, email, phone, website, apiKey, config, priority } = validation.data
 
     const supplier = await prisma.supplier.create({
       data: {
@@ -68,6 +111,7 @@ export async function POST(request: Request) {
         phone: phone || null,
         website: website || null,
         apiKey: apiKey || null,
+        config: config || null,
         priority: priority || 1,
       },
     })
@@ -105,7 +149,7 @@ export async function PATCH(request: Request) {
     const { id, ...rawUpdates } = validation.data
 
     const data: Record<string, unknown> = {}
-    for (const field of ['name', 'type', 'email', 'phone', 'website', 'apiKey', 'priority', 'status']) {
+    for (const field of ['name', 'type', 'email', 'phone', 'website', 'apiKey', 'config', 'priority', 'status']) {
       if (field in rawUpdates) data[field] = (rawUpdates as Record<string, unknown>)[field]
     }
     if (Object.keys(data).length === 0) {
