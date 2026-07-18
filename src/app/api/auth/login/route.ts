@@ -71,6 +71,7 @@ export async function POST(request: Request) {
 
     await createSession({
       id: user.id,
+      userId: user.userId,
       email: user.email,
       name: user.name,
       role: user.role,

@@ -4,6 +4,7 @@ import { Header } from '@/components/layout/Header'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { useApi } from '@/hooks/useApi'
+import { useAuth } from '@/lib/api'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import {
@@ -53,6 +54,7 @@ export default function ClientDashboard() {
   const { data: ordersRes, loading: ordersLoading } = useApi<{ orders: OrderItem[] }>({ url: '/api/orders?limit=5' })
   const { data: walletData } = useApi<WalletData>({ url: '/api/wallet' })
   const { data: servicesData } = useApi<{ services: ServiceItem[] }>({ url: '/api/services' })
+  const { user } = useAuth()
 
   const recentOrders = ordersRes?.orders || []
   const balance = walletData?.balance ?? 0
@@ -95,6 +97,14 @@ export default function ClientDashboard() {
     <div>
       <Header title="Client Dashboard" subtitle="Welcome back" />
       <div className="p-6 space-y-6">
+        {/* User ID */}
+        {user?.userId && (
+          <GlassCard padding="p-5">
+            <p className="text-xs font-medium text-[var(--muted)] uppercase tracking-wider mb-1">Your User ID</p>
+            <p className="text-xl font-bold text-[var(--foreground)] font-mono">{user.userId}</p>
+          </GlassCard>
+        )}
+
         {/* Stat Cards */}
         <motion.div className="grid grid-cols-2 lg:grid-cols-4 gap-4" variants={container} initial="initial" animate="animate">
           {statCards.map((card) => (

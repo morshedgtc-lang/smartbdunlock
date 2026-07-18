@@ -70,7 +70,7 @@ export async function POST(request: Request) {
             type: 'transfer',
             amount: -amount,
             balanceAfter: senderAfter!.walletBalance,
-            description: description || 'Transfer to user',
+            description: `${description || 'Transfer to user'} (from ${user.userId})`,
           },
         })
 
@@ -88,7 +88,7 @@ export async function POST(request: Request) {
             type: 'deposit',
             amount,
             balanceAfter: targetAfter!.walletBalance,
-            description: description || 'Transfer from client',
+            description: `${description || 'Transfer from client'} (to ${user.userId})`,
           },
         })
 
@@ -118,7 +118,7 @@ export async function POST(request: Request) {
           type,
           amount: delta,
           balanceAfter: after!.walletBalance,
-          description,
+          description: `${description || type} (${user.userId})`,
         },
       })
 
@@ -130,7 +130,8 @@ export async function POST(request: Request) {
       userEmail: user.email,
       action: `wallet.${type}`,
       entityType: 'transaction',
-      newValues: { type, amount, targetUserId, description },
+      entityId: user.id,
+      newValues: { type, amount, targetUserId, description, userPublicId: user.userId },
       ip: getClientIp(request),
       userAgent: getClientUserAgent(request),
     })

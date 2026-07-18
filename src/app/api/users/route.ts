@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { requireAuth, requireAdmin } from '@/lib/auth'
 import { usersQuerySchema, createUserSchema, updateUserSchema, validateBody, validateQuery } from '@/lib/validations'
 import { auditLog, getClientIp, getClientUserAgent } from '@/lib/audit'
+import { generateUserId } from '@/lib/user-id'
 import bcrypt from 'bcryptjs'
 
 export async function GET(request: Request) {
@@ -31,7 +32,7 @@ export async function GET(request: Request) {
       orderBy: { createdAt: 'desc' },
       take: limit,
       select: {
-        id: true, email: true, name: true, role: true, phone: true,
+        id: true, userId: true, email: true, name: true, role: true, phone: true,
         status: true, walletBalance: true, resellerId: true, createdAt: true,
         _count: { select: { orders: true, transactions: true } },
       },
@@ -67,8 +68,10 @@ export async function POST(request: Request) {
 
     const hashedPassword = await bcrypt.hash(password, 12)
     const admin = await requireAuth()
+    const publicUserId = await generateUserId()
     const user = await prisma.user.create({
       data: {
+        userId: publicUserId,
         email,
         password: hashedPassword,
         name,

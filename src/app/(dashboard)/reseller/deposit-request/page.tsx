@@ -7,6 +7,7 @@ import { GlassDropdown } from '@/components/ui/GlassDropdown'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { useApi } from '@/hooks/useApi'
 import { useToast } from '@/components/ui/Toast'
+import { useAuth } from '@/lib/api'
 import { motion } from 'framer-motion'
 import { Loader2, Plus, X, CreditCard } from 'lucide-react'
 import { useState } from 'react'
@@ -40,6 +41,7 @@ export default function DepositRequestPage() {
   const [page, setPage] = useState(1)
 
   const { data, loading, refetch } = useApi<{ requests: DepositReq[]; pagination: { total: number; pages: number } }>({ url: `/api/deposit-requests?page=${page}&limit=10` })
+  const { user } = useAuth()
 
   const requests = data?.requests || []
 
@@ -87,6 +89,13 @@ export default function DepositRequestPage() {
     <div>
       <Header title="Deposit Request" subtitle="Request wallet funds" />
       <div className="p-6 space-y-6">
+        {user?.userId && (
+          <GlassCard padding="p-5">
+            <p className="text-xs font-medium text-[var(--muted)] uppercase tracking-wider mb-1">Your User ID</p>
+            <p className="text-xl font-bold text-[var(--foreground)] font-mono">{user.userId}</p>
+          </GlassCard>
+        )}
+
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <GlassCard glow>
             <div className="flex items-center justify-between">

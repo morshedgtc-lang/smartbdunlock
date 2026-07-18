@@ -21,6 +21,7 @@ interface DepositReq {
   adminNote?: string
   userName?: string
   userEmail?: string
+  userPublicId?: string
   approvedAt?: string
   createdAt: string
 }
@@ -94,6 +95,7 @@ export default function AdminDepositRequestsPage() {
               <thead>
                 <tr className="border-b border-[var(--card-border)]">
                   <th className="text-left py-3 px-4 text-[var(--muted)] font-medium">Client</th>
+                  <th className="text-left py-3 px-4 text-[var(--muted)] font-medium">User ID</th>
                   <th className="text-right py-3 px-4 text-[var(--muted)] font-medium">Amount</th>
                   <th className="text-left py-3 px-4 text-[var(--muted)] font-medium">Method</th>
                   <th className="text-left py-3 px-4 text-[var(--muted)] font-medium">Transaction ID</th>
@@ -104,15 +106,18 @@ export default function AdminDepositRequestsPage() {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={7} className="py-12 text-center"><Loader2 size={24} className="animate-spin mx-auto text-[var(--muted)]" /></td></tr>
+                  <tr><td colSpan={8} className="py-12 text-center"><Loader2 size={24} className="animate-spin mx-auto text-[var(--muted)]" /></td></tr>
                 ) : requests.length === 0 ? (
-                  <tr><td colSpan={7} className="py-12 text-center"><CheckCircle size={40} className="mx-auto text-[var(--muted)] mb-3 opacity-50" /><p className="text-[var(--muted)]">No requests</p></td></tr>
+                  <tr><td colSpan={8} className="py-12 text-center"><CheckCircle size={40} className="mx-auto text-[var(--muted)] mb-3 opacity-50" /><p className="text-[var(--muted)]">No requests</p></td></tr>
                 ) : (
                   requests.map((r: DepositReq, i: number) => (
                     <motion.tr key={r.id} className="border-b border-[var(--card-border)] hover:bg-white/5" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}>
-                      <td className="py-3 px-4">
+                       <td className="py-3 px-4">
                         <div className="text-[var(--foreground)]">{r.userName || 'Unknown'}</div>
                         <div className="text-xs text-[var(--muted)]">{r.userEmail}</div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="text-xs font-mono text-[var(--foreground)]">{r.userPublicId || '—'}</span>
                       </td>
                       <td className="py-3 px-4 text-right font-bold text-[var(--foreground)]">${r.amount.toFixed(2)}</td>
                       <td className="py-3 px-4 text-[var(--foreground)] capitalize">{r.method}</td>

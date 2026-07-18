@@ -45,6 +45,9 @@ next-env.d.ts
 *.db-journal
 *.log
 
+# Windows Zone.Identifier files
+*:Zone.Identifier
+
 # deployment artifacts
 deploy.zip
 *.zip

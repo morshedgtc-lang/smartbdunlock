@@ -4,6 +4,7 @@ import { Header } from '@/components/layout/Header'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { useApi } from '@/hooks/useApi'
+import { useAuth } from '@/lib/api'
 import { motion } from 'framer-motion'
 import { Loader2, Wallet } from 'lucide-react'
 import Link from 'next/link'
@@ -19,6 +20,7 @@ interface TransactionItem {
 
 export default function ClientWalletPage() {
   const { data: walletData, loading: walletLoading, error: walletError } = useApi<{ balance: number; transactions: TransactionItem[] }>({ url: '/api/wallet' })
+  const { user } = useAuth()
 
   const balance = walletData?.balance ?? 0
   const transactions = walletData?.transactions || []
@@ -49,6 +51,13 @@ export default function ClientWalletPage() {
     <div>
       <Header title="My Wallet" subtitle="Manage your balance" />
       <div className="p-6 space-y-6">
+        {user?.userId && (
+          <GlassCard padding="p-5">
+            <p className="text-xs font-medium text-[var(--muted)] uppercase tracking-wider mb-1">Your User ID</p>
+            <p className="text-xl font-bold text-[var(--foreground)] font-mono">{user.userId}</p>
+          </GlassCard>
+        )}
+
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <GlassCard glow>
             <div className="flex items-center justify-between flex-wrap gap-4">

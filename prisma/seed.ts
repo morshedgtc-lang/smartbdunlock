@@ -3,6 +3,17 @@ import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
+async function nextPublicUserId(): Promise<string> {
+  const latest = await prisma.user.findFirst({
+    orderBy: { userId: 'desc' },
+    where: { userId: { startsWith: 'SBD' } },
+    select: { userId: true },
+  })
+  const base = 100000
+  const numeric = latest ? parseInt(latest.userId.slice(3), 10) : base
+  return `SBD${String((Number.isFinite(numeric) ? numeric : base) + 1).padStart(6, '0')}`
+}
+
 async function main() {
   console.log('Seeding database...')
 
@@ -13,6 +24,7 @@ async function main() {
     where: { email: 'admin@smartbdunlock.com' },
     update: {},
     create: {
+      userId: await nextPublicUserId(),
       email: 'admin@smartbdunlock.com',
       password: adminPassword,
       name: 'Admin',
@@ -26,6 +38,7 @@ async function main() {
     where: { email: 'reseller@smartbdunlock.com' },
     update: {},
     create: {
+      userId: await nextPublicUserId(),
       email: 'reseller@smartbdunlock.com',
       password: resellerPassword,
       name: 'Reseller',

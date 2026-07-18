@@ -14,6 +14,7 @@ import { useState } from 'react'
 
 interface UserItem {
   id: string
+  userId: string
   name: string
   email: string
   phone?: string
@@ -201,6 +202,7 @@ export default function UsersPage() {
               <thead>
                 <tr className="border-b border-[var(--card-border)]">
                   <th className="text-left py-4 px-4 text-[var(--muted)] font-medium">User</th>
+                  <th className="text-left py-4 px-4 text-[var(--muted)] font-medium">User ID</th>
                   <th className="text-left py-4 px-4 text-[var(--muted)] font-medium">Role</th>
                   <th className="text-left py-4 px-4 text-[var(--muted)] font-medium">Status</th>
                   <th className="text-right py-4 px-4 text-[var(--muted)] font-medium">Balance</th>
@@ -219,11 +221,14 @@ export default function UsersPage() {
                 ) : (
                   filtered.map((user: UserItem, i: number) => (
                     <motion.tr key={user.id} className="border-b border-[var(--card-border)] hover:bg-white/5 dark:hover:bg-white/5 transition-colors" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.03 }}>
-                      <td className="py-3 px-4">
+                       <td className="py-3 px-4">
                         <div>
                           <p className="font-medium text-[var(--foreground)]">{user.name}</p>
                           <p className="text-xs text-[var(--muted)]">{user.email}</p>
                         </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="text-xs font-mono text-[var(--foreground)]">{user.userId || '—'}</span>
                       </td>
                       <td className="py-3 px-4">
                         <span className="text-xs font-medium px-2 py-1 rounded-lg bg-white/5 dark:bg-white/5">{roleLabels[user.role] || user.role}</span>

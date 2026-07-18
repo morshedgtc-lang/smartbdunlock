@@ -6,6 +6,7 @@ import { Loader2 } from 'lucide-react'
 
 interface AuthUser {
   id: string
+  userId: string
   email: string
   name: string
   role: string

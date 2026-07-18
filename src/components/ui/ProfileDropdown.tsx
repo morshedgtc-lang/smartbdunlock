@@ -109,6 +109,9 @@ export function ProfileDropdown() {
                   }}>
                     {roleLabel}
                   </span>
+                  {user.userId && (
+                    <p className="text-[10px] text-[var(--muted)] mt-1 font-mono">ID: {user.userId}</p>
+                  )}
                 </div>
               </div>
             </div>

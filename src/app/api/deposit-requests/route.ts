@@ -28,7 +28,7 @@ export async function GET(request: Request) {
         skip: offset,
         take: limit,
         include: {
-          user: { select: { id: true, name: true, email: true } },
+          user: { select: { id: true, userId: true, name: true, email: true } },
         },
       }),
     ])
@@ -38,6 +38,7 @@ export async function GET(request: Request) {
         ...r,
         userName: r.user?.name,
         userEmail: r.user?.email,
+        userPublicId: r.user?.userId,
       })),
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     })
@@ -121,14 +122,15 @@ export async function PATCH(request: Request) {
           where: { id: existing.userId },
           data: { walletBalance: { increment: existing.amount } },
         })
-        await tx.transaction.create({
+         const targetUser = await tx.user.findUnique({ where: { id: existing.userId }, select: { userId: true } })
+         await tx.transaction.create({
           data: {
             id: crypto.randomUUID(),
             userId: existing.userId,
             type: 'deposit',
             amount: existing.amount,
             balanceAfter: newBalance,
-            description: `Deposit approved via ${existing.method}`,
+            description: `Deposit approved via ${existing.method} (${targetUser?.userId || existing.userId})`,
           },
         })
         await tx.depositRequest.update({

@@ -4,7 +4,7 @@ cd /home/u457792910/app
 # Fix .env with MySQL config
 cat > .env << 'ENVEOF'
 DATABASE_URL="mysql://u457792910_u457792910_:%40Morshedsathi2026%40@localhost:3306/u457792910_smartunlock"
-NEXTAUTH_SECRET="aGVsbG8gdGhpcyBpcyBhIHNlY3JldCBrZXkgZm9yIFNtYXJ0QkQ="
+JWT_SECRET="aGVsbG8gdGhpcyBpcyBhIHNlY3JldCBrZXkgZm9yIFNtYXJ0QkQ="
 NEXTAUTH_URL="https://smartbdunlock.com"
 ENVEOF
 

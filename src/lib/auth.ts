@@ -22,6 +22,7 @@ const COOKIE_NAME = 'sb_session'
 
 export interface SessionUser {
   id: string
+  userId: string
   email: string
   name: string
   role: string
@@ -58,12 +59,13 @@ export async function getSession(): Promise<SessionUser | null> {
       const { prisma } = await import('@/lib/prisma')
       const dbUser = await prisma.user.findUnique({
         where: { id: jwtUser.id },
-        select: { id: true, email: true, name: true, role: true, status: true },
+        select: { id: true, userId: true, email: true, name: true, role: true, status: true },
       })
       if (!dbUser || dbUser.status !== 'active') return null
-      if (dbUser.role !== jwtUser.role || dbUser.name !== jwtUser.name) {
+      if (dbUser.role !== jwtUser.role || dbUser.name !== jwtUser.name || dbUser.userId !== jwtUser.userId) {
         const freshUser: SessionUser = {
           id: dbUser.id,
+          userId: dbUser.userId,
           email: dbUser.email,
           name: dbUser.name,
           role: dbUser.role,

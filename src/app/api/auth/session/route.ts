@@ -13,6 +13,7 @@ export async function GET() {
       where: { id: sessionUser.id },
       select: {
         id: true,
+        userId: true,
         email: true,
         name: true,
         role: true,
