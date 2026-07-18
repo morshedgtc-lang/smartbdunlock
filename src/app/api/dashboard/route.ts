@@ -39,7 +39,7 @@ export async function GET() {
       userRecord,
       lastNotification,
     ] = await Promise.all([
-      isAdmin ? prisma.user.count() : Promise.resolve(1),
+      isAdmin ? prisma.user.count({ where: { status: { not: 'deleted' } } }) : Promise.resolve(1),
       prisma.order.count({ where: userFilter }),
       prisma.service.count({ where: { status: 'active' } }),
       isAdmin ? prisma.supplier.count() : Promise.resolve(0),
