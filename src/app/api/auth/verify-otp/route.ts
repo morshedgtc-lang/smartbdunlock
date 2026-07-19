@@ -84,7 +84,7 @@ export async function POST(request: Request) {
     await sendAdminApprovalNotification({
       name: user.name,
       email: user.email,
-      username: user.username,
+      username: user.username || 'N/A',
       userId: user.userId,
     })
 

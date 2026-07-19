@@ -67,7 +67,7 @@ export async function sendOtpEmail({ to, name, otp }: SendOtpEmailParams): Promi
 interface SendAdminNotificationParams {
   name: string
   email: string
-  username: string
+  username: string | null
   userId: string
 }
 
@@ -91,7 +91,7 @@ export async function sendAdminApprovalNotification({ name, email, username, use
         <tr><td style="padding:32px;">
           <table width="100%" cellpadding="8" cellspacing="0" style="color:#e2e8f0;font-size:14px;">
             <tr><td style="color:#94a3b8;width:120px;">Name</td><td>${name}</td></tr>
-            <tr><td style="color:#94a3b8;">Username</td><td>${username}</td></tr>
+            <tr><td style="color:#94a3b8;">Username</td><td>${username || 'N/A'}</td></tr>
             <tr><td style="color:#94a3b8;">Email</td><td>${email}</td></tr>
             <tr><td style="color:#94a3b8;">User ID</td><td><strong>${userId}</strong></td></tr>
           </table>
