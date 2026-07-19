@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { createSession } from '@/lib/auth'
 import { loginSchema, validateBody } from '@/lib/validations'
+import { generateOtp, hashOtp, otpExpiryDate } from '@/lib/otp'
+import { sendOtpEmail } from '@/lib/email'
 import { auditLog, getClientIp, getClientUserAgent } from '@/lib/audit'
 import bcrypt from 'bcryptjs'
 
@@ -111,6 +113,17 @@ export async function POST(request: Request) {
     accountLockouts.delete(email)
 
     if (!user.emailVerified) {
+      const otp = generateOtp()
+      const otpHashVal = await hashOtp(otp)
+      const otpExpire = otpExpiryDate()
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { otpHash: otpHashVal, otpExpire, otpAttempts: 0 },
+      })
+
+      await sendOtpEmail({ to: user.email, name: user.name, otp })
+
       return NextResponse.json({
         error: 'Please verify your email before logging in',
         code: 'EMAIL_NOT_VERIFIED',
