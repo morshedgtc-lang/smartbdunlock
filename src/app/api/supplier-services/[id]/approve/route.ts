@@ -46,7 +46,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         clientVisible: clientVisible ?? true,
         categoryId: categoryId || undefined,
         supplierId: supplierService.providerId,
-        supplierServiceId: supplierService.id,
         profitType,
         profitValue,
       },

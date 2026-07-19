@@ -5,8 +5,7 @@ ADD COLUMN "syncInterval" INTEGER DEFAULT 10,
 ADD COLUMN "lastSyncAt" TIMESTAMP(3);
 
 -- AlterTable: Service
-ALTER TABLE "Service" ADD COLUMN "supplierServiceId" TEXT,
-ADD COLUMN "profitType" TEXT NOT NULL DEFAULT 'fixed',
+ALTER TABLE "Service" ADD COLUMN "profitType" TEXT NOT NULL DEFAULT 'fixed',
 ADD COLUMN "profitValue" DOUBLE PRECISION NOT NULL DEFAULT 0;
 
 -- CreateTable: SupplierService
@@ -78,6 +77,7 @@ CREATE TABLE "SupplierApiLog" (
 
 -- CreateIndex: SupplierService
 CREATE UNIQUE INDEX "SupplierService_providerId_supplierServiceId_key" ON "SupplierService"("providerId", "supplierServiceId");
+CREATE UNIQUE INDEX "SupplierService_websiteServiceId_key" ON "SupplierService"("websiteServiceId");
 CREATE INDEX "SupplierService_providerId_status_idx" ON "SupplierService"("providerId", "status");
 CREATE INDEX "SupplierService_supplierServiceId_idx" ON "SupplierService"("supplierServiceId");
 
@@ -93,9 +93,6 @@ CREATE INDEX "SyncHistory_providerId_createdAt_idx" ON "SyncHistory"("providerId
 CREATE INDEX "SupplierApiLog_providerId_createdAt_idx" ON "SupplierApiLog"("providerId", "createdAt");
 CREATE INDEX "SupplierApiLog_success_createdAt_idx" ON "SupplierApiLog"("success", "createdAt");
 
--- CreateIndex: Service (new index for supplierServiceId)
-CREATE INDEX "Service_supplierServiceId_idx" ON "Service"("supplierServiceId");
-
 -- AddForeignKey: SupplierService -> Supplier
 ALTER TABLE "SupplierService" ADD CONSTRAINT "SupplierService_providerId_fkey" FOREIGN KEY ("providerId") REFERENCES "Supplier"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
@@ -107,9 +104,6 @@ ALTER TABLE "SyncHistory" ADD CONSTRAINT "SyncHistory_providerId_fkey" FOREIGN K
 
 -- AddForeignKey: SupplierApiLog -> Supplier
 ALTER TABLE "SupplierApiLog" ADD CONSTRAINT "SupplierApiLog_providerId_fkey" FOREIGN KEY ("providerId") REFERENCES "Supplier"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey: Service -> SupplierService
-ALTER TABLE "Service" ADD CONSTRAINT "Service_supplierServiceId_fkey" FOREIGN KEY ("supplierServiceId") REFERENCES "SupplierService"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey: SupplierService -> Service (website link)
 ALTER TABLE "SupplierService" ADD CONSTRAINT "SupplierService_websiteServiceId_fkey" FOREIGN KEY ("websiteServiceId") REFERENCES "Service"("id") ON DELETE SET NULL ON UPDATE CASCADE;

@@ -55,8 +55,7 @@ model Service {
   category          ServiceCategory?    @relation(fields: [categoryId], references: [id])
   supplierId        String?
   supplier          Supplier?           @relation(fields: [supplierId], references: [id])
-  supplierServiceId String?             // link to imported SupplierService
-  supplierService   SupplierService?    @relation(fields: [supplierServiceId], references: [id])
+  supplierService   SupplierService?    // back-ref: set via SupplierService.websiteServiceId
   profitType        String              @default("fixed") // fixed, percentage
   profitValue       Float               @default(0)       // fixed amount or percentage value
   orders            Order[]
@@ -109,6 +108,7 @@ model Supplier {
   supplierServices SupplierService[]
   syncHistories    SyncHistory[]
   apiLogs          SupplierApiLog[]
+  pricingRules     PricingRule[]
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 }
@@ -349,7 +349,7 @@ model SupplierService {
   requiredInputs    String?   // JSON: ["imei","email","username",...]
   rawData           String?   // full supplier response JSON
   status            String    @default("pending") // pending, approved, ignored, disabled
-  websiteServiceId  String?   // link to published service (set when approved)
+  websiteServiceId  String?   @unique // link to published service (set when approved)
   websiteService    Service?  @relation(fields: [websiteServiceId], references: [id])
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
