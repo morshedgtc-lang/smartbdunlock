@@ -2,14 +2,19 @@ import nodemailer from 'nodemailer'
 import { config } from './config'
 
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true,
   auth: {
     user: process.env.GMAIL_USER,
     pass: process.env.GMAIL_APP_PASSWORD,
   },
-  connectionTimeout: config.email.smtpTimeout,
-  greetingTimeout: config.email.greetingTimeout,
-  socketTimeout: config.email.socketTimeout,
+  connectionTimeout: 30000,
+  greetingTimeout: 10000,
+  socketTimeout: 30000,
+  pool: true,
+  maxConnections: 3,
+  maxMessages: 5,
 })
 
 interface SendOtpEmailParams {

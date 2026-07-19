@@ -425,4 +425,6 @@ model SystemSetting {
   key       String   @id
   value     String
   updatedAt DateTime @default(now()) @updatedAt
+
+  @@map("system_settings")
 }
