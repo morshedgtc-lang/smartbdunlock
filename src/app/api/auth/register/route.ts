@@ -11,6 +11,17 @@ const registerAttempts = new Map<string, { count: number; resetTime: number }>()
 const REGISTER_RATE_LIMIT = 3
 const REGISTER_WINDOW = 60 * 60 * 1000
 
+async function generateUniqueUsername(base: string): Promise<string> {
+  const clean = base.toLowerCase().replace(/[^a-z0-9]/g, '')
+  let candidate = clean
+  let suffix = 1
+  while (await prisma.user.findUnique({ where: { username: candidate }, select: { id: true } })) {
+    candidate = `${clean}${suffix}`
+    suffix++
+  }
+  return candidate
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json()
@@ -18,7 +29,8 @@ export async function POST(request: Request) {
     if (!validation.success) {
       return NextResponse.json({ error: validation.error }, { status: 400 })
     }
-    const { name, username, email, password } = validation.data
+    const { name, email, password } = validation.data
+    const displayName = name || email.split('@')[0]
 
     const forwarded = request.headers.get('x-forwarded-for')
     const ip = forwarded?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || 'unknown'
@@ -37,18 +49,12 @@ export async function POST(request: Request) {
       entry.count++
     }
 
-    const [existingEmail, existingUsername] = await Promise.all([
-      prisma.user.findUnique({ where: { email }, select: { id: true } }),
-      prisma.user.findUnique({ where: { username }, select: { id: true } }),
-    ])
-
+    const existingEmail = await prisma.user.findUnique({ where: { email }, select: { id: true } })
     if (existingEmail) {
       return NextResponse.json({ error: 'An account with this email already exists' }, { status: 409 })
     }
-    if (existingUsername) {
-      return NextResponse.json({ error: 'This username is already taken' }, { status: 409 })
-    }
 
+    const username = await generateUniqueUsername(email.split('@')[0])
     const hashedPassword = await bcrypt.hash(password, 12)
     const userId = await generateUserId()
     const otp = generateOtp()
@@ -61,7 +67,7 @@ export async function POST(request: Request) {
         email,
         username,
         password: hashedPassword,
-        name,
+        name: displayName,
         role: 'reseller',
         status: 'pending_approval',
         walletBalance: 0,
@@ -72,7 +78,7 @@ export async function POST(request: Request) {
       },
     })
 
-    await sendOtpEmail({ to: email, name, otp })
+    await sendOtpEmail({ to: email, name: displayName, otp })
 
     registerAttempts.delete(rateKey)
 
@@ -82,7 +88,7 @@ export async function POST(request: Request) {
       action: 'register.success',
       entityType: 'auth',
       entityId: user.id,
-      newValues: { userId: user.userId, name, email, username, role: 'reseller' },
+      newValues: { userId: user.userId, name: displayName, email, username, role: 'reseller' },
       ip: getClientIp(request),
       userAgent: getClientUserAgent(request),
     })
