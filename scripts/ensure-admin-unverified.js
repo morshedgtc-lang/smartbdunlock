@@ -36,14 +36,14 @@ async function main() {
       },
     })
     console.log(`[ADMIN] Created admin account: ${adminEmail}`)
-  } else if (existing.emailVerified) {
+  } else {
+    // Always ensure correct password and role for admin
+    const hashed = await bcrypt.hash(adminPassword, 12)
     await prisma.user.update({
       where: { email: adminEmail },
-      data: { emailVerified: false },
+      data: { emailVerified: false, role: 'admin', status: 'active', password: hashed },
     })
-    console.log(`[ADMIN] Reset emailVerified=false for ${adminEmail}`)
-  } else {
-    console.log(`[ADMIN] ${adminEmail} already exists and unverified`)
+    console.log(`[ADMIN] Reset admin account: ${adminEmail}`)
   }
 }
 
