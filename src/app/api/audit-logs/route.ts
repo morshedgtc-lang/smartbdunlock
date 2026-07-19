@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/auth'
+import type { AuditLog } from '@prisma/client'
 
 export async function GET(request: Request) {
   try {
@@ -47,7 +48,7 @@ export async function GET(request: Request) {
 
     if (exportCsv) {
       const headers = ['Time', 'User', 'Action', 'Module', 'Entity', 'Entity ID', 'Description', 'IP', 'Old Values', 'New Values']
-      const rows = logs.map(log => [
+      const rows = logs.map((log: AuditLog) => [
         new Date(log.createdAt).toISOString(),
         log.userEmail || '',
         log.action,
