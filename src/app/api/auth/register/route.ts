@@ -78,7 +78,9 @@ export async function POST(request: Request) {
       },
     })
 
-    await sendOtpEmail({ to: email, name: displayName, otp })
+    sendOtpEmail({ to: email, name: displayName, otp }).catch(err =>
+      console.error('[EMAIL] Failed to send OTP on register:', err)
+    )
 
     registerAttempts.delete(rateKey)
 

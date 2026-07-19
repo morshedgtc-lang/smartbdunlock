@@ -47,7 +47,9 @@ export async function POST(request: Request) {
       data: { otpHash: otpHashVal, otpExpire, otpAttempts: 0 },
     })
 
-    await sendOtpEmail({ to: email, name: user.name, otp })
+    sendOtpEmail({ to: email, name: user.name, otp }).catch(err =>
+      console.error('[EMAIL] Failed to resend OTP:', err)
+    )
 
     await auditLog({
       userId: user.id,

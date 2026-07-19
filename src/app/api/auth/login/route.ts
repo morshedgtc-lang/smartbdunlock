@@ -122,7 +122,9 @@ export async function POST(request: Request) {
         data: { otpHash: otpHashVal, otpExpire, otpAttempts: 0 },
       })
 
-      await sendOtpEmail({ to: user.email, name: user.name, otp })
+      sendOtpEmail({ to: user.email, name: user.name, otp }).catch(err =>
+        console.error('[EMAIL] Failed to send OTP on login:', err)
+      )
 
       return NextResponse.json({
         error: 'Please verify your email before logging in',

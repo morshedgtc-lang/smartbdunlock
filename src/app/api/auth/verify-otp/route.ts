@@ -81,12 +81,14 @@ export async function POST(request: Request) {
       userAgent: getClientUserAgent(request),
     })
 
-    await sendAdminApprovalNotification({
+    sendAdminApprovalNotification({
       name: user.name,
       email: user.email,
       username: user.username || 'N/A',
       userId: user.userId,
-    })
+    }).catch(err =>
+      console.error('[EMAIL] Failed to send admin notification:', err)
+    )
 
     return NextResponse.json({
       success: true,
