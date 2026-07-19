@@ -642,7 +642,7 @@ export default function PricingPage() {
                 <h4 className="text-sm font-bold text-[var(--foreground)] mb-3">Active Rules Summary</h4>
                 <div className="space-y-2">
                   {rules.filter((r: PricingRule) => r.active).map((rule: PricingRule) => {
-                    let label = rule.type
+                    let label: string = rule.type
                     if (rule.type === 'category') label = `Category: ${rule.category}`
                     if (rule.type === 'supplier') {
                       const sName = suppliers.find((s: SupplierItem) => s.id === rule.providerId)?.name
