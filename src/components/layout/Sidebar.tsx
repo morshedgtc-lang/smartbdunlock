@@ -29,6 +29,10 @@ import {
   MessageSquare,
   Bell,
   Globe,
+  Globe2,
+  Download,
+  DollarSign,
+  History,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '@/lib/api'
@@ -38,6 +42,10 @@ const adminLinks = [
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/services', label: 'Services', icon: Package },
   { href: '/admin/orders', label: 'Orders', icon: ShoppingCart },
+  { href: '/admin/providers', label: 'API Providers', icon: Globe2 },
+  { href: '/admin/import-services', label: 'Import Services', icon: Download },
+  { href: '/admin/pricing', label: 'Pricing Rules', icon: DollarSign },
+  { href: '/admin/sync-history', label: 'Sync History', icon: History },
   { href: '/admin/suppliers', label: 'Suppliers', icon: Plug },
   { href: '/admin/wallet', label: 'Wallet', icon: Wallet },
   { href: '/admin/deposit-requests', label: 'Deposit Requests', icon: BadgeDollarSign },

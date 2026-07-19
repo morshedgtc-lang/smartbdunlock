@@ -14,6 +14,8 @@ export function StatusBadge({ status }: { status: string }) {
     suspended: 'badge-danger',
     disabled: 'badge-danger',
     inactive: 'badge-neutral',
+    ignored: 'badge-neutral',
+    partial: 'badge-warning',
     deposit: 'badge-success',
     order_payment: 'badge-warning',
     order_refund: 'badge-info',

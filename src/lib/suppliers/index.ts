@@ -1,5 +1,6 @@
-export type { SupplierAdapter, SupplierResponse, SupplierStatus } from './base'
+export type { SupplierAdapter, SupplierResponse, SupplierStatus, SupplierServiceData } from './base'
 export { getAdapter, selectBestSupplier, getFailoverChain } from './router'
 export { createSupplierJob, submitToSupplier, processJob } from './processor'
 export { pollPendingJobs } from './poller'
 export { triggerFailover } from './failover'
+export { GenericApiAdapter } from './generic-api'

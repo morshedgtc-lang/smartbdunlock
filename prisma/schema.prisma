@@ -42,26 +42,31 @@ model ServiceCategory {
 }
 
 model Service {
-  id             String              @id @default(cuid())
-  name           String
-  description    String?
-  type           String              @default("unlock") // unlock, flash, repair, imei (kept for backward compat)
-  cost           Float               @default(0)
-  sellingPrice   Float               @default(0)
-  processingTime String?
-  status         String              @default("active") // active, inactive
-  clientVisible  Boolean             @default(true)
-  categoryId     String?
-  category       ServiceCategory?    @relation(fields: [categoryId], references: [id])
-  supplierId     String?
-  supplier       Supplier?           @relation(fields: [supplierId], references: [id])
-  orders         Order[]
-  customFields   ServiceCustomField[]
-  bulkBatches    BulkOrderBatch[]
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
+  id                String              @id @default(cuid())
+  name              String
+  description       String?
+  type              String              @default("unlock") // unlock, flash, repair, imei (kept for backward compat)
+  cost              Float               @default(0)
+  sellingPrice      Float               @default(0)
+  processingTime    String?
+  status            String              @default("active") // active, inactive
+  clientVisible     Boolean             @default(true)
+  categoryId        String?
+  category          ServiceCategory?    @relation(fields: [categoryId], references: [id])
+  supplierId        String?
+  supplier          Supplier?           @relation(fields: [supplierId], references: [id])
+  supplierServiceId String?             // link to imported SupplierService
+  supplierService   SupplierService?    @relation(fields: [supplierServiceId], references: [id])
+  profitType        String              @default("fixed") // fixed, percentage
+  profitValue       Float               @default(0)       // fixed amount or percentage value
+  orders            Order[]
+  customFields      ServiceCustomField[]
+  bulkBatches       BulkOrderBatch[]
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
 
   @@index([supplierId, status])
+  @@index([supplierServiceId])
 }
 
 model ServiceCustomField {
@@ -82,23 +87,30 @@ model ServiceCustomField {
 }
 
 model Supplier {
-  id          String    @id @default(cuid())
-  name        String
-  email       String?
-  phone       String?
-  website     String?
-  type        String    // api, manual, reseller
-  status      String    @default("active") // active, inactive
-  successRate Float     @default(100)
-  totalOrders Int       @default(0)
-  priority    Int       @default(1) // 1=highest
-  apiKey      String?
-  config      String?   // JSON config for supplier
-  services     Service[]
-  orders       Order[]
-  supplierJobs SupplierJob[]
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id              String    @id @default(cuid())
+  name            String
+  email           String?
+  phone           String?
+  website         String?
+  type            String    // api, manual, reseller
+  status          String    @default("active") // active, inactive
+  successRate     Float     @default(100)
+  totalOrders     Int       @default(0)
+  priority        Int       @default(1) // 1=highest
+  apiKey          String?
+  apiKeyEncrypted String?   // AES-256-GCM encrypted API key
+  ipAddress       String?   // supplier IP whitelist info
+  syncInterval    Int?      @default(10) // sync interval in minutes
+  lastSyncAt      DateTime?
+  config          String?   // JSON config for supplier
+  services        Service[]
+  orders          Order[]
+  supplierJobs    SupplierJob[]
+  supplierServices SupplierService[]
+  syncHistories    SyncHistory[]
+  apiLogs          SupplierApiLog[]
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 }
 
 model Order {
@@ -322,4 +334,77 @@ model BulkOrderBatch {
   @@index([userId])
   @@index([status])
   @@index([createdAt])
+}
+
+model SupplierService {
+  id                String    @id @default(cuid())
+  providerId        String
+  provider          Supplier  @relation(fields: [providerId], references: [id])
+  supplierServiceId String    // supplier's own service ID
+  name              String
+  category          String?
+  supplierCost      Float     @default(0)
+  currency          String    @default("USD")
+  deliveryTime      String?
+  requiredInputs    String?   // JSON: ["imei","email","username",...]
+  rawData           String?   // full supplier response JSON
+  status            String    @default("pending") // pending, approved, ignored, disabled
+  websiteServiceId  String?   // link to published service (set when approved)
+  websiteService    Service?  @relation(fields: [websiteServiceId], references: [id])
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([providerId, status])
+  @@index([supplierServiceId])
+  @@unique([providerId, supplierServiceId])
+}
+
+model PricingRule {
+  id         String    @id @default(cuid())
+  type       String    // fixed, percentage, category, supplier
+  value      Float     @default(0)
+  category   String?   // for category type rules
+  providerId String?   // for supplier type rules
+  provider   Supplier? @relation(fields: [providerId], references: [id])
+  currency   String    @default("USD")
+  active     Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([type, active])
+  @@index([category])
+  @@index([providerId])
+}
+
+model SyncHistory {
+  id              String    @id @default(cuid())
+  providerId      String
+  provider        Supplier  @relation(fields: [providerId], references: [id])
+  totalImported   Int       @default(0)
+  newServices     Int       @default(0)
+  updatedServices Int       @default(0)
+  failedServices  Int       @default(0)
+  status          String    @default("success") // success, partial, failed
+  error           String?
+  duration        Int?      // milliseconds
+  createdAt       DateTime  @default(now())
+
+  @@index([providerId, createdAt])
+}
+
+model SupplierApiLog {
+  id           String    @id @default(cuid())
+  providerId   String
+  provider     Supplier  @relation(fields: [providerId], references: [id])
+  endpoint     String    // API endpoint called
+  method       String    @default("GET") // GET, POST, PUT, DELETE
+  requestTime  DateTime  @default(now())
+  responseTime DateTime?
+  statusCode   Int?
+  success      Boolean   @default(false)
+  errorMessage String?
+  createdAt    DateTime  @default(now())
+
+  @@index([providerId, createdAt])
+  @@index([success, createdAt])
 }

@@ -2,10 +2,12 @@ import { prisma } from '@/lib/prisma'
 import type { SupplierAdapter } from './base'
 import { MockSupplierAdapter } from './mock'
 import { ManualSupplierAdapter } from './manual'
+import { GenericApiAdapter } from './generic-api'
 
 const adapters = new Map<string, SupplierAdapter>([
   ['mock', new MockSupplierAdapter()],
   ['manual', new ManualSupplierAdapter()],
+  ['api', new GenericApiAdapter()],
 ])
 
 export function getAdapter(supplierType: string): SupplierAdapter {

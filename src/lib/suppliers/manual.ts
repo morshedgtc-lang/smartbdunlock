@@ -1,8 +1,20 @@
-import type { SupplierAdapter, SupplierResponse, SupplierStatus } from './base'
+import type { SupplierAdapter, SupplierResponse, SupplierStatus, SupplierServiceData } from './base'
 
 export class ManualSupplierAdapter implements SupplierAdapter {
   name = 'Manual Supplier'
   type = 'manual'
+
+  async connect(): Promise<boolean> {
+    return true
+  }
+
+  async testConnection(): Promise<{ success: boolean; message: string }> {
+    return { success: true, message: 'Manual supplier — no API to test' }
+  }
+
+  async getServices(): Promise<SupplierServiceData[]> {
+    return []
+  }
 
   async submitOrder(params: {
     orderId: string

@@ -135,6 +135,8 @@ export const updateSupplierSchema = z.object({
   phone: z.string().optional().nullable(),
   website: z.string().url().optional().nullable(),
   apiKey: z.string().optional().nullable(),
+  ipAddress: z.string().optional().nullable(),
+  syncInterval: z.number().int().min(1).max(1440).optional(),
   config: z.string().optional().nullable(),
   priority: z.number().int().min(1).optional(),
   status: z.enum(['active', 'inactive']).optional(),
@@ -203,6 +205,95 @@ export const bulkOrderProcessSchema = z.object({
 })
 
 export const bulkOrderQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+})
+
+export const providerQuerySchema = z.object({
+  search: z.string().optional().default(''),
+  status: z.string().optional().default(''),
+  limit: z.coerce.number().int().min(1).max(500).optional().default(500),
+})
+
+export const createProviderSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  apiUrl: z.string().url('Invalid URL').optional().nullable(),
+  apiKey: z.string().min(1, 'API key is required'),
+  ipAddress: z.string().optional().nullable(),
+  website: z.string().url().optional().nullable(),
+  email: z.string().email().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  syncInterval: z.number().int().min(1).max(1440).optional().default(10),
+  config: z.string().optional().nullable(),
+  priority: z.number().int().min(1).optional().default(1),
+})
+
+export const updateProviderSchema = z.object({
+  id: z.string().min(1, 'Provider ID is required'),
+  name: z.string().min(1).optional(),
+  apiUrl: z.string().url().optional().nullable(),
+  apiKey: z.string().optional().nullable(),
+  ipAddress: z.string().optional().nullable(),
+  website: z.string().url().optional().nullable(),
+  email: z.string().email().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  syncInterval: z.number().int().min(1).max(1440).optional(),
+  config: z.string().optional().nullable(),
+  priority: z.number().int().min(1).optional(),
+  status: z.enum(['active', 'inactive']).optional(),
+})
+
+export const supplierServiceQuerySchema = z.object({
+  providerId: z.string().optional().default(''),
+  status: z.string().optional().default(''),
+  search: z.string().optional().default(''),
+  category: z.string().optional().default(''),
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(500).optional().default(50),
+})
+
+export const approveServiceSchema = z.object({
+  id: z.string().min(1, 'Service ID is required'),
+  sellingPrice: z.number().min(0).optional(),
+  profitType: z.enum(['fixed', 'percentage']).optional().default('fixed'),
+  profitValue: z.number().min(0).optional().default(0),
+  categoryId: z.string().optional().nullable(),
+  clientVisible: z.boolean().optional().default(true),
+})
+
+export const bulkServiceActionSchema = z.object({
+  ids: z.array(z.string()).min(1, 'At least one service required'),
+  action: z.enum(['approve', 'ignore', 'disable']),
+})
+
+export const pricingRuleQuerySchema = z.object({
+  type: z.string().optional().default(''),
+  category: z.string().optional().default(''),
+  providerId: z.string().optional().default(''),
+  active: z.coerce.boolean().optional(),
+})
+
+export const createPricingRuleSchema = z.object({
+  type: z.enum(['fixed', 'percentage', 'category', 'supplier'], 'Invalid rule type'),
+  value: z.number().min(0, 'Value must be non-negative'),
+  category: z.string().optional().nullable(),
+  providerId: z.string().optional().nullable(),
+  currency: z.string().optional().default('USD'),
+  active: z.boolean().optional().default(true),
+})
+
+export const updatePricingRuleSchema = z.object({
+  id: z.string().min(1, 'Rule ID is required'),
+  value: z.number().min(0).optional(),
+  category: z.string().optional().nullable(),
+  providerId: z.string().optional().nullable(),
+  currency: z.string().optional(),
+  active: z.boolean().optional(),
+})
+
+export const syncHistoryQuerySchema = z.object({
+  providerId: z.string().optional().default(''),
+  status: z.string().optional().default(''),
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
 })

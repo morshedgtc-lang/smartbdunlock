@@ -1,3 +1,14 @@
+export interface SupplierServiceData {
+  serviceId: string
+  name: string
+  category?: string
+  cost: number
+  currency?: string
+  deliveryTime?: string
+  requiredInputs?: string[]
+  rawData?: Record<string, unknown>
+}
+
 export interface SupplierResponse {
   success: boolean
   externalOrderId?: string
@@ -14,6 +25,9 @@ export interface SupplierStatus {
 export interface SupplierAdapter {
   name: string
   type: string
+  connect(apiUrl: string, apiKey: string): Promise<boolean>
+  testConnection(apiUrl: string, apiKey: string): Promise<{ success: boolean; message: string; latencyMs?: number }>
+  getServices(apiUrl: string, apiKey: string): Promise<SupplierServiceData[]>
   submitOrder(params: {
     orderId: string
     orderNumber: string
