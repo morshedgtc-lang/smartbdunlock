@@ -45,6 +45,7 @@ const customFieldInputSchema = z.object({
   options: z.unknown().optional(),
   required: z.boolean().optional(),
   visibleToClient: z.boolean().optional(),
+  previewImage: z.boolean().optional(),
   order: z.number().int().optional(),
 })
 

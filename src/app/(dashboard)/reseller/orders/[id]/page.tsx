@@ -34,6 +34,7 @@ interface CustomValue {
   id: string
   label?: string
   fieldType?: string
+  previewImage?: boolean
   value: string
 }
 
@@ -119,20 +120,7 @@ interface OrderDetail {
   }[]
 }
 
-function renderCustomValue(value: string, fieldType?: string): string {
-  if (!value) return '—'
-  if (fieldType === 'image' || fieldType === 'file') return '📎 Attached'
-  if (fieldType === 'checkbox') return value === 'true' ? '✓ Yes' : '✗ No'
-  if (['imei_multi', 'serial_multi', 'multiselect'].includes(fieldType || '')) {
-    try {
-      const arr = JSON.parse(value)
-      return Array.isArray(arr) ? arr.join(', ') : value
-    } catch {
-      return value
-    }
-  }
-  return value
-}
+import { renderCustomValue } from '@/components/admin/OrderDetailDrawer'
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('en-US', {
@@ -396,12 +384,29 @@ export default function ResellerOrderDetailPage() {
                           {customValues.map((cv) => (
                             <div
                               key={cv.id}
-                              className="flex flex-col sm:flex-row sm:items-center justify-between py-2.5 px-3 rounded-lg bg-white/3 border border-[var(--card-border)] gap-1"
+                              className="py-2.5 px-3 rounded-lg bg-white/3 border border-[var(--card-border)]"
                             >
-                              <span className="text-sm text-[var(--muted)] font-medium">{cv.label || 'Field'}</span>
-                              <span className="text-sm text-[var(--foreground)] font-mono max-w-full sm:max-w-[60%] truncate">
-                                {renderCustomValue(cv.value, cv.fieldType)}
-                              </span>
+                              {((cv.fieldType === 'file' || cv.fieldType === 'image') && cv.previewImage && cv.value && !cv.value.startsWith('data:')) ? (
+                                <div className="flex items-center gap-3">
+                                  <span className="text-sm text-[var(--muted)] font-medium">{cv.label || 'Field'}</span>
+                                  <a href={cv.value} target="_blank" rel="noreferrer" className="block flex-shrink-0">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={cv.value} alt={cv.label || 'Preview'} className="w-[120px] h-[120px] object-cover rounded-lg border border-[var(--card-border)]" />
+                                  </a>
+                                </div>
+                              ) : ((cv.fieldType === 'file' || cv.fieldType === 'image') && cv.previewImage && !cv.value) ? (
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm text-[var(--muted)] font-medium">{cv.label || 'Field'}</span>
+                                  <span className="text-sm text-[var(--muted)]">No image uploaded.</span>
+                                </div>
+                              ) : (
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                                  <span className="text-sm text-[var(--muted)] font-medium">{cv.label || 'Field'}</span>
+                                  <span className="text-sm text-[var(--foreground)] font-mono max-w-full sm:max-w-[60%] truncate">
+                                    {renderCustomValue(cv.value, cv.fieldType)}
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>

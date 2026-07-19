@@ -34,6 +34,7 @@ interface ServiceCustomField {
   options?: string | string[]
   required: boolean
   visibleToClient: boolean
+  previewImage?: boolean
 }
 
 interface ServiceItem {
@@ -105,10 +106,24 @@ export default function ServiceDetailPage() {
     e.preventDefault()
     setCreating(true)
     try {
+      const finalValues = { ...customValues }
+      for (const field of customFields) {
+        if ((field.fieldType === 'file' || field.fieldType === 'image') && field.previewImage && finalValues[field.id]?.startsWith('data:')) {
+          try {
+            const res = await fetch('/api/upload/imgbb', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ image: finalValues[field.id] }),
+            })
+            const data = await res.json()
+            if (res.ok && data.url) finalValues[field.id] = data.url
+          } catch { /* keep base64 as fallback */ }
+        }
+      }
       const body: { serviceId: string; notes?: string; customFieldValues: Record<string, string> } = {
         serviceId: service.id,
         notes: orderForm.notes || undefined,
-        customFieldValues: customValues,
+        customFieldValues: finalValues,
       }
       const res = await fetch('/api/orders', {
         method: 'POST',

@@ -8,8 +8,11 @@ import { StatusBadge } from '@/components/ui/StatusBadge'
 import { AlertModal } from '@/components/ui/ConfirmDialog'
 import { useApi } from '@/hooks/useApi'
 import { useToast } from '@/components/ui/Toast'
-import { OrderDetailDrawer, DetailOrder } from '@/components/admin/OrderDetailDrawer'
+import dynamic from 'next/dynamic'
 import { motion, AnimatePresence } from 'framer-motion'
+
+const OrderDetailDrawer = dynamic(() => import('@/components/admin/OrderDetailDrawer').then(m => ({ default: m.OrderDetailDrawer })), { ssr: false })
+type DetailOrder = import('@/components/admin/OrderDetailDrawer').DetailOrder
 import { Plus, Search, Loader2, X, Smartphone, Upload, AlertCircle, ArrowRight, Package, ChevronDown, ChevronUp } from 'lucide-react'
 import Link from 'next/link'
 import { useState, useRef, useEffect } from 'react'
@@ -39,6 +42,7 @@ interface CustomField {
   options?: string | string[]
   required: boolean
   visibleToClient: boolean
+  previewImage?: boolean
 }
 
 interface OrderItem {
@@ -119,7 +123,22 @@ export default function ClientOrdersPage() {
     if (!orderForm.serviceId) { toast('error', 'Please select a service'); return }
     setCreating(true)
     try {
-      const body: { serviceId: string; notes?: string; customFieldValues: Record<string, string> } = { serviceId: orderForm.serviceId, notes: orderForm.notes || undefined, customFieldValues: customValues }
+      const finalValues = { ...customValues }
+      const svc = services.find((s: ServiceItem) => s.id === orderForm.serviceId)
+      for (const field of svc?.customFields || []) {
+        if ((field.fieldType === 'file' || field.fieldType === 'image') && field.previewImage && finalValues[field.id]?.startsWith('data:')) {
+          try {
+            const res = await fetch('/api/upload/imgbb', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ image: finalValues[field.id] }),
+            })
+            const data = await res.json()
+            if (res.ok && data.url) finalValues[field.id] = data.url
+          } catch { /* keep base64 as fallback */ }
+        }
+      }
+      const body: { serviceId: string; notes?: string; customFieldValues: Record<string, string> } = { serviceId: orderForm.serviceId, notes: orderForm.notes || undefined, customFieldValues: finalValues }
       const res = await fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)

@@ -28,7 +28,7 @@ export async function GET(
         },
         supplier: { select: { name: true } },
         customValues: {
-          include: { customField: { select: { label: true, fieldType: true } } },
+          include: { customField: { select: { label: true, fieldType: true, previewImage: true } } },
         },
         attachments: { orderBy: { createdAt: 'asc' } },
         transactions: {
@@ -110,6 +110,7 @@ export async function GET(
         id: cv.id,
         label: cv.customField?.label,
         fieldType: cv.customField?.fieldType,
+        previewImage: cv.customField?.previewImage,
         value: cv.value,
       })),
       attachments: order.attachments.map((a) => ({

@@ -92,7 +92,7 @@ export async function POST(request: Request) {
 
       if (customFields?.length) {
         await tx.serviceCustomField.createMany({
-          data: customFields.map((f: { fieldType: string; label: string; placeholder?: string; options?: unknown; required?: boolean; visibleToClient?: boolean; order?: number }, i: number) => ({
+          data: customFields.map((f: { fieldType: string; label: string; placeholder?: string; options?: unknown; required?: boolean; visibleToClient?: boolean; previewImage?: boolean; order?: number }, i: number) => ({
             id: crypto.randomUUID(),
             serviceId: s.id,
             fieldType: f.fieldType,
@@ -101,6 +101,7 @@ export async function POST(request: Request) {
             options: f.options ? JSON.stringify(f.options) : null,
             required: f.required || false,
             visibleToClient: f.visibleToClient !== false,
+            previewImage: f.previewImage !== false,
             order: f.order ?? i,
           })),
         })
@@ -157,7 +158,7 @@ export async function PATCH(request: Request) {
         await tx.serviceCustomField.deleteMany({ where: { serviceId: id } })
         if (customFields.length) {
           await tx.serviceCustomField.createMany({
-            data: customFields.map((f: { fieldType: string; label: string; placeholder?: string; options?: unknown; required?: boolean; visibleToClient?: boolean; order?: number }, i: number) => ({
+            data: customFields.map((f: { fieldType: string; label: string; placeholder?: string; options?: unknown; required?: boolean; visibleToClient?: boolean; previewImage?: boolean; order?: number }, i: number) => ({
               id: crypto.randomUUID(),
               serviceId: id,
               fieldType: f.fieldType,
@@ -166,6 +167,7 @@ export async function PATCH(request: Request) {
               options: f.options ? JSON.stringify(f.options) : null,
               required: f.required || false,
               visibleToClient: f.visibleToClient !== false,
+              previewImage: f.previewImage !== false,
               order: f.order ?? i,
             })),
           })

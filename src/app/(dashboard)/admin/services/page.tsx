@@ -21,6 +21,7 @@ interface ServiceCustomField {
   options: string
   required: boolean
   visibleToClient: boolean
+  previewImage: boolean
 }
 
 interface ServiceItem {
@@ -67,7 +68,7 @@ const FIELD_TYPES = [
 ]
 
 const emptyService = { name: '', description: '', type: 'unlock', cost: '', sellingPrice: '', processingTime: '', supplierId: '', status: 'active', categoryId: '', clientVisible: true }
-const emptyField = { fieldType: 'text', label: '', placeholder: '', options: '', required: false, visibleToClient: true }
+const emptyField = { fieldType: 'text', label: '', placeholder: '', options: '', required: false, visibleToClient: true, previewImage: true }
 
 export default function ServicesPage() {
   const [search, setSearch] = useState('')
@@ -423,6 +424,12 @@ export default function ServicesPage() {
                             <input type="checkbox" checked={field.visibleToClient} onChange={e => updateField(index, { visibleToClient: e.target.checked })} className="rounded" />
                             Visible to client
                           </label>
+                          {['file', 'image'].includes(field.fieldType) && (
+                            <label className="flex items-center gap-2 text-xs text-[var(--muted)] cursor-pointer">
+                              <input type="checkbox" checked={field.previewImage} onChange={e => updateField(index, { previewImage: e.target.checked })} className="rounded" />
+                              Preview Image in Order Details
+                            </label>
+                          )}
                         </div>
                       </div>
                     ))}

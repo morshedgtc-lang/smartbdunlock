@@ -48,7 +48,7 @@ export async function GET(request: Request) {
           service: { select: { name: true, type: true } },
           supplier: { select: { name: true } },
           user: { select: { name: true, email: true } },
-          customValues: { include: { customField: { select: { label: true, fieldType: true } } } },
+          customValues: { include: { customField: { select: { label: true, fieldType: true, previewImage: true } } } },
         },
       }),
     ])
@@ -65,6 +65,7 @@ export async function GET(request: Request) {
           ...cv,
           label: cv.customField?.label,
           fieldType: cv.customField?.fieldType,
+          previewImage: cv.customField?.previewImage,
         })),
       })),
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },

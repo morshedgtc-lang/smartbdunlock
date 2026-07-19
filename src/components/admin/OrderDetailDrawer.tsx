@@ -31,7 +31,7 @@ export interface DetailOrder {
   user: { id: string; name: string; email: string; phone?: string | null; userId?: string; walletBalance?: number }
   service: { name?: string; type?: string; processingTime?: string | null; category?: string | null }
   supplier?: string | null
-  customValues: { id: string; label?: string; fieldType?: string; value: string }[]
+  customValues: { id: string; label?: string; fieldType?: string; previewImage?: boolean; value: string }[]
   attachments: { id: string; fileName: string; fileUrl: string; fileType?: string | null; fileSize?: number | null; uploadedByName?: string | null; createdAt: string }[]
   timeline: { id: string; authorName: string; content: string; visible: boolean; createdAt: string }[]
   messages: { id: string; authorName: string; content: string; visible: boolean; createdAt: string }[]
@@ -207,9 +207,26 @@ function OrderDrawerContent({
             <div className="space-y-1.5">
               {order.customValues.length === 0 && <p className="text-sm text-[var(--muted)]">No custom fields</p>}
               {order.customValues.map((cv) => (
-                <div key={cv.id} className="flex justify-between py-1.5 px-3 rounded-lg bg-white/3 text-sm">
-                  <span className="text-[var(--muted)]">{cv.label}</span>
-                  <span className="text-[var(--foreground)] font-mono text-xs max-w-[250px] truncate">{renderCustomValue(cv.value, cv.fieldType)}</span>
+                <div key={cv.id} className="py-1.5 px-3 rounded-lg bg-white/3 text-sm">
+                  {((cv.fieldType === 'file' || cv.fieldType === 'image') && cv.previewImage && cv.value && !cv.value.startsWith('data:')) ? (
+                    <div className="flex items-center gap-3">
+                      <span className="text-[var(--muted)]">{cv.label}</span>
+                      <a href={cv.value} target="_blank" rel="noreferrer" className="block flex-shrink-0">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={cv.value} alt={cv.label || 'Preview'} className="w-[120px] h-[120px] object-cover rounded-lg border border-[var(--card-border)]" />
+                      </a>
+                    </div>
+                  ) : ((cv.fieldType === 'file' || cv.fieldType === 'image') && cv.previewImage && !cv.value) ? (
+                    <div className="flex justify-between items-center">
+                      <span className="text-[var(--muted)]">{cv.label}</span>
+                      <span className="text-xs text-[var(--muted)]">No image uploaded.</span>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between items-center">
+                      <span className="text-[var(--muted)]">{cv.label}</span>
+                      <span className="text-[var(--foreground)] font-mono text-xs max-w-[250px] truncate">{renderCustomValue(cv.value, cv.fieldType)}</span>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

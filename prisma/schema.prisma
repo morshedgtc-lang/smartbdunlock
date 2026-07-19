@@ -74,6 +74,7 @@ model ServiceCustomField {
   options         String?  // JSON array for select/multiselect: ["Option 1","Option 2"]
   required        Boolean  @default(false)
   visibleToClient Boolean  @default(true)
+  previewImage    Boolean  @default(true)  // Show thumbnail preview in order details (file/image types only)
   order           Int      @default(0)
   customValues    OrderCustomFieldValue[]
   createdAt       DateTime @default(now())
