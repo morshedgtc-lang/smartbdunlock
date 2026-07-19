@@ -11,9 +11,8 @@ import { useApi } from '@/hooks/useApi'
 import { useToast } from '@/components/ui/Toast'
 import { motion } from 'framer-motion'
 import {
-  Search, Loader2, X, CheckCircle, XCircle, Trash2, Download,
-  Eye, EyeOff, Package, Clock, AlertCircle, CheckCheck,
-  DollarSign, SlidersHorizontal,
+  Search, Loader2, X, CheckCircle, XCircle, Trash2,
+  Package, Clock, AlertCircle, CheckCheck,
 } from 'lucide-react'
 import { useState, useMemo } from 'react'
 
@@ -96,17 +95,18 @@ export default function ImportServicesPage() {
   const { data: providersData } = useApi<{ suppliers: SupplierItem[] }>({ url: '/api/suppliers' })
   const { data: catData } = useApi<{ categories: CategoryItem[] }>({ url: '/api/service-categories' })
 
-  const services = data?.services || []
   const providers = providersData?.suppliers || []
   const categories = catData?.categories || []
 
   const allCategories = useMemo(() => {
+    const items = data?.services || []
     const cats = new Set<string>()
-    services.forEach((s) => { if (s.category) cats.add(s.category) })
-    categories.forEach((c) => cats.add(c.name))
+    items.forEach((s) => { if (s.category) cats.add(s.category) })
+    ;(catData?.categories || []).forEach((c) => cats.add(c.name))
     return Array.from(cats).sort()
-  }, [services, categories])
+  }, [data?.services, catData?.categories])
 
+  const services = data?.services || []
   const allSelected = services.length > 0 && services.every((s) => selectedIds.has(s.id))
 
   const toggleSelectAll = () => {

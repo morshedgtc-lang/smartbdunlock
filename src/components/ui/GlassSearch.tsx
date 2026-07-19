@@ -37,9 +37,8 @@ export function GlassSearch({
   const resultsRef = useRef<HTMLDivElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
 
-  const sourceResults = results.length > 0 ? results : [];
-
   const filteredResults = useMemo(() => {
+    const sourceResults = results.length > 0 ? results : [];
     if (query.length === 0) return sourceResults.slice(0, 5);
     const q = query.toLowerCase();
     return sourceResults.filter(
@@ -48,7 +47,7 @@ export function GlassSearch({
         r.subtitle.toLowerCase().includes(q) ||
         r.type.toLowerCase().includes(q)
     );
-  }, [query, sourceResults]);
+  }, [query, results]);
 
   useEffect(() => {
     if (query.length > 0) {

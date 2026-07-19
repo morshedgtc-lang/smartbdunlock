@@ -1,131 +1,176 @@
-# SmartBD Unlock - AI Agent Instructions
+# SmartBD Unlock — Agent Instructions
 
-## Repository
-https://github.com/morshedgtc-lang/smartbdunlock.git
+## Quick Start
 
-## Live Production
-https://www.smartbdunlock.com
+```bash
+npm install
+npx prisma generate   # REQUIRED before dev/build — Prisma client is generated, not committed
+npm run dev           # localhost:3000
+```
 
-## Technology Stack
-- Next.js 16.2.10 (App Router + Turbopack)
-- React 19
-- TypeScript 5
-- Tailwind CSS v4
-- Prisma 5.22.0
-- PostgreSQL (Railway)
-- framer-motion
-- jose (JWT auth)
-- bcryptjs (password hashing)
-- Zod v4 validation
-- nodemailer (Gmail SMTP for OTP)
+**Windows PowerShell:** Use `;` not `&&` to chain commands.
+
+## Commands
+
+| What | Command |
+|------|---------|
+| Dev server | `npm run dev` |
+| Production build | `npm run build` |
+| Lint | `npm run lint` |
+| Typecheck | `npx tsc --noEmit` |
+| Generate Prisma | `npx prisma generate` |
+| New migration | `npx prisma migrate dev --name <name>` |
+| Deploy (Railway) | `git push origin main` |
+| Deploy (Docker) | `docker compose up -d --build` |
+| DB reset | `npx prisma migrate reset --force` |
+| DB backup | `pg_dump -Fc -h <host> -U postgres -d railway -f backup.dump` |
+
+**Build order:** `npx prisma generate` → `next build`. Build fails without generated Prisma client.
+
+## Architecture
+
+- **Next.js 16** App Router + Turbopack, React 19, TypeScript 5 (strict), Tailwind CSS v4
+- **Prisma 5.22** with 22 models — all tables in `prisma/schema.prisma`, no raw SQL table access
+- **PostgreSQL** on Railway — internal URL only, external via `tokaido.proxy.rlwy.net`
+- **JWT auth** via `jose` — httpOnly cookie `sb_session`, 7-day expiry
+- **UI:** custom liquid-glass components in `src/components/ui/` (GlassCard, GlassButton, GlassInput, etc.)
+- **Config:** all magic numbers, rate limits, security constants in `src/lib/config.ts`
+- **CI/CD:** GitHub Actions (lint → build with PG → security audit → Railway deploy)
+
+## Roles
+
+Two roles only: `admin` and `reseller`. UI labels show "Client" but DB role is always `reseller`.
+
+## Authentication Flow
+
+1. User logs in → if email not verified, returns `EMAIL_NOT_VERIFIED`
+2. Login route auto-generates OTP and sends email (non-blocking/fire-and-forget)
+3. Frontend shows OTP input → user enters 6-digit code
+4. On verify → account goes to `pending_approval`
+5. Admin approves → user can log in
+6. **If user has MFA enabled** → login returns `TOTP_REQUIRED` (403) + `challengeToken`
+7. Frontend shows TOTP input → calls `POST /api/auth/totp/challenge` with `challengeToken` + `code`
+8. Challenge route creates full session → user logged in
+
+**Key:** OTP email sends are non-blocking (`.catch()` not `await`) — Gmail SMTP can be slow, and the login must not hang.
+
+## MFA/TOTP Flow
+
+- **Enable:** `POST /api/auth/totp/setup` → returns `secret` + `provisioningUri` → user scans QR in authenticator app → `POST /api/auth/totp/enable` with token → returns backup codes
+- **Authenticate:** Login returns `TOTP_REQUIRED` + `challengeToken` → `POST /api/auth/totp/challenge` with `challengeToken` + `code`
+- **Backup codes:** 8 codes returned on enable; passed to `POST /api/auth/totp/challenge` as `code` if user lost device
+- **Disable:** `POST /api/auth/totp/disable` → clears all TOTP fields
+- **Verify active session:** `POST /api/auth/totp/verify` with `token` or `backupCode`
+
+**TOTP config:** `config.mfa.totpDigits=6`, `config.mfa.totpPeriod=30s`, `config.mfa.issuer='SmartBD Unlock'`, `config.mfa.backupCodesCount=8`, `config.mfa.challengeTtlMs=300000`
+**TOTP secret storage:** AES-256-GCM encrypted via `encryptSecret()` / `decryptSecret()`
+**TOTP library:** `otplib` top-level API (`generateSecret`, `verify`, `generateURI`)
 
 ## Deployment
-Platform: Railway
-Build Command: npx prisma generate && next build
-Start Command: bash scripts/start.sh
-- `scripts/start.sh` runs `prisma migrate deploy` on boot
-- `ensure-admin-unverified.js` runs on every deploy (creates/resets admin)
-- New migrations auto-applied on deploy
 
-## Authentication
-- JWT stored in httpOnly cookie: sb_session
-- Session expiry: 7 days
-- Roles: admin, reseller
-- Password hashing: bcryptjs (12 rounds)
-- Email verification: 6-digit OTP (bcrypt-hashed, 10-min expiry, 5 max attempts)
-- Any email address accepted for registration
-- OTP auto-sent on login when email not verified
-- Account lockout: 5 failed attempts = 15 min lockout
+### Railway (primary)
+Auto-deploys from `main`. Build: `npx prisma generate && next build`. Start: `bash scripts/start.sh`.
+
+`scripts/start.sh` on every deploy:
+1. `prisma migrate deploy` (applies pending migrations)
+2. `node scripts/ensure-admin-unverified.js` (creates/resets admin account)
+3. `next start -p $PORT`
+
+`ensure-admin-unverified.js` always resets admin password to `admin123` and `emailVerified: false`.
+
+### CI/CD Pipeline (GitHub Actions)
+Push to `main` runs:
+1. **lint** — `npm run lint` + `npx tsc --noEmit` (cached)
+2. **build** — Full build with PostgreSQL service container
+3. **security** — `npm audit --audit-level=high`
+4. **deploy** — `railway up` (pipeline token in `RAILWAY_TOKEN` secret)
+
+### Docker (alternative)
+```bash
+docker compose up -d --build
+```
+See `Dockerfile`, `docker-compose.yml`, `nginx.conf` for configuration.
+
+## Environment Variables
+
+Required (see `.env.example`):
+- `DATABASE_URL` — PostgreSQL connection string
+- `JWT_SECRET` — JWT signing secret (NOT `NEXTAUTH_SECRET`)
+- `GMAIL_USER` + `GMAIL_APP_PASSWORD` — Gmail SMTP for OTP emails
+- `ADMIN_EMAIL` — Admin notification recipient
+- `SUPPLIER_ENCRYPTION_KEY` — AES-256-GCM for supplier API keys
+- `CRON_SECRET` — Bearer token for cron endpoint
 
 ## Database
-PostgreSQL with 22 tables:
-User, ServiceCategory, Service, ServiceCustomField, Supplier, Order, OrderNote, OrderCustomFieldValue, OrderAttachment, Transaction, Log, AuditLog, Notification, ApiKey, DepositRequest, SupplierJob, BulkOrderBatch, SupplierService, PricingRule, SyncHistory, SupplierApiLog, SystemSetting
 
-### Public User ID
-- The `User` model has a public `userId` field (format `SBU100001`, `SBU100002`, …).
-- Generated transaction-safely by `src/lib/user-id.ts` `generateUserId()`.
-- `userId` is **read-only**: never editable.
-- Internal relations use the opaque `id` (cuid); `userId` is purely a customer-facing identifier.
+22 Prisma models. Key patterns:
+- Public user ID format: `SBU100001` (generated by `src/lib/user-id.ts`, read-only)
+- All currencies use `Float` (known issue — rounding risk)
+- `DepositRequest.screenshot` stores base64 data URLs
+- Log/AuditLog grow unbounded (no TTL)
+- TOTP secret stored as encrypted string (AES-256-GCM): `encryptSecret()`/`decryptSecret()`
+
+## Config Module (`src/lib/config.ts`)
+
+Centralized configuration object with sections for:
+- `jwt` — secret, expiry, cookie options
+- `otp` — digits, expiry, maxAttempts, resendInterval
+- `upload` — maxSize, allowedTypes, allowedExtensions
+- `email` — SMTP host/port/user/pass, timeouts
+- `rateLimits` — general, login, register rates + window
+- `user` — defaultPassword, minId, idPrefix
+- `pagination` — defaultLimit, maxLimit
+- `cors` — origin, methods, headers
+- `mfa` — totpDigits, totpPeriod, issuer, backupCodesCount, challengeTtlMs
+- `bcrypt` — rounds
+
+**Always import from config instead of hardcoding:** `import { config } from '@/lib/config'`
+
+## Deployment Files
+| File | Purpose |
+|------|---------|
+| `.github/workflows/ci.yml` | CI/CD pipeline |
+| `Dockerfile` | Multi-stage production build (deps → build → runner) |
+| `docker-compose.yml` | App + PostgreSQL for local production-like setup |
+| `nginx.conf` | Reverse proxy with rate limiting, SSL, SSE support |
+| `docs/BACKUP.md` | Database backup/restore procedures |
 
 ## Security Rules
-- Never expose supplier API keys
-- Never expose service cost to reseller/client APIs
-- Only return clientVisible=true and status=active services to clients
-- All API keys must be SHA-256 hashed
-- Maintain audit logging for sensitive actions
-- Keep rate limiting enabled (100 req/min)
-- Preserve security headers in middleware
-- Production requires `JWT_SECRET` env var
 
-## Business Rules
-- One reseller can manage multiple client accounts
-- Each user has a permanent public `userId` (SBU format) shown across dashboards
-- Orders deduct wallet balance using Transaction records
-- Refunds create order_refund transactions
-- Order timeline must be preserved
-- Internal notes are admin-only
-- Visible notes are client-facing
-- Deleting orders must cascade to notes and custom field values
+- Never expose supplier API keys or service cost to reseller/client APIs
+- Only return `clientVisible=true` and `status=active` services to clients
+- All API keys SHA-256 hashed; supplier keys AES-256-GCM encrypted
+- Account lockout: 5 failed logins = 15 min
+- Rate limiting: 100 req/min general, 5 login attempts per 15 min per IP+email
+- Security headers in middleware (HSTS, X-Frame-Options, CSP, COOP, CORP, etc.)
+- JWT_SECRET and SUPPLIER_ENCRYPTION_KEY throw errors if missing (no dev fallbacks)
+- CSP: `'unsafe-eval'` removed; `Cross-Origin-Opener-Policy: same-origin`; `Cross-Origin-Resource-Policy: same-origin`
+- File uploads: magic-byte signature verification (JPEG, PNG, GIF, WebP, PDF) + MIME + extension check
+- MFA: TOTP secrets encrypted via AES-256-GCM, challenge tokens in-memory with 5-min TTL
 
-## Current Features
-- Client dashboard with glass UI
-- Service marketplace
-- Order creation with dynamic fields
-- Order details page with timeline
-- Wallet system with deposit requests
-- Notification system (SSE real-time)
-- API key management
-- External REST API
-- Audit trail with CSV export
-- Reporting dashboard
-- File management with UUID filenames
-- Change password modal
-- Profile dropdown
-- Permanent public User ID (SBU format) across all dashboards
-- Email verification with OTP
-- Admin approval flow for new registrations
-- Supplier management and sync
-- Pricing rules engine
-- Bulk order upload
+## Shared Utilities
 
-## Development Rules
-1. Maintain TypeScript strict mode
-2. Keep build at 0 errors / 0 warnings
-3. Remove dead code when replacing features
-4. Use existing glass UI components
-5. Add audit logs for admin actions
-6. Add notifications for important user events
-7. Preserve responsive design
-8. Do not break Railway deployment
+- `src/lib/config.ts` — All constants, env accessors, rate limits, security params (import first)
+- `src/lib/totp.ts` — `generateSecret()`, `encryptSecret()`, `decryptSecret()`, `getProvisioningUri()`, `verifyToken()`, `generateBackupCodes()`, `verifyBackupCode()`
+- `src/lib/mfa.ts` — `createChallengeToken()`, `consumeChallengeToken()`, `verifyMfaChallenge()`
+- `src/lib/utils.ts` — `timeAgo()`, `formatDate()` — import these, don't redefine
+- `src/lib/validations.ts` — Zod schemas for all API inputs
+- `src/lib/auth.ts` — JWT session management (`getSession`, `createSession`)
+- `src/lib/api.tsx` — Client-side `AuthProvider`, `useAuth`, `ProtectedRoute`
+- `src/lib/audit.ts` — `auditLog()` helper for security logging
+- `src/lib/otp.ts` — OTP generation, hashing, verification (uses config)
+- `src/lib/email.ts` — Gmail SMTP sending (with 10s connection timeout, uses config)
 
-## Important API Endpoints
-/api/auth/login, /api/auth/register, /api/auth/verify-otp, /api/auth/resend-otp
-/api/orders, /api/orders/[id], /api/orders/[id]/notes, /api/orders/[id]/timeline
-/api/notifications, /api/notifications/stream
-/api/api-keys, /api/external/services, /api/external/orders
-/api/reporting, /api/audit-logs, /api/upload, /api/files
-/api/auth/change-password, /api/admin/users, /api/admin/users/[id]
+## Gotchas
 
-## Future Priority
-1. Tests (auth, orders, wallet)
-2. CSP security headers
-3. Currency as Decimal (not Float)
-4. Multi-currency wallet
-5. Webhook integrations
-6. Team/staff permissions
-7. Mobile PWA support
-8. AI-assisted order processing
-
-## Current Production Status
-- Build: Clean (0 errors, 0 warnings)
-- Deployment: Live on Railway
-- Database: PostgreSQL (22 models)
-- Auth: JWT + OTP email verification
-- Notifications: SSE working
-- API Keys: Working
-- External API: Working
-- Reporting: Working
-- Client Dashboard: Upgraded
-- Order Timeline: Working
-- Public User ID: Implemented (SBU format)
-- Security: Account lockout, rate limiting, audit logging
+- `prisma generate` must run before any build — the generated client is gitignored
+- `start.sh` has hardcoded migration names in fallback — update when adding migrations
+- `nodemailer` SMTP timeouts are set to 10s — email failures are logged but don't block requests
+- In-memory rate limiting (`Map`) resets on cold start in serverless
+- In-memory challenge token store (`Map`) resets on cold start — `config.mfa.challengeTtlMs=300000`
+- String-based enums everywhere (roles, statuses) — validated by Zod, not Prisma
+- No test files exist — verify changes with `npm run build` (0 errors required)
+- `otplib` uses top-level API (`generateSecret`, `verify`, `generateURI`) — module does NOT export `authenticator` or allow `new TOTP()` directly
+- `otplib.verify()` returns `{ valid: boolean }` — check `.valid` property
+- Enable route must `await verifyToken()` — it's async
+- `POST /api/auth/totp/verify` was removed as redundant (challenge route covers verification) — if needed, recreate

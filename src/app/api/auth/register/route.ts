@@ -3,13 +3,12 @@ import { prisma } from '@/lib/prisma'
 import { registerSchema, validateBody } from '@/lib/validations'
 import { generateUserId } from '@/lib/user-id'
 import { generateOtp, hashOtp, otpExpiryDate } from '@/lib/otp'
-import { sendOtpEmail, sendAdminApprovalNotification } from '@/lib/email'
+import { sendOtpEmail } from '@/lib/email'
 import { auditLog, getClientIp, getClientUserAgent } from '@/lib/audit'
 import bcrypt from 'bcryptjs'
+import { config } from '@/lib/config'
 
 const registerAttempts = new Map<string, { count: number; resetTime: number }>()
-const REGISTER_RATE_LIMIT = 3
-const REGISTER_WINDOW = 60 * 60 * 1000
 
 async function generateUniqueUsername(base: string): Promise<string> {
   const clean = base.toLowerCase().replace(/[^a-z0-9]/g, '')
@@ -38,13 +37,13 @@ export async function POST(request: Request) {
     const now = Date.now()
     const entry = registerAttempts.get(rateKey)
 
-    if (entry && entry.count >= REGISTER_RATE_LIMIT && now < entry.resetTime) {
+    if (entry && entry.count >= config.rateLimit.registerMax && now < entry.resetTime) {
       const remaining = Math.ceil((entry.resetTime - now) / 1000)
       return NextResponse.json({ error: `Too many attempts. Try again in ${remaining}s` }, { status: 429 })
     }
 
     if (!entry || now > entry.resetTime) {
-      registerAttempts.set(rateKey, { count: 1, resetTime: now + REGISTER_WINDOW })
+      registerAttempts.set(rateKey, { count: 1, resetTime: now + config.rateLimit.registerWindowMs })
     } else {
       entry.count++
     }

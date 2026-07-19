@@ -6,14 +6,11 @@ import { generateOtp, hashOtp, otpExpiryDate } from '@/lib/otp'
 import { sendOtpEmail } from '@/lib/email'
 import { auditLog, getClientIp, getClientUserAgent } from '@/lib/audit'
 import bcrypt from 'bcryptjs'
+import { config } from '@/lib/config'
+import { createChallengeToken } from '@/lib/mfa'
 
 const loginAttempts = new Map<string, { count: number; resetTime: number }>()
-const LOGIN_RATE_LIMIT = 5
-const LOGIN_WINDOW = 15 * 60 * 1000
-
 const accountLockouts = new Map<string, { lockedUntil: number }>()
-const ACCOUNT_LOCKOUT_ATTEMPTS = 5
-const ACCOUNT_LOCKOUT_DURATION = 15 * 60 * 1000
 
 export async function POST(request: Request) {
   try {
@@ -48,7 +45,7 @@ export async function POST(request: Request) {
     const rateKey = `${ip}:${email}`
     const entry = loginAttempts.get(rateKey)
 
-    if (entry && entry.count >= LOGIN_RATE_LIMIT && now < entry.resetTime) {
+    if (entry && entry.count >= config.rateLimit.loginMax && now < entry.resetTime) {
       const remaining = Math.ceil((entry.resetTime - now) / 1000)
       await auditLog({
         action: 'login.rate_limited',
@@ -60,7 +57,7 @@ export async function POST(request: Request) {
     }
 
     if (!entry || now > entry.resetTime) {
-      loginAttempts.set(rateKey, { count: 1, resetTime: now + LOGIN_WINDOW })
+      loginAttempts.set(rateKey, { count: 1, resetTime: now + config.rateLimit.loginWindowMs })
     } else {
       entry.count++
     }
@@ -70,12 +67,12 @@ export async function POST(request: Request) {
     })
 
     if (!user || !await bcrypt.compare(password, user.password)) {
-      const accountEntry = loginAttempts.get(email) || { count: 0, resetTime: now + ACCOUNT_LOCKOUT_DURATION }
+      const accountEntry = loginAttempts.get(email) || { count: 0, resetTime: now + config.rateLimit.lockoutDurationMs }
       accountEntry.count++
       loginAttempts.set(email, accountEntry)
 
-      if (accountEntry.count >= ACCOUNT_LOCKOUT_ATTEMPTS) {
-        accountLockouts.set(email, { lockedUntil: now + ACCOUNT_LOCKOUT_DURATION })
+      if (accountEntry.count >= config.rateLimit.lockoutAttempts) {
+        accountLockouts.set(email, { lockedUntil: now + config.rateLimit.lockoutDurationMs })
         loginAttempts.delete(email)
         await auditLog({
           action: 'login.account_locked',
@@ -151,6 +148,15 @@ export async function POST(request: Request) {
       return NextResponse.json({
         error: 'Your account has been banned.',
         code: 'BANNED',
+      }, { status: 403 })
+    }
+
+    if (user.totpEnabled) {
+      const challengeToken = createChallengeToken(user.id)
+      return NextResponse.json({
+        error: 'Two-factor authentication required',
+        code: 'TOTP_REQUIRED',
+        challengeToken,
       }, { status: 403 })
     }
 

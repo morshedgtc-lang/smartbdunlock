@@ -5,7 +5,7 @@ import { GlassCard } from '@/components/ui/GlassCard'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { StatCard } from '@/components/ui/StatCard'
 import { StatusBadge } from '@/components/ui/StatusBadge'
-import { SkeletonStat, SkeletonCard, SkeletonTable } from '@/components/ui/Skeleton'
+import { SkeletonStat, SkeletonCard } from '@/components/ui/Skeleton'
 import { OrderDetailDrawer, DetailOrder } from '@/components/admin/OrderDetailDrawer'
 import { useApi } from '@/hooks/useApi'
 import { useToast } from '@/components/ui/Toast'
@@ -20,7 +20,7 @@ import {
   ArrowUpRight, RefreshCw, AlertTriangle, Server,
   Database, Wifi, Bell, Eye, Reply, Settings,
   MessageSquare, UserPlus, CreditCard, Radio,
-  Globe, HardDrive, Layers, Play, CircleDot, Plus,
+  Globe, HardDrive, Layers, Play, Plus,
 } from 'lucide-react'
 
 interface DashboardData {
@@ -128,16 +128,6 @@ interface AuditLog {
 
 const fadeUp = { initial: { opacity: 0, y: 16 }, animate: { opacity: 1, y: 0 } }
 
-function statusIcon(status: string) {
-  switch (status) {
-    case 'completed': return <CheckCircle size={12} className="text-emerald-500" />
-    case 'processing': return <RefreshCw size={12} className="text-blue-500 animate-spin" />
-    case 'pending': return <Clock size={12} className="text-amber-500" />
-    case 'failed': case 'rejected': return <XCircle size={12} className="text-red-500" />
-    default: return <Activity size={12} className="text-[var(--muted)]" />
-  }
-}
-
 function auditActionLabel(action: string): { label: string; color: string } {
   if (action.includes('order.create') || action.includes('order.place')) return { label: 'New Order', color: 'text-blue-500 bg-blue-500/10' }
   if (action.includes('order.update') || action.includes('order.status')) return { label: 'Order Updated', color: 'text-amber-500 bg-amber-500/10' }
@@ -164,7 +154,7 @@ const QUICK_ACTIONS = [
 
 export default function AdminDashboard() {
   const { toast } = useToast()
-  const { user } = useAuth()
+  useAuth()
   const { data: dash, loading: dashLoading, error: dashError } = useApi<DashboardData>({ url: '/api/dashboard' })
   const { data: report } = useApi<ReportingData>({ url: '/api/reporting?range=30d' })
   const { data: summary } = useApi<OrderSummary>({ url: '/api/orders/summary' })
@@ -172,7 +162,6 @@ export default function AdminDashboard() {
   const { data: notifRes } = useApi<NotificationData>({ url: '/api/notifications?limit=15' })
   const { data: depositsRes } = useApi<DepositData>({ url: '/api/deposit-requests?status=pending&limit=5' })
   const { data: suppliersRes } = useApi<{ suppliers: SupplierItem[] }>({ url: '/api/suppliers' })
-  const { data: usersRes } = useApi<{ users: { id: string; userId: string; name: string; email: string; walletBalance: number; orderCount?: number; status: string }[] }>({ url: '/api/users' })
   const { data: auditRes } = useApi<{ logs: AuditLog[] }>({ url: '/api/audit-logs?limit=12' })
 
   const [viewOrder, setViewOrder] = useState<DetailOrder | null>(null)
@@ -184,10 +173,8 @@ export default function AdminDashboard() {
   const orders = ordersRes?.orders || []
   const notifications = notifRes?.notifications || []
   const unreadCount = notifRes?.unreadCount || 0
-  const pendingDeposits = depositsRes?.requests || []
   const pendingDepositCount = depositsRes?.pagination?.total || 0
   const suppliers = suppliersRes?.suppliers || []
-  const users = usersRes?.users || []
   const auditLogs = auditRes?.logs || []
 
   const dailyRevenue = useMemo(() => r?.dailyRevenue || [], [r])
@@ -242,8 +229,6 @@ export default function AdminDashboard() {
   const processingOrders = sc?.counts?.processing || s?.processingOrders || 0
   const completedToday = s?.completedToday || 0
   const rejectedToday = (sc?.counts?.rejected || s?.rejectedOrders || 0) + (sc?.counts?.failed || s?.failedOrders || 0)
-  const refundedOrders = sc?.counts?.refunded || s?.refundedOrders || 0
-  const cancelledOrders = sc?.counts?.cancelled || 0
   const totalOrders = sc?.total || s?.totalOrders || 0
   const successRate = totalOrders > 0 ? Math.round(((sc?.counts?.completed || s?.completedOrders || 0) / totalOrders) * 100) : 0
 

@@ -8,12 +8,12 @@ import { useAuth } from '@/lib/api'
 import { useToast } from '@/components/ui/Toast'
 import { timeAgo, formatDate } from '@/lib/utils'
 import { OrderDetailDrawer, DetailOrder } from '@/components/admin/OrderDetailDrawer'
-import { SkeletonStat, SkeletonWelcome, SkeletonTable, SkeletonSection } from '@/components/ui/Skeleton'
+import { SkeletonStat, SkeletonWelcome, SkeletonTable } from '@/components/ui/Skeleton'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import {
-  ShoppingCart, Wallet, Loader2, Package, CheckCircle2, Clock,
+  ShoppingCart, Wallet, Package, CheckCircle2, Clock,
   ArrowRight, CreditCard, PlusCircle, Upload, MessageSquare,
   Smartphone, DollarSign, RefreshCw, Bell, AlertCircle,
   ArrowUpRight, ArrowDownRight, Zap, Eye,
@@ -130,7 +130,7 @@ export default function ResellerDashboard() {
   const { user } = useAuth()
   const { data: stats, loading: statsLoading } = useApi<DashboardData>({ url: '/api/dashboard' })
   const { data: walletRes, loading: walletLoading } = useApi<WalletData>({ url: '/api/wallet' })
-  const { data: notifRes, loading: notifLoading } = useApi<NotificationData>({ url: '/api/notifications?limit=10' })
+  const { data: notifRes } = useApi<NotificationData>({ url: '/api/notifications?limit=10' })
 
   const [viewOrder, setViewOrder] = useState<DetailOrder | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)

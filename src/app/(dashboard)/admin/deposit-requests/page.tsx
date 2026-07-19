@@ -1,10 +1,10 @@
 'use client'
 
+/* eslint-disable @next/next/no-img-element -- base64 data URLs can't use next/image */
 import { Header } from '@/components/layout/Header'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GlassButton } from '@/components/ui/GlassButton'
 import { StatusBadge } from '@/components/ui/StatusBadge'
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useApi } from '@/hooks/useApi'
 import { useToast } from '@/components/ui/Toast'
 import { motion } from 'framer-motion'

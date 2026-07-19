@@ -7,11 +7,7 @@ const TAG_LENGTH = 16
 function getKey(): Buffer {
   const key = process.env.SUPPLIER_ENCRYPTION_KEY
   if (!key) {
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('SUPPLIER_ENCRYPTION_KEY environment variable is required in production')
-    }
-    console.warn('⚠️ SUPPLIER_ENCRYPTION_KEY not set — using insecure fallback for development only')
-    return Buffer.from('dev-only-insecure-32byte-fallback!!', 'utf-8')
+    throw new Error('SUPPLIER_ENCRYPTION_KEY environment variable is required')
   }
   const buf = Buffer.from(key, 'hex')
   if (buf.length !== 32) {

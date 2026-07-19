@@ -58,23 +58,6 @@ function SubmitButton({ loading, children, disabled }: { loading: boolean; child
   )
 }
 
-function TabToggle({ active, onSwitch, left, right }: { active: 'login' | 'register'; onSwitch: (m: AuthMode) => void; left: string; right: string }) {
-  return (
-    <div className="flex rounded-2xl bg-white/[0.04] border border-white/[0.06] p-1 mb-6">
-      {(['login', 'register'] as const).map(tab => (
-        <button key={tab} onClick={() => onSwitch(tab)}
-          className={`flex-1 py-2.5 text-sm font-medium rounded-xl transition-all duration-300 ${
-            active === tab
-              ? 'bg-white/[0.08] text-white shadow-lg shadow-indigo-500/10'
-              : 'text-white/30 hover:text-white/50'
-          }`}>
-          {tab === 'login' ? left : right}
-        </button>
-      ))}
-    </div>
-  )
-}
-
 function AlertMessage({ type, children }: { type: 'error' | 'success'; children: React.ReactNode }) {
   const styles = type === 'error'
     ? 'bg-red-500/10 border-red-500/20 text-red-300'

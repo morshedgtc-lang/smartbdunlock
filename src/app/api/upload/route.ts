@@ -1,18 +1,23 @@
 import { NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
 import { auditLog, getClientIp, getClientUserAgent } from '@/lib/audit'
+import { config } from '@/lib/config'
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024
-const ALLOWED_TYPES = new Set([
-  'image/jpeg', 'image/png', 'image/gif', 'image/webp',
-  'application/pdf',
-  'text/plain', 'text/csv',
-  'application/json',
-])
-const BLOCKED_EXTENSIONS = new Set([
-  'html', 'htm', 'svg', 'exe', 'bat', 'cmd', 'com', 'msi', 'scr',
-  'pif', 'vbs', 'js', 'ws', 'wsh', 'ps1', 'sh', 'bash',
-])
+const MAGIC_BYTES: Record<string, Uint8Array[]> = {
+  'image/jpeg': [new Uint8Array([0xFF, 0xD8, 0xFF])],
+  'image/png': [new Uint8Array([0x89, 0x50, 0x4E, 0x47])],
+  'image/gif': [new Uint8Array([0x47, 0x49, 0x46])],
+  'image/webp': [new Uint8Array([0x52, 0x49, 0x46, 0x46])],
+  'application/pdf': [new Uint8Array([0x25, 0x50, 0x44, 0x46])],
+}
+
+function verifyMagicBytes(buffer: Uint8Array, mimeType: string): boolean {
+  const signatures = MAGIC_BYTES[mimeType]
+  if (!signatures) return true
+  return signatures.some(sig =>
+    sig.every((byte, i) => buffer[i] === byte)
+  )
+}
 
 export async function POST(request: Request) {
   try {
@@ -32,31 +37,37 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No files provided' }, { status: 400 })
     }
 
-    if (files.length > 5) {
-      return NextResponse.json({ error: 'Maximum 5 files per upload' }, { status: 400 })
+    if (files.length > config.upload.maxFilesPerRequest) {
+      return NextResponse.json({ error: `Maximum ${config.upload.maxFilesPerRequest} files per upload` }, { status: 400 })
     }
 
     const results: { url: string; name: string; originalName: string; type: string; size: number }[] = []
     const errors: string[] = []
 
     for (const file of files) {
-      if (file.size > MAX_FILE_SIZE) {
-        errors.push(`${file.name}: exceeds 10MB limit`)
+      if (file.size > config.upload.maxFileSize) {
+        errors.push(`${file.name}: exceeds ${config.upload.maxFileSize / 1024 / 1024}MB limit`)
         continue
       }
 
-      if (!ALLOWED_TYPES.has(file.type)) {
+      if (!config.upload.allowedTypes.has(file.type)) {
         errors.push(`${file.name}: file type not allowed`)
         continue
       }
 
       const extension = (file.name.split('.').pop() || '').toLowerCase()
-      if (BLOCKED_EXTENSIONS.has(extension)) {
+      if (config.upload.blockedExtensions.has(extension)) {
         errors.push(`${file.name}: extension not allowed for security reasons`)
         continue
       }
       const randomFilename = `${crypto.randomUUID()}.${extension}`
       const buffer = Buffer.from(await file.arrayBuffer())
+
+      if (!verifyMagicBytes(new Uint8Array(buffer), file.type)) {
+        errors.push(`${file.name}: file content does not match declared type`)
+        continue
+      }
+
       const base64 = buffer.toString('base64')
       const dataUrl = `data:${file.type};base64,${base64}`
 

@@ -165,7 +165,6 @@ export default function ResellerOrderDetailPage() {
     data: order,
     loading: orderLoading,
     error: orderError,
-    refetch: refetchOrder,
   } = useApi<OrderDetail>({ url: `/api/orders/${orderId}` })
 
   const {

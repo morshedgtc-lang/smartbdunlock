@@ -1,5 +1,6 @@
 // Ensure admin account exists + emailVerified=false (OTP required)
 // Idempotent — safe to run every deploy
+/* eslint-disable @typescript-eslint/no-require-imports */
 const { PrismaClient } = require('@prisma/client')
 const bcrypt = require('bcryptjs')
 const prisma = new PrismaClient()

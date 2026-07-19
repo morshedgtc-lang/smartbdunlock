@@ -53,8 +53,9 @@ export default function SuppliersPage() {
   const testTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
 
   useEffect(() => {
+    const timers = testTimers.current
     return () => {
-      Object.values(testTimers.current).forEach(clearTimeout)
+      Object.values(timers).forEach(clearTimeout)
     }
   }, [])
 

@@ -1,24 +1,14 @@
 import { SignJWT, jwtVerify } from 'jose'
 import { cookies } from 'next/headers'
+import { config } from './config'
 
 let _secret: Uint8Array | null = null
 
 function getSecret(): Uint8Array {
   if (_secret) return _secret
-  const secret = process.env.JWT_SECRET
-  if (!secret) {
-    if (process.env.NODE_ENV === 'production' && typeof window === 'undefined') {
-      throw new Error('JWT_SECRET environment variable is required in production')
-    }
-    console.warn('⚠️ JWT_SECRET not set — using insecure fallback for development only')
-    _secret = new TextEncoder().encode('dev-only-insecure-fallback-do-not-deploy')
-    return _secret
-  }
-  _secret = new TextEncoder().encode(secret)
+  _secret = new TextEncoder().encode(config.jwt.secret())
   return _secret
 }
-
-const COOKIE_NAME = 'sb_session'
 
 export interface SessionUser {
   id: string
@@ -32,23 +22,23 @@ export async function createSession(user: SessionUser) {
   const token = await new SignJWT({ user })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
-    .setExpirationTime('7d')
+    .setExpirationTime(config.jwt.expiry)
     .sign(getSecret())
 
   const cookieStore = await cookies()
-  cookieStore.set(COOKIE_NAME, token, {
+  cookieStore.set(config.jwt.cookieName, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: config.isProd,
     sameSite: 'lax',
     path: '/',
-    maxAge: 60 * 60 * 24 * 7,
+    maxAge: config.jwt.cookieMaxAge,
   })
 }
 
 export async function getSession(): Promise<SessionUser | null> {
   try {
-    const cookieStore = await cookies()
-    const token = cookieStore.get(COOKIE_NAME)?.value
+  const cookieStore = await cookies()
+  const token = cookieStore.get(config.jwt.cookieName)?.value
     if (!token) return null
 
     const { payload } = await jwtVerify(token, getSecret())
@@ -85,7 +75,7 @@ export async function getSession(): Promise<SessionUser | null> {
 
 export async function destroySession() {
   const cookieStore = await cookies()
-  cookieStore.delete(COOKIE_NAME)
+  cookieStore.delete(config.jwt.cookieName)
 }
 
 export async function requireAuth(): Promise<SessionUser> {

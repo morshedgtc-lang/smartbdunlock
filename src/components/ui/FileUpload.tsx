@@ -26,6 +26,7 @@ function formatSize(bytes: number): string {
 }
 
 function getTypeIcon(type: string) {
+  // eslint-disable-next-line jsx-a11y/alt-text
   if (type.startsWith('image/')) return <Image size={14} className="text-[var(--accent)]" />
   if (type.startsWith('text/') || type === 'application/json') return <FileText size={14} className="text-[var(--accent)]" />
   return <FileIcon size={14} className="text-[var(--muted)]" />
@@ -96,7 +97,7 @@ export function FileUpload({ onChange, maxFiles = 5, maxSizeMB = 10, accept, val
     if (progress !== 100) setProgress(100)
     setTimeout(() => setProgress(null), 400)
     onChange([...value, ...results])
-  }, [value, maxFiles, validate, onChange])
+  }, [value, maxFiles, validate, onChange]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()

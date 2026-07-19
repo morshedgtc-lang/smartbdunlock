@@ -42,6 +42,7 @@ export function useApi<T = Record<string, unknown>>({ url, method = 'GET', body,
   const [trigger, setTrigger] = useState(0)
 
   const refetch = useCallback(() => setTrigger(t => t + 1), [])
+  const bodyKey = body ? JSON.stringify(body) : undefined
 
   useEffect(() => {
     if (!shouldFetch) {
@@ -58,8 +59,8 @@ export function useApi<T = Record<string, unknown>>({ url, method = 'GET', body,
           headers: { 'Content-Type': 'application/json' },
           credentials: 'same-origin',
         }
-        if (body && method !== 'GET') {
-          opts.body = JSON.stringify(body)
+        if (bodyKey && method !== 'GET') {
+          opts.body = bodyKey
         }
         const res = await fetch(url, opts)
 
@@ -106,7 +107,7 @@ export function useApi<T = Record<string, unknown>>({ url, method = 'GET', body,
     doFetch(0)
 
     return () => { cancelled = true }
-  }, [url, method, trigger, shouldFetch]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [url, method, trigger, shouldFetch, bodyKey])
 
   return { data, loading, error, refetch }
 }

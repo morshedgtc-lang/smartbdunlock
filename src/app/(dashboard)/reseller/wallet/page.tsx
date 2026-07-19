@@ -32,7 +32,6 @@ import {
   Clock,
   Banknote,
   CircleDollarSign,
-  Ban,
   Settings2,
   AlertCircle,
 } from 'lucide-react'
@@ -105,15 +104,15 @@ export default function ResellerWalletPage() {
   const [typeFilter, setTypeFilter] = useState('all')
   const [currentPage, setCurrentPage] = useState(1)
 
-  const transactions = walletData?.transactions ?? []
   const balance = walletData?.balance ?? 0
 
   const stats = useMemo(() => {
+    const txns = walletData?.transactions ?? []
     let totalCredit = 0
     let totalDebit = 0
     let lastDeposit: TransactionItem | null = null
 
-    for (const txn of transactions) {
+    for (const txn of txns) {
       if (txn.amount >= 0) {
         totalCredit += txn.amount
       } else {
@@ -129,12 +128,12 @@ export default function ResellerWalletPage() {
       totalCredit,
       totalDebit,
       lastDeposit,
-      transactionCount: transactions.length,
+      transactionCount: txns.length,
     }
-  }, [transactions])
+  }, [walletData?.transactions])
 
   const filteredTransactions = useMemo(() => {
-    let result = transactions
+    let result = walletData?.transactions ?? []
 
     if (typeFilter !== 'all') {
       result = result.filter(txn => txn.type === typeFilter)
@@ -150,7 +149,7 @@ export default function ResellerWalletPage() {
     }
 
     return result
-  }, [transactions, typeFilter, searchQuery])
+  }, [walletData?.transactions, typeFilter, searchQuery])
 
   const totalPages = Math.max(1, Math.ceil(filteredTransactions.length / PAGE_SIZE))
   const safePage = Math.min(currentPage, totalPages)

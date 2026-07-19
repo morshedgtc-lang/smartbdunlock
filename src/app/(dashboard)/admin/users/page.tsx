@@ -9,7 +9,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
 import { useApi } from '@/hooks/useApi'
 import { motion } from 'framer-motion'
-import { Search, Plus, Edit, Trash2, Users, Loader2, X, ChevronLeft, ChevronRight, UserCheck, Shield, Wallet, Ban, UserMinus } from 'lucide-react'
+import { Search, Plus, Edit, Trash2, Loader2, X, ChevronLeft, ChevronRight, UserCheck, Shield, Wallet, Ban, UserMinus } from 'lucide-react'
 import Link from 'next/link'
 import { useState, useMemo } from 'react'
 
@@ -44,15 +44,15 @@ export default function UsersPage() {
   const [deleting, setDeleting] = useState(false)
   const { toast } = useToast()
   const { data, loading, error, refetch } = useApi<{ users: UserItem[] }>({ url: '/api/users' })
-  const allUsers = data?.users || []
 
   const filtered = useMemo(() => {
+    const allUsers = data?.users || []
     return allUsers.filter((u: UserItem) => {
       const matchSearch = u.name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase()) || (u.userId && u.userId.toLowerCase().includes(search.toLowerCase()))
       const matchRole = roleFilter === 'ALL' || u.role === roleFilter
       return matchSearch && matchRole
     })
-  }, [allUsers, search, roleFilter])
+  }, [data?.users, search, roleFilter])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const safePage = Math.min(page, totalPages)
@@ -60,10 +60,11 @@ export default function UsersPage() {
   const showingFrom = filtered.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1
   const showingTo = Math.min(safePage * PAGE_SIZE, filtered.length)
 
-  const adminsCount = allUsers.filter((u: UserItem) => u.role === 'admin').length
-  const clientsCount = allUsers.filter((u: UserItem) => u.role === 'reseller').length
-  const totalBalance = allUsers.reduce((sum: number, u: UserItem) => sum + (u.walletBalance || 0), 0)
-  const suspendedCount = allUsers.filter((u: UserItem) => u.status === 'suspended').length
+  const userList = data?.users || []
+  const adminsCount = userList.filter((u: UserItem) => u.role === 'admin').length
+  const clientsCount = userList.filter((u: UserItem) => u.role === 'reseller').length
+  const totalBalance = userList.reduce((sum: number, u: UserItem) => sum + (u.walletBalance || 0), 0)
+  const suspendedCount = userList.filter((u: UserItem) => u.status === 'suspended').length
 
   const openCreate = () => {
     setEditing(null)
@@ -158,7 +159,7 @@ export default function UsersPage() {
 
   return (
     <div>
-      <Header title="User Management" subtitle={`${allUsers.length} total users`} />
+      <Header title="User Management" subtitle={`${userList.length} total users`} />
       <div className="p-6 space-y-6">
         <motion.div className="glass p-4" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
           <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">

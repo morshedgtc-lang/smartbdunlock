@@ -1,4 +1,5 @@
-export function timeAgo(dateStr: string): string {
+export function timeAgo(dateStr?: string): string {
+  if (!dateStr) return 'Never'
   const diff = Date.now() - new Date(dateStr).getTime()
   const sec = Math.floor(diff / 1000)
   if (sec < 60) return `${sec}s`

@@ -7,8 +7,8 @@ import { Drawer } from '@/components/ui/Drawer'
 import { useToast } from '@/components/ui/Toast'
 import { useState } from 'react'
 import {
-  Pencil, Check, X, Loader2, User, Smartphone, DollarSign,
-  Clock, Send, Paperclip, History, MessageSquare, CheckCircle2,
+  Pencil, Check, Loader2, User, Smartphone, DollarSign,
+  Clock, Send, Paperclip, History, MessageSquare,
 } from 'lucide-react'
 
 export interface DetailOrder {

@@ -1,32 +1,29 @@
 import { prisma } from '@/lib/prisma'
+import type { Prisma } from '@prisma/client'
+import { config } from './config'
 
-const PREFIX = 'SBU'
-const BASE = 100000
-
-async function nextSuffix(tx: { user: { findFirst: (args: unknown) => Promise<{ userId: string } | null> } }): Promise<number> {
+async function nextSuffix(tx: Prisma.TransactionClient): Promise<number> {
   const latest = await tx.user.findFirst({
     orderBy: { userId: 'desc' },
-    where: { userId: { startsWith: PREFIX } },
+    where: { userId: { startsWith: config.user.idPrefix } },
     select: { userId: true },
   })
-  if (!latest) return BASE + 1
-  const numeric = parseInt(latest.userId.slice(PREFIX.length), 10)
-  return (Number.isFinite(numeric) ? numeric : BASE) + 1
+  if (!latest) return config.user.idBase + 1
+  const numeric = parseInt(latest.userId.slice(config.user.idPrefix.length), 10)
+  return (Number.isFinite(numeric) ? numeric : config.user.idBase) + 1
 }
 
 export async function generateUserId(): Promise<string> {
   for (let attempt = 0; attempt < 10; attempt++) {
     try {
       return await prisma.$transaction(async (tx) => {
-        const suffix = await nextSuffix(tx as never)
-        const candidate = `${PREFIX}${String(suffix).padStart(6, '0')}`
-        // Probe existence within the same transaction for serializable safety.
+        const suffix = await nextSuffix(tx)
+        const candidate = `${config.user.idPrefix}${String(suffix).padStart(6, '0')}`
         const exists = await tx.user.findUnique({ where: { userId: candidate } })
         if (exists) throw new Error('collision')
         return candidate
       })
     } catch {
-      // Race on concurrent signups: retry with fresh suffix read.
       continue
     }
   }

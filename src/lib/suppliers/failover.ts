@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma'
-import { getFailoverChain, getAdapter } from './router'
+import { getFailoverChain } from './router'
 import { createSupplierJob, submitToSupplier } from './processor'
 import { createNotification } from '@/lib/notifications'
 import { auditLog } from '@/lib/audit'

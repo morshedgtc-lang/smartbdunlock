@@ -1,19 +1,15 @@
 import crypto from 'crypto'
 import bcrypt from 'bcryptjs'
-
-const OTP_LENGTH = 6
-const OTP_EXPIRY_MINUTES = 10
-const OTP_MAX_ATTEMPTS = 5
-const BCRYPT_ROUNDS = 12
+import { config } from './config'
 
 export function generateOtp(): string {
   const buf = crypto.randomBytes(4)
   const num = buf.readUInt32BE(0) % 1_000_000
-  return String(num).padStart(OTP_LENGTH, '0')
+  return String(num).padStart(config.otp.length, '0')
 }
 
 export async function hashOtp(otp: string): Promise<string> {
-  return bcrypt.hash(otp, BCRYPT_ROUNDS)
+  return bcrypt.hash(otp, config.bcrypt.rounds)
 }
 
 export async function verifyOtp(otp: string, hash: string): Promise<boolean> {
@@ -21,11 +17,11 @@ export async function verifyOtp(otp: string, hash: string): Promise<boolean> {
 }
 
 export function otpExpiryDate(): Date {
-  return new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000)
+  return new Date(Date.now() + config.otp.expiryMinutes * 60 * 1000)
 }
 
 export function isOtpExpired(expiry: Date): boolean {
   return new Date() > expiry
 }
 
-export { OTP_MAX_ATTEMPTS, OTP_EXPIRY_MINUTES }
+export const { maxAttempts: OTP_MAX_ATTEMPTS, expiryMinutes: OTP_EXPIRY_MINUTES } = config.otp

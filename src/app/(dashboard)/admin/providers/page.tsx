@@ -15,6 +15,7 @@ import {
   Clock, Zap, Activity, ArrowUpDown,
 } from 'lucide-react'
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { timeAgo } from '@/lib/utils'
 
 interface ProviderItem {
   id: string
@@ -85,9 +86,11 @@ export default function ProvidersPage() {
   const syncTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
 
   useEffect(() => {
+    const testTimersSnapshot = testTimers.current
+    const syncTimersSnapshot = syncTimers.current
     return () => {
-      Object.values(testTimers.current).forEach(clearTimeout)
-      Object.values(syncTimers.current).forEach(clearTimeout)
+      Object.values(testTimersSnapshot).forEach(clearTimeout)
+      Object.values(syncTimersSnapshot).forEach(clearTimeout)
     }
   }, [])
 
@@ -261,18 +264,6 @@ export default function ProvidersPage() {
     if (!key) return 'No API key'
     if (key.length <= 8) return '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022'
     return '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022'
-  }
-
-  const timeAgo = (dateStr?: string) => {
-    if (!dateStr) return 'Never'
-    const diff = Date.now() - new Date(dateStr).getTime()
-    const sec = Math.floor(diff / 1000)
-    if (sec < 60) return `${sec}s ago`
-    const min = Math.floor(sec / 60)
-    if (min < 60) return `${min}m ago`
-    const hr = Math.floor(min / 60)
-    if (hr < 24) return `${hr}h ago`
-    return `${Math.floor(hr / 24)}d ago`
   }
 
   if (loading) {

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
-import { encryptApiKey, decryptApiKey } from '@/lib/crypto'
+import { encryptApiKey } from '@/lib/crypto'
 import { providerQuerySchema, createProviderSchema, validateBody, validateQuery } from '@/lib/validations'
 import { auditLog, getClientIp, getClientUserAgent } from '@/lib/audit'
 
