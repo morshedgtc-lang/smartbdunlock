@@ -21,14 +21,6 @@ interface GlassSearchProps {
   onSearch?: (query: string) => void;
 }
 
-const DEFAULT_RESULTS: SearchResult[] = [
-  { id: "nav-dashboard", icon: "📊", title: "Dashboard", subtitle: "View analytics", href: "/admin/dashboard", type: "nav" },
-  { id: "nav-orders", icon: "📦", title: "Orders", subtitle: "Manage orders", href: "/admin/orders", type: "nav" },
-  { id: "nav-services", icon: "🔧", title: "Services", subtitle: "Manage services", href: "/admin/services", type: "nav" },
-  { id: "nav-users", icon: "👥", title: "Users", subtitle: "Manage users", href: "/admin/users", type: "nav" },
-  { id: "nav-wallet", icon: "💰", title: "Wallet", subtitle: "Manage funds", href: "/admin/wallet", type: "nav" },
-];
-
 export function GlassSearch({
   placeholder = "Search orders, services, users...",
   results = [],
@@ -45,7 +37,7 @@ export function GlassSearch({
   const resultsRef = useRef<HTMLDivElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
 
-  const sourceResults = results.length > 0 ? results : DEFAULT_RESULTS;
+  const sourceResults = results.length > 0 ? results : [];
 
   const filteredResults = useMemo(() => {
     if (query.length === 0) return sourceResults.slice(0, 5);

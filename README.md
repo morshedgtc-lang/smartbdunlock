@@ -16,6 +16,12 @@ GSM mobile service management platform for resellers and clients. Handles orders
 
 ## Features
 
+**Auth**
+- Email verification with 6-digit OTP
+- Any email address accepted for registration
+- Admin approval flow for new accounts
+- Account lockout after failed attempts
+
 **Admin**
 - Dashboard with analytics
 - User management (admin/reseller roles)
@@ -23,6 +29,7 @@ GSM mobile service management platform for resellers and clients. Handles orders
 - Custom field image preview (ImgBB upload)
 - Order management with status tracking
 - Supplier management with adapter pattern + failover
+- Pricing rules engine
 - Wallet and deposit request handling
 - Audit trail with CSV export
 - API key management for external access
@@ -70,31 +77,42 @@ Open http://localhost:3000
 ```env
 DATABASE_URL=postgresql://...
 JWT_SECRET=your-secret-key
-IMGBB_API_KEY=your-imgbb-api-key
+GMAIL_USER=your-gmail@gmail.com
+GMAIL_APP_PASSWORD=your-gmail-app-password
+ADMIN_EMAIL=admin@yourdomain.com
+SUPPLIER_ENCRYPTION_KEY=your-encryption-key
+CRON_SECRET=your-cron-secret
 ```
 
-- `JWT_SECRET` is required in production. Without it, the app falls back to an insecure dev key.
-- `IMGBB_API_KEY` is required for image preview uploads. Get one free at https://api.imgbb.com/
+- `JWT_SECRET` is required in production. Without it, the app throws an error.
+- `GMAIL_USER` + `GMAIL_APP_PASSWORD` are required for OTP email verification.
+- `ADMIN_EMAIL` receives notifications for new registrations.
 
 ## Database
 
-17 models via Prisma. Key entities:
+22 models via Prisma. Key entities:
 
 | Model | Purpose |
 |-------|---------|
-| User | Auth, roles, public userId (SBD format) |
+| User | Auth, roles, public userId (SBU format) |
 | Service | Catalog with custom fields |
 | Order | Core order engine with status lifecycle |
 | Transaction | Wallet ledger |
 | Supplier | API/manual/mock adapters |
 | SupplierJob | Async supplier job queue |
+| SupplierService | Supplier catalog sync |
+| PricingRule | Price calculation rules |
+| SyncHistory | Supplier sync audit |
+| SupplierApiLog | Supplier API call log |
+| OrderAttachment | File uploads on orders |
 | AuditLog | Security audit trail |
 | ApiKey | External API access |
 | Notification | Real-time alerts (SSE) |
 | DepositRequest | Funding requests |
 | BulkOrderBatch | CSV upload tracking |
+| SystemSetting | Key-value config store |
 
-Migrations in `prisma/migrations/`. Auto-applied on deploy via `scripts/start.sh`.
+Migrations in `prisma/migrations/` (11 total). Auto-applied on deploy via `scripts/start.sh`.
 
 ## API Routes
 
@@ -147,7 +165,7 @@ src/
 prisma/
   schema.prisma          # Database schema
   seed.ts                # Dev seed data
-  migrations/            # 8 migrations
+  migrations/            # 11 migrations
 scripts/
   start.sh               # Railway startup script
 ```

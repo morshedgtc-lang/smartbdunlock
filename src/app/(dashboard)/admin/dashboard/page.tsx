@@ -10,15 +10,16 @@ import { OrderDetailDrawer, DetailOrder } from '@/components/admin/OrderDetailDr
 import { useApi } from '@/hooks/useApi'
 import { useToast } from '@/components/ui/Toast'
 import { useAuth } from '@/lib/api'
+import { timeAgo } from '@/lib/utils'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { useState, useMemo } from 'react'
 import {
   Users, ShoppingCart, DollarSign, Clock, CheckCircle, XCircle,
-  TrendingUp, Wallet, Package, BarChart3, Crown, Zap, Activity,
-  ArrowUpRight, RefreshCw, RotateCcw, AlertTriangle, Server,
-  Database, Wifi, Shield, Bell, FileText, Eye, Reply, Settings,
-  Send, MessageSquare, UserPlus, CreditCard, Upload, Radio,
+  TrendingUp, Wallet, Package, BarChart3, Crown, Activity,
+  ArrowUpRight, RefreshCw, AlertTriangle, Server,
+  Database, Wifi, Bell, Eye, Reply, Settings,
+  MessageSquare, UserPlus, CreditCard, Radio,
   Globe, HardDrive, Layers, Play, CircleDot, Plus,
 } from 'lucide-react'
 
@@ -126,17 +127,6 @@ interface AuditLog {
 }
 
 const fadeUp = { initial: { opacity: 0, y: 16 }, animate: { opacity: 1, y: 0 } }
-
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime()
-  const sec = Math.floor(diff / 1000)
-  if (sec < 60) return `${sec}s ago`
-  const min = Math.floor(sec / 60)
-  if (min < 60) return `${min}m ago`
-  const hr = Math.floor(min / 60)
-  if (hr < 24) return `${hr}h ago`
-  return `${Math.floor(hr / 24)}d ago`
-}
 
 function statusIcon(status: string) {
   switch (status) {

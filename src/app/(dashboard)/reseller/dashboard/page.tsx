@@ -6,6 +6,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge'
 import { useApi } from '@/hooks/useApi'
 import { useAuth } from '@/lib/api'
 import { useToast } from '@/components/ui/Toast'
+import { timeAgo, formatDate } from '@/lib/utils'
 import { OrderDetailDrawer, DetailOrder } from '@/components/admin/OrderDetailDrawer'
 import { SkeletonStat, SkeletonWelcome, SkeletonTable, SkeletonSection } from '@/components/ui/Skeleton'
 import { motion } from 'framer-motion'
@@ -14,8 +15,8 @@ import { useState, useEffect } from 'react'
 import {
   ShoppingCart, Wallet, Loader2, Package, CheckCircle2, Clock,
   ArrowRight, CreditCard, PlusCircle, Upload, MessageSquare,
-  Smartphone, TrendingUp, DollarSign, RefreshCw, Bell, AlertCircle,
-  Globe, Server, ArrowUpRight, ArrowDownRight, Zap, Eye,
+  Smartphone, DollarSign, RefreshCw, Bell, AlertCircle,
+  ArrowUpRight, ArrowDownRight, Zap, Eye,
   ChevronRight, CircleDot, XCircle, RotateCcw, BarChart3,
 } from 'lucide-react'
 
@@ -101,22 +102,6 @@ interface NotificationData {
 }
 
 const fadeUp = { initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 } }
-
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime()
-  const sec = Math.floor(diff / 1000)
-  if (sec < 60) return `${sec}s`
-  const min = Math.floor(sec / 60)
-  if (min < 60) return `${min}m`
-  const hr = Math.floor(min / 60)
-  if (hr < 24) return `${hr}h`
-  const day = Math.floor(hr / 24)
-  return `${day}d`
-}
-
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-}
 
 const QUICK_ACTIONS = [
   { label: 'Create Order', href: '/reseller/services', icon: PlusCircle, gradient: 'from-indigo-500 to-purple-500', shadow: 'shadow-indigo-500/20' },
