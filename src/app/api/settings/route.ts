@@ -11,24 +11,13 @@ const DEFAULTS: Record<string, string> = {
   maintenanceMode: 'false',
 }
 
-async function ensureTable() {
-  await prisma.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS system_settings (
-      key TEXT PRIMARY KEY,
-      value TEXT NOT NULL,
-      "updatedAt" TIMESTAMP DEFAULT NOW()
-    )
-  `)
-}
-
 export async function GET() {
   try {
     await requireAdmin()
-    await ensureTable()
 
-    const rows = await prisma.$queryRawUnsafe<{ key: string; value: string }[]>(
-      'SELECT key, value FROM system_settings'
-    )
+    const rows = await prisma.systemSetting.findMany({
+      select: { key: true, value: true },
+    })
 
     const stored: Record<string, string> = {}
     for (const row of rows) {
@@ -49,7 +38,6 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const admin = await requireAdmin()
-    await ensureTable()
 
     const body = await request.json()
     if (!body || typeof body !== 'object') {
@@ -70,13 +58,11 @@ export async function POST(request: Request) {
     }
 
     for (const { key, value } of entries) {
-      await prisma.$executeRawUnsafe(
-        `INSERT INTO system_settings (key, value, "updatedAt")
-         VALUES ($1, $2, NOW())
-         ON CONFLICT (key) DO UPDATE SET value = $2, "updatedAt" = NOW()`,
-        key,
-        value,
-      )
+      await prisma.systemSetting.upsert({
+        where: { key },
+        update: { value },
+        create: { key, value },
+      })
     }
 
     const oldValues: Record<string, string> = {}
@@ -94,9 +80,9 @@ export async function POST(request: Request) {
       userAgent: getClientUserAgent(request),
     })
 
-    const rows = await prisma.$queryRawUnsafe<{ key: string; value: string }[]>(
-      'SELECT key, value FROM system_settings'
-    )
+    const rows = await prisma.systemSetting.findMany({
+      select: { key: true, value: true },
+    })
     const stored: Record<string, string> = {}
     for (const row of rows) {
       stored[row.key] = row.value

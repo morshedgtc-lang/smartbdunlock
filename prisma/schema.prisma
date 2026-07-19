@@ -31,6 +31,7 @@ model User {
   @@index([email])
   @@index([role])
   @@index([userId])
+  @@index([status])
 }
 
 model ServiceCategory {
@@ -65,7 +66,7 @@ model Service {
   updatedAt         DateTime            @updatedAt
 
   @@index([supplierId, status])
-  @@index([supplierServiceId])
+  @@index([status])
 }
 
 model ServiceCustomField {
@@ -202,6 +203,7 @@ model Transaction {
   createdAt     DateTime @default(now())
 
   @@index([userId, type, createdAt])
+  @@index([createdAt])
 }
 
 model Log {
@@ -407,4 +409,10 @@ model SupplierApiLog {
 
   @@index([providerId, createdAt])
   @@index([success, createdAt])
+}
+
+model SystemSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @default(now()) @updatedAt
 }

@@ -2,20 +2,30 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Jellyfish } from '@/components/Jellyfish'
-import { Mail, Lock, Smartphone, ArrowRight, Eye, EyeOff } from 'lucide-react'
+import { Mail, Lock, Smartphone, ArrowRight, Eye, EyeOff, User, Phone } from 'lucide-react'
 
 export default function LoginPage() {
   const router = useRouter()
+  const [mode, setMode] = useState<'login' | 'register'>('login')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [focusedField, setFocusedField] = useState<string | null>(null)
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
   const cardRef = useRef<HTMLDivElement>(null)
+
+  const [loginEmail, setLoginEmail] = useState('')
+  const [loginPassword, setLoginPassword] = useState('')
+
+  const [regName, setRegName] = useState('')
+  const [regEmail, setRegEmail] = useState('')
+  const [regPhone, setRegPhone] = useState('')
+  const [regPassword, setRegPassword] = useState('')
+  const [regConfirmPassword, setRegConfirmPassword] = useState('')
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -37,7 +47,7 @@ export default function LoginPage() {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email: loginEmail, password: loginPassword }),
     })
 
     const data = await res.json()
@@ -53,6 +63,56 @@ export default function LoginPage() {
     if (role === 'admin') router.push('/admin/dashboard')
     else if (role === 'reseller') router.push('/reseller/dashboard')
     else router.push('/login')
+  }
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+    setSuccess('')
+
+    if (regPassword !== regConfirmPassword) {
+      setError('Passwords do not match')
+      setLoading(false)
+      return
+    }
+
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: regName,
+        email: regEmail,
+        phone: regPhone || undefined,
+        password: regPassword,
+        confirmPassword: regConfirmPassword,
+      }),
+    })
+
+    const data = await res.json()
+
+    if (!res.ok) {
+      setError(data.error || 'Registration failed')
+      setLoading(false)
+      return
+    }
+
+    setSuccess('Account created successfully! Redirecting...')
+
+    setTimeout(() => {
+      const role = data?.user?.role
+      if (role === 'admin') router.push('/admin/dashboard')
+      else if (role === 'reseller') router.push('/reseller/dashboard')
+      else router.push('/login')
+    }, 1000)
+  }
+
+  const switchMode = (newMode: 'login' | 'register') => {
+    setMode(newMode)
+    setError('')
+    setSuccess('')
+    setShowPassword(false)
+    setShowConfirmPassword(false)
   }
 
   return (
@@ -135,104 +195,319 @@ export default function LoginPage() {
               />
             </div>
 
-            <h2 className="text-xl font-bold text-[var(--foreground)] mb-1 relative">Welcome back</h2>
-            <p className="text-sm text-[var(--muted)] mb-6 relative">Sign in to your account</p>
-
-            <form onSubmit={handleLogin} className="space-y-4 relative">
-              {error && (
-                <div className="px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-                  {error}
-                </div>
-              )}
-              {/* Email Input */}
-              <div className="liquid-input-wrapper">
-                <div className={`liquid-input-container ${focusedField === 'email' ? 'liquid-input-focus' : ''}`}>
-                  <Mail size={18} className="liquid-input-icon" />
-                  <input
-                    type="email"
-                    placeholder="Email address"
-                    autoComplete="email"
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    onFocus={() => setFocusedField('email')}
-                    onBlur={() => setFocusedField(null)}
-                    className="liquid-input"
-                  />
-                  {/* Focus highlight glow */}
-                  <div className="liquid-input-glow" />
-                </div>
-              </div>
-
-              {/* Password Input */}
-              <div className="liquid-input-wrapper">
-                <div className={`liquid-input-container ${focusedField === 'password' ? 'liquid-input-focus' : ''}`}>
-                  <Lock size={18} className="liquid-input-icon" />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="Password"
-                    autoComplete="current-password"
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    onFocus={() => setFocusedField('password')}
-                    onBlur={() => setFocusedField(null)}
-                    className="liquid-input"
-                  />
-                  <button
-                    type="button"
-                    className="liquid-eye-btn"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                  <div className="liquid-input-glow" />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between text-sm">
-                <label className="flex items-center gap-2 text-[var(--muted)] cursor-pointer">
-                  <div className="liquid-checkbox">
-                    <input type="checkbox" className="sr-only peer" />
-                    <div className="w-4 h-4 rounded-md border border-[var(--input-border)] peer-checked:bg-[var(--accent)] peer-checked:border-[var(--accent)] transition-all flex items-center justify-center">
-                      <svg className="w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                  </div>
-                  Remember me
-                </label>
-                <a href="mailto:support@smartbdunlock.com" className="text-[var(--accent)] hover:underline">Forgot password?</a>
-              </div>
-
-              {/* Liquid Glass Submit Button */}
+            {/* Mode Toggle */}
+            <div className="flex mb-6 relative">
               <button
-                type="submit"
-                disabled={loading}
-                className="liquid-submit-btn w-full relative overflow-hidden group"
+                type="button"
+                onClick={() => switchMode('login')}
+                className={`flex-1 pb-3 text-sm font-semibold transition-all duration-300 relative ${
+                  mode === 'login' ? 'text-[var(--accent)]' : 'text-[var(--muted)] hover:text-[var(--foreground)]'
+                }`}
               >
-                <div className="liquid-submit-outer">
-                  <div className="liquid-submit-glass">
-                    {/* Animated light refraction */}
-                    <div className="liquid-submit-refraction" />
-                    {/* Top highlight edge */}
-                    <div className="liquid-submit-highlight" />
-                    {/* Content */}
-                    <div className="liquid-submit-content">
-                      {loading ? (
-                        <div className="liquid-spinner" />
-                      ) : (
-                      <>
-                        <span>Sign In</span>
-                        <ArrowRight size={18} strokeWidth={2} className="group-hover:translate-x-1 transition-transform duration-300 ease-out" />
-                      </>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                Sign In
+                {mode === 'login' && (
+                  <motion.div
+                    className="absolute bottom-0 left-0 right-0 h-[2px] bg-[var(--accent)] rounded-full"
+                    layoutId="authTab"
+                    transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                  />
+                )}
               </button>
-            </form>
+              <button
+                type="button"
+                onClick={() => switchMode('register')}
+                className={`flex-1 pb-3 text-sm font-semibold transition-all duration-300 relative ${
+                  mode === 'register' ? 'text-[var(--accent)]' : 'text-[var(--muted)] hover:text-[var(--foreground)]'
+                }`}
+              >
+                Sign Up
+                {mode === 'register' && (
+                  <motion.div
+                    className="absolute bottom-0 left-0 right-0 h-[2px] bg-[var(--accent)] rounded-full"
+                    layoutId="authTab"
+                    transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                  />
+                )}
+              </button>
+            </div>
+
+            <AnimatePresence mode="wait">
+              {mode === 'login' ? (
+                <motion.div
+                  key="login"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <h2 className="text-xl font-bold text-[var(--foreground)] mb-1">Welcome back</h2>
+                  <p className="text-sm text-[var(--muted)] mb-6">Sign in to your account</p>
+
+                  <form onSubmit={handleLogin} className="space-y-4">
+                    {error && (
+                      <div className="px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+                        {error}
+                      </div>
+                    )}
+
+                    {/* Email Input */}
+                    <div className="liquid-input-wrapper">
+                      <div className={`liquid-input-container ${focusedField === 'login-email' ? 'liquid-input-focus' : ''}`}>
+                        <Mail size={18} className="liquid-input-icon" />
+                        <input
+                          type="email"
+                          placeholder="Email address"
+                          autoComplete="email"
+                          value={loginEmail}
+                          onChange={e => setLoginEmail(e.target.value)}
+                          onFocus={() => setFocusedField('login-email')}
+                          onBlur={() => setFocusedField(null)}
+                          className="liquid-input"
+                        />
+                        <div className="liquid-input-glow" />
+                      </div>
+                    </div>
+
+                    {/* Password Input */}
+                    <div className="liquid-input-wrapper">
+                      <div className={`liquid-input-container ${focusedField === 'login-password' ? 'liquid-input-focus' : ''}`}>
+                        <Lock size={18} className="liquid-input-icon" />
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          placeholder="Password"
+                          autoComplete="current-password"
+                          value={loginPassword}
+                          onChange={e => setLoginPassword(e.target.value)}
+                          onFocus={() => setFocusedField('login-password')}
+                          onBlur={() => setFocusedField(null)}
+                          className="liquid-input"
+                        />
+                        <button
+                          type="button"
+                          className="liquid-eye-btn"
+                          onClick={() => setShowPassword(!showPassword)}
+                        >
+                          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                        <div className="liquid-input-glow" />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between text-sm">
+                      <label className="flex items-center gap-2 text-[var(--muted)] cursor-pointer">
+                        <div className="liquid-checkbox">
+                          <input type="checkbox" className="sr-only peer" />
+                          <div className="w-4 h-4 rounded-md border border-[var(--input-border)] peer-checked:bg-[var(--accent)] peer-checked:border-[var(--accent)] transition-all flex items-center justify-center">
+                            <svg className="w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                        </div>
+                        Remember me
+                      </label>
+                      <a href="mailto:support@smartbdunlock.com" className="text-[var(--accent)] hover:underline">Forgot password?</a>
+                    </div>
+
+                    {/* Submit Button */}
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="liquid-submit-btn w-full relative overflow-hidden group"
+                    >
+                      <div className="liquid-submit-outer">
+                        <div className="liquid-submit-glass">
+                          <div className="liquid-submit-refraction" />
+                          <div className="liquid-submit-highlight" />
+                          <div className="liquid-submit-content">
+                            {loading ? (
+                              <div className="liquid-spinner" />
+                            ) : (
+                              <>
+                                <span>Sign In</span>
+                                <ArrowRight size={18} strokeWidth={2} className="group-hover:translate-x-1 transition-transform duration-300 ease-out" />
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  </form>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="register"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <h2 className="text-xl font-bold text-[var(--foreground)] mb-1">Create account</h2>
+                  <p className="text-sm text-[var(--muted)] mb-6">Join SmartBD Unlock today</p>
+
+                  <form onSubmit={handleRegister} className="space-y-4">
+                    {error && (
+                      <div className="px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+                        {error}
+                      </div>
+                    )}
+                    {success && (
+                      <div className="px-4 py-3 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 text-sm">
+                        {success}
+                      </div>
+                    )}
+
+                    {/* Name Input */}
+                    <div className="liquid-input-wrapper">
+                      <div className={`liquid-input-container ${focusedField === 'reg-name' ? 'liquid-input-focus' : ''}`}>
+                        <User size={18} className="liquid-input-icon" />
+                        <input
+                          type="text"
+                          placeholder="Full name"
+                          autoComplete="name"
+                          value={regName}
+                          onChange={e => setRegName(e.target.value)}
+                          onFocus={() => setFocusedField('reg-name')}
+                          onBlur={() => setFocusedField(null)}
+                          className="liquid-input"
+                          required
+                        />
+                        <div className="liquid-input-glow" />
+                      </div>
+                    </div>
+
+                    {/* Email Input */}
+                    <div className="liquid-input-wrapper">
+                      <div className={`liquid-input-container ${focusedField === 'reg-email' ? 'liquid-input-focus' : ''}`}>
+                        <Mail size={18} className="liquid-input-icon" />
+                        <input
+                          type="email"
+                          placeholder="Email address"
+                          autoComplete="email"
+                          value={regEmail}
+                          onChange={e => setRegEmail(e.target.value)}
+                          onFocus={() => setFocusedField('reg-email')}
+                          onBlur={() => setFocusedField(null)}
+                          className="liquid-input"
+                          required
+                        />
+                        <div className="liquid-input-glow" />
+                      </div>
+                    </div>
+
+                    {/* Phone Input */}
+                    <div className="liquid-input-wrapper">
+                      <div className={`liquid-input-container ${focusedField === 'reg-phone' ? 'liquid-input-focus' : ''}`}>
+                        <Phone size={18} className="liquid-input-icon" />
+                        <input
+                          type="tel"
+                          placeholder="Phone number (optional)"
+                          autoComplete="tel"
+                          value={regPhone}
+                          onChange={e => setRegPhone(e.target.value)}
+                          onFocus={() => setFocusedField('reg-phone')}
+                          onBlur={() => setFocusedField(null)}
+                          className="liquid-input"
+                        />
+                        <div className="liquid-input-glow" />
+                      </div>
+                    </div>
+
+                    {/* Password Input */}
+                    <div className="liquid-input-wrapper">
+                      <div className={`liquid-input-container ${focusedField === 'reg-password' ? 'liquid-input-focus' : ''}`}>
+                        <Lock size={18} className="liquid-input-icon" />
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          placeholder="Password"
+                          autoComplete="new-password"
+                          value={regPassword}
+                          onChange={e => setRegPassword(e.target.value)}
+                          onFocus={() => setFocusedField('reg-password')}
+                          onBlur={() => setFocusedField(null)}
+                          className="liquid-input"
+                          required
+                        />
+                        <button
+                          type="button"
+                          className="liquid-eye-btn"
+                          onClick={() => setShowPassword(!showPassword)}
+                        >
+                          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                        <div className="liquid-input-glow" />
+                      </div>
+                    </div>
+
+                    {/* Confirm Password Input */}
+                    <div className="liquid-input-wrapper">
+                      <div className={`liquid-input-container ${focusedField === 'reg-confirm' ? 'liquid-input-focus' : ''}`}>
+                        <Lock size={18} className="liquid-input-icon" />
+                        <input
+                          type={showConfirmPassword ? 'text' : 'password'}
+                          placeholder="Confirm password"
+                          autoComplete="new-password"
+                          value={regConfirmPassword}
+                          onChange={e => setRegConfirmPassword(e.target.value)}
+                          onFocus={() => setFocusedField('reg-confirm')}
+                          onBlur={() => setFocusedField(null)}
+                          className="liquid-input"
+                          required
+                        />
+                        <button
+                          type="button"
+                          className="liquid-eye-btn"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        >
+                          {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                        <div className="liquid-input-glow" />
+                      </div>
+                    </div>
+
+                    {/* Submit Button */}
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="liquid-submit-btn w-full relative overflow-hidden group"
+                    >
+                      <div className="liquid-submit-outer">
+                        <div className="liquid-submit-glass">
+                          <div className="liquid-submit-refraction" />
+                          <div className="liquid-submit-highlight" />
+                          <div className="liquid-submit-content">
+                            {loading ? (
+                              <div className="liquid-spinner" />
+                            ) : (
+                              <>
+                                <span>Create Account</span>
+                                <ArrowRight size={18} strokeWidth={2} className="group-hover:translate-x-1 transition-transform duration-300 ease-out" />
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  </form>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             <div className="mt-6 text-center text-sm text-[var(--muted)] relative">
-              Contact admin to create an account
+              {mode === 'login' ? (
+                <>
+                  Don&apos;t have an account?{' '}
+                  <button onClick={() => switchMode('register')} className="text-[var(--accent)] hover:underline font-medium">
+                    Sign up
+                  </button>
+                </>
+              ) : (
+                <>
+                  Already have an account?{' '}
+                  <button onClick={() => switchMode('login')} className="text-[var(--accent)] hover:underline font-medium">
+                    Sign in
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </motion.div>

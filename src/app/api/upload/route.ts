@@ -9,6 +9,10 @@ const ALLOWED_TYPES = new Set([
   'text/plain', 'text/csv',
   'application/json',
 ])
+const BLOCKED_EXTENSIONS = new Set([
+  'html', 'htm', 'svg', 'exe', 'bat', 'cmd', 'com', 'msi', 'scr',
+  'pif', 'vbs', 'js', 'ws', 'wsh', 'ps1', 'sh', 'bash',
+])
 
 export async function POST(request: Request) {
   try {
@@ -46,7 +50,11 @@ export async function POST(request: Request) {
         continue
       }
 
-      const extension = file.name.split('.').pop() || 'bin'
+      const extension = (file.name.split('.').pop() || '').toLowerCase()
+      if (BLOCKED_EXTENSIONS.has(extension)) {
+        errors.push(`${file.name}: extension not allowed for security reasons`)
+        continue
+      }
       const randomFilename = `${crypto.randomUUID()}.${extension}`
       const buffer = Buffer.from(await file.arrayBuffer())
       const base64 = buffer.toString('base64')
