@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
 
-const PREFIX = 'SBD'
+const PREFIX = 'SBU'
 const BASE = 100000
 
 async function nextSuffix(tx: { user: { findFirst: (args: unknown) => Promise<{ userId: string } | null> } }): Promise<number> {

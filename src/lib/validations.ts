@@ -7,16 +7,32 @@ export const loginSchema = z.object({
 
 export const registerSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
-  email: z.string().email('Invalid email format'),
-  phone: z.string().optional(),
+  username: z.string()
+    .min(3, 'Username must be at least 3 characters')
+    .max(20, 'Username must be at most 20 characters')
+    .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores'),
+  email: z.string().email('Invalid email format').refine(
+    (e) => e.endsWith('@gmail.com'),
+    'Only Gmail addresses are accepted'
+  ),
   password: z.string().min(8, 'Password must be at least 8 characters')
     .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
     .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
-    .regex(/[0-9]/, 'Password must contain at least one number'),
+    .regex(/[0-9]/, 'Password must contain at least one number')
+    .regex(/[^a-zA-Z0-9]/, 'Password must contain at least one special character'),
   confirmPassword: z.string(),
 }).refine(data => data.password === data.confirmPassword, {
   message: 'Passwords do not match',
   path: ['confirmPassword'],
+})
+
+export const verifyOtpSchema = z.object({
+  email: z.string().email('Invalid email format'),
+  otp: z.string().length(6, 'OTP must be 6 digits').regex(/^\d+$/, 'OTP must contain only numbers'),
+})
+
+export const resendOtpSchema = z.object({
+  email: z.string().email('Invalid email format'),
 })
 
 export const ordersQuerySchema = z.object({
@@ -102,6 +118,7 @@ export const createUserSchema = z.object({
   email: z.string().email('Invalid email format'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   name: z.string().min(1, 'Name is required'),
+  username: z.string().min(3).max(20).regex(/^[a-zA-Z0-9_]+$/).optional(),
   phone: z.string().optional(),
   role: z.enum(['admin', 'reseller']).optional().default('reseller'),
   resellerId: z.string().optional(),

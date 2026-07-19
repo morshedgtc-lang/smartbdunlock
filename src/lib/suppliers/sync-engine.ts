@@ -27,7 +27,7 @@ export async function syncProviderServices(providerId: string): Promise<SyncResu
   }
 
   const config = parseConfig(provider.config)
-  const apiUrl = config?.apiUrl || ''
+  const apiUrl = String(config?.apiUrl || '')
   const encryptedKey = provider.apiKeyEncrypted || provider.apiKey
 
   if (!apiUrl || !encryptedKey) {

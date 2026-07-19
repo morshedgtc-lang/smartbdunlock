@@ -115,12 +115,12 @@ export class GenericApiAdapter implements SupplierAdapter {
       return raw.map((s) => ({
         serviceId: String(s.id || s.serviceId || s.service_id || ''),
         name: String(s.name || s.title || s.service_name || 'Unknown'),
-        category: s.category || s.type || undefined,
+        category: String(s.category || s.type || ''),
         cost: Number(s.cost || s.price || s.supplierCost || s.supplier_cost || 0),
         currency: String(s.currency || 'USD'),
-        deliveryTime: s.deliveryTime || s.delivery_time || s.eta || undefined,
+        deliveryTime: String(s.deliveryTime || s.delivery_time || s.eta || ''),
         requiredInputs: Array.isArray(s.requiredInputs || s.required_inputs || s.fields)
-          ? (s.requiredInputs || s.required_inputs || s.fields)
+          ? ((s.requiredInputs || s.required_inputs || s.fields) as string[])
           : undefined,
         rawData: s,
       }))

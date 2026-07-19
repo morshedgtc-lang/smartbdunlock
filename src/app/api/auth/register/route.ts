@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { createSession } from '@/lib/auth'
 import { registerSchema, validateBody } from '@/lib/validations'
 import { generateUserId } from '@/lib/user-id'
+import { generateOtp, hashOtp, otpExpiryDate } from '@/lib/otp'
+import { sendOtpEmail, sendAdminApprovalNotification } from '@/lib/email'
 import { auditLog, getClientIp, getClientUserAgent } from '@/lib/audit'
 import bcrypt from 'bcryptjs'
 
@@ -17,7 +18,7 @@ export async function POST(request: Request) {
     if (!validation.success) {
       return NextResponse.json({ error: validation.error }, { status: 400 })
     }
-    const { name, email, phone, password } = validation.data
+    const { name, username, email, password } = validation.data
 
     const forwarded = request.headers.get('x-forwarded-for')
     const ip = forwarded?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || 'unknown'
@@ -27,13 +28,7 @@ export async function POST(request: Request) {
 
     if (entry && entry.count >= REGISTER_RATE_LIMIT && now < entry.resetTime) {
       const remaining = Math.ceil((entry.resetTime - now) / 1000)
-      await auditLog({
-        action: 'register.rate_limited',
-        entityType: 'auth',
-        ip: getClientIp(request),
-        userAgent: getClientUserAgent(request),
-      })
-      return NextResponse.json({ error: `Too many registration attempts. Try again in ${remaining}s` }, { status: 429 })
+      return NextResponse.json({ error: `Too many attempts. Try again in ${remaining}s` }, { status: 429 })
     }
 
     if (!entry || now > entry.resetTime) {
@@ -42,43 +37,44 @@ export async function POST(request: Request) {
       entry.count++
     }
 
-    const existingUser = await prisma.user.findUnique({ where: { email } })
-    if (existingUser) {
-      await auditLog({
-        action: 'register.duplicate_email',
-        entityType: 'auth',
-        newValues: { email },
-        ip: getClientIp(request),
-        userAgent: getClientUserAgent(request),
-      })
+    const [existingEmail, existingUsername] = await Promise.all([
+      prisma.user.findUnique({ where: { email }, select: { id: true } }),
+      prisma.user.findUnique({ where: { username }, select: { id: true } }),
+    ])
+
+    if (existingEmail) {
       return NextResponse.json({ error: 'An account with this email already exists' }, { status: 409 })
+    }
+    if (existingUsername) {
+      return NextResponse.json({ error: 'This username is already taken' }, { status: 409 })
     }
 
     const hashedPassword = await bcrypt.hash(password, 12)
     const userId = await generateUserId()
+    const otp = generateOtp()
+    const otpHashVal = await hashOtp(otp)
+    const otpExpire = otpExpiryDate()
 
     const user = await prisma.user.create({
       data: {
         userId,
         email,
+        username,
         password: hashedPassword,
         name,
-        phone: phone || null,
         role: 'reseller',
-        status: 'active',
+        status: 'pending_approval',
         walletBalance: 0,
+        emailVerified: false,
+        otpHash: otpHashVal,
+        otpExpire,
+        otpAttempts: 0,
       },
     })
 
-    registerAttempts.delete(rateKey)
+    await sendOtpEmail({ to: email, name, otp })
 
-    await createSession({
-      id: user.id,
-      userId: user.userId,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-    })
+    registerAttempts.delete(rateKey)
 
     await auditLog({
       userId: user.id,
@@ -86,19 +82,15 @@ export async function POST(request: Request) {
       action: 'register.success',
       entityType: 'auth',
       entityId: user.id,
-      newValues: { userId: user.userId, name, email, role: 'reseller' },
+      newValues: { userId: user.userId, name, email, username, role: 'reseller' },
       ip: getClientIp(request),
       userAgent: getClientUserAgent(request),
     })
 
     return NextResponse.json({
-      user: {
-        id: user.id,
-        userId: user.userId,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-      },
+      success: true,
+      message: 'Verification code sent to your email',
+      email,
     })
   } catch (error) {
     console.error('Registration error:', error)

@@ -15,7 +15,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (!provider) return NextResponse.json({ error: 'Provider not found' }, { status: 404 })
 
     const config = parseConfig(provider.config)
-    const apiUrl = config?.apiUrl || ''
+    const apiUrl = String(config?.apiUrl || '')
     const encryptedKey = provider.apiKeyEncrypted || provider.apiKey
 
     if (!apiUrl || !encryptedKey) {

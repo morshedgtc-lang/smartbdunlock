@@ -8,27 +8,34 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  userId        String    @unique // public ID, format SBD100001
-  email         String    @unique
-  password      String
-  name          String
-  role          String    @default("reseller") // admin, reseller
-  phone         String?
-  status        String    @default("active") // active, suspended, banned
-  walletBalance Float     @default(0)
-  resellerId    String?   // admin or reseller this user is assigned to
-  reseller      User?     @relation("ResellerAssignment", fields: [resellerId], references: [id])
-  clients       User[]    @relation("ResellerAssignment")
-  createdAt          DateTime          @default(now())
-  updatedAt          DateTime          @updatedAt
-  orders             Order[]
-  transactions       Transaction[]
-  logs               Log[]
-  depositRequests    DepositRequest[]
-  bulkBatches        BulkOrderBatch[]
+  id              String    @id @default(cuid())
+  userId          String    @unique // public ID, format SBU100001
+  email           String    @unique
+  username        String    @unique
+  password        String
+  name            String
+  role            String    @default("reseller") // admin, reseller
+  phone           String?
+  status          String    @default("active") // active, suspended, banned, pending_approval
+  walletBalance   Float     @default(0)
+  emailVerified   Boolean   @default(false)
+  emailVerifiedAt DateTime?
+  otpHash         String?
+  otpExpire       DateTime?
+  otpAttempts     Int       @default(0)
+  resellerId      String?
+  reseller        User?     @relation("ResellerAssignment", fields: [resellerId], references: [id])
+  clients         User[]    @relation("ResellerAssignment")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  orders          Order[]
+  transactions    Transaction[]
+  logs            Log[]
+  depositRequests DepositRequest[]
+  bulkBatches     BulkOrderBatch[]
 
   @@index([email])
+  @@index([username])
   @@index([role])
   @@index([userId])
   @@index([status])

@@ -29,7 +29,7 @@ export async function POST(request: Request) {
 
       try {
         const result = await syncProviderServices(provider.id)
-        results.push({ providerId: provider.id, name: provider.name, ...result })
+        results.push({ ...result, name: provider.name })
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : 'Unknown error'
         await logger.error(`Cron sync failed for ${provider.name}: ${errorMsg}`, { source: 'cron-sync' })

@@ -6,12 +6,12 @@ const prisma = new PrismaClient()
 async function nextPublicUserId(): Promise<string> {
   const latest = await prisma.user.findFirst({
     orderBy: { userId: 'desc' },
-    where: { userId: { startsWith: 'SBD' } },
+    where: { userId: { startsWith: 'SBU' } },
     select: { userId: true },
   })
   const base = 100000
   const numeric = latest ? parseInt(latest.userId.slice(3), 10) : base
-  return `SBD${String((Number.isFinite(numeric) ? numeric : base) + 1).padStart(6, '0')}`
+  return `SBU${String((Number.isFinite(numeric) ? numeric : base) + 1).padStart(6, '0')}`
 }
 
 async function main() {
@@ -26,11 +26,13 @@ async function main() {
     create: {
       userId: await nextPublicUserId(),
       email: 'admin@smartbdunlock.com',
+      username: 'admin',
       password: adminPassword,
       name: 'Admin',
       role: 'admin',
       status: 'active',
       walletBalance: 10000,
+      emailVerified: true,
     },
   })
 
@@ -40,12 +42,14 @@ async function main() {
     create: {
       userId: await nextPublicUserId(),
       email: 'reseller@smartbdunlock.com',
+      username: 'reseller',
       password: resellerPassword,
       name: 'Reseller',
       role: 'reseller',
       status: 'active',
       walletBalance: 5000,
       resellerId: admin.id,
+      emailVerified: true,
     },
   })
 

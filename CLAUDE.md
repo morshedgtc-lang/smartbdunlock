@@ -33,12 +33,25 @@
 - Session verified against DB on every `getSession()` call
 - Token silently refreshed if DB data changed (role, name, userId)
 - API key auth for external endpoints (SHA-256 hashed lookup)
+- Gmail-only email verification with OTP (6-digit, 10-min expiry, 5 attempts)
+- Account status: active, pending_approval, suspended, banned
+- New registrations require email OTP verification + admin approval
 
 ### Public User ID System
-- Format: `SBD100001`, `SBD100002`, etc.
+- Format: `SBU100001`, `SBU100002`, etc. (updated from SBD)
 - Generated transaction-safely in `src/lib/user-id.ts`
 - Read-only, never editable
 - Used across all dashboards for display
+
+### Email Verification (Gmail-only)
+- Registration requires Gmail address (@gmail.com)
+- 6-digit OTP sent via Gmail SMTP (`nodemailer`)
+- OTP hashed with bcrypt before storage
+- Expires after 10 minutes, max 5 attempts
+- Resend cooldown: 60 seconds
+- After email verify → account status = `pending_approval`
+- Admin must approve before user can login
+- Admin receives email notification on new registration
 
 ### Database Models (16 in Prisma)
 User, ServiceCategory, Service, ServiceCustomField, Supplier, Order, OrderNote, OrderCustomFieldValue, Transaction, Log, AuditLog, Notification, ApiKey, DepositRequest, SupplierJob, BulkOrderBatch
@@ -106,6 +119,9 @@ These tables exist in the database but are NOT in `schema.prisma`:
 ### Required Environment Variables
 - `DATABASE_URL` — PostgreSQL connection string
 - `JWT_SECRET` — JWT signing secret (NOT `NEXTAUTH_SECRET`)
+- `GMAIL_USER` — Gmail address for sending OTP emails
+- `GMAIL_APP_PASSWORD` — Gmail app password (not regular password)
+- `ADMIN_EMAIL` — Receives notifications for new registrations
 - `SUPPLIER_ENCRYPTION_KEY` — AES-256-GCM key for supplier API keys
 - `CRON_SECRET` — Bearer token for cron sync endpoint
 - `IMGBB_API_KEY` — Image upload fallback

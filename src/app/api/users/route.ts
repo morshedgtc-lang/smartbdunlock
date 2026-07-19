@@ -61,10 +61,14 @@ export async function POST(request: Request) {
     if (!validation.success) {
       return NextResponse.json({ error: validation.error }, { status: 400 })
     }
-    const { email, password, name, phone, role, resellerId } = validation.data
+    const { email, password, name, username, phone, role, resellerId } = validation.data
 
     const existing = await prisma.user.findUnique({ where: { email } })
     if (existing) return NextResponse.json({ error: 'Email already exists' }, { status: 409 })
+
+    const userUsername = username || email.split('@')[0]
+    const existingUsername = await prisma.user.findUnique({ where: { username: userUsername } })
+    if (existingUsername) return NextResponse.json({ error: 'Username already taken' }, { status: 409 })
 
     const hashedPassword = await bcrypt.hash(password, 12)
     const admin = await requireAuth()
@@ -73,11 +77,13 @@ export async function POST(request: Request) {
       data: {
         userId: publicUserId,
         email,
+        username: userUsername,
         password: hashedPassword,
         name,
         phone: phone || null,
         role: role || 'reseller',
         resellerId: resellerId || null,
+        emailVerified: true,
       },
       select: {
         id: true, email: true, name: true, role: true, status: true,

@@ -64,7 +64,7 @@ export async function POST(request: Request) {
     }
 
     const user = await prisma.user.findFirst({
-      where: { email, status: 'active' },
+      where: { email },
     })
 
     if (!user || !await bcrypt.compare(password, user.password)) {
@@ -109,6 +109,35 @@ export async function POST(request: Request) {
     loginAttempts.delete(rateKey)
     loginAttempts.delete(email)
     accountLockouts.delete(email)
+
+    if (!user.emailVerified) {
+      return NextResponse.json({
+        error: 'Please verify your email before logging in',
+        code: 'EMAIL_NOT_VERIFIED',
+        email: user.email,
+      }, { status: 403 })
+    }
+
+    if (user.status === 'pending_approval') {
+      return NextResponse.json({
+        error: 'Your account is pending admin approval',
+        code: 'PENDING_APPROVAL',
+      }, { status: 403 })
+    }
+
+    if (user.status === 'suspended') {
+      return NextResponse.json({
+        error: 'Your account has been suspended. Contact support.',
+        code: 'SUSPENDED',
+      }, { status: 403 })
+    }
+
+    if (user.status === 'banned') {
+      return NextResponse.json({
+        error: 'Your account has been banned.',
+        code: 'BANNED',
+      }, { status: 403 })
+    }
 
     await createSession({
       id: user.id,
