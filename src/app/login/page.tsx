@@ -235,7 +235,7 @@ export default function LoginPage() {
                   </div>
                   <form onSubmit={handleRegister} className="space-y-3">
                     {error && <AlertMessage type="error">{error}</AlertMessage>}
-                    <AuthInput icon={Mail} type="email" placeholder="Gmail address (@gmail.com)" value={regEmail} onChange={setRegEmail} name="reg-email" />
+                    <AuthInput icon={Mail} type="email" placeholder="Email address" value={regEmail} onChange={setRegEmail} name="reg-email" />
                     <AuthInput icon={Lock} type={showPassword ? 'text' : 'password'} placeholder="Password" value={regPassword} onChange={setRegPassword} name="reg-password"
                       right={<PasswordToggle show={showPassword} onClick={() => setShowPassword(!showPassword)} />} />
                     <AuthInput icon={Lock} type={showConfirmPassword ? 'text' : 'password'} placeholder="Confirm password" value={regConfirmPassword} onChange={setRegConfirmPassword} name="reg-confirm"

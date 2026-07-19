@@ -14,5 +14,8 @@ if ! npx prisma migrate deploy 2>&1; then
   npx prisma migrate deploy
 fi
 
+# Ensure admin email is unverified (OTP required for all users)
+node scripts/ensure-admin-unverified.js 2>&1 || true
+
 # Start the app
 next start -p $PORT
