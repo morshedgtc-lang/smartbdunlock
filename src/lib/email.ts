@@ -1,8 +1,13 @@
 import nodemailer from 'nodemailer'
 import { config } from './config'
+import dns from 'dns'
+
+dns.setDefaultResultOrder('ipv4first')
 
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true,
   auth: {
     user: process.env.GMAIL_USER,
     pass: process.env.GMAIL_APP_PASSWORD,
@@ -10,9 +15,6 @@ const transporter = nodemailer.createTransport({
   connectionTimeout: 30000,
   greetingTimeout: 10000,
   socketTimeout: 30000,
-  tls: {
-    family: 4,
-  },
 } as any)
 
 interface SendOtpEmailParams {
