@@ -2,8 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { registerSchema, validateBody } from '@/lib/validations'
 import { generateUserId } from '@/lib/user-id'
-import { generateOtp, hashOtp, otpExpiryDate } from '@/lib/otp'
-import { sendOtpEmail } from '@/lib/email'
+import { sendAdminApprovalNotification } from '@/lib/email'
 import { auditLog, getClientIp, getClientUserAgent } from '@/lib/audit'
 import bcrypt from 'bcryptjs'
 import { config } from '@/lib/config'
@@ -56,9 +55,6 @@ export async function POST(request: Request) {
     const username = await generateUniqueUsername(email.split('@')[0])
     const hashedPassword = await bcrypt.hash(password, 12)
     const userId = await generateUserId()
-    const otp = generateOtp()
-    const otpHashVal = await hashOtp(otp)
-    const otpExpire = otpExpiryDate()
 
     const user = await prisma.user.create({
       data: {
@@ -70,15 +66,18 @@ export async function POST(request: Request) {
         role: 'reseller',
         status: 'pending_approval',
         walletBalance: 0,
-        emailVerified: false,
-        otpHash: otpHashVal,
-        otpExpire,
-        otpAttempts: 0,
+        emailVerified: true,
+        emailVerifiedAt: new Date(),
       },
     })
 
-    sendOtpEmail({ to: email, name: displayName, otp }).catch(err =>
-      console.error('[EMAIL] Failed to send OTP on register:', err)
+    sendAdminApprovalNotification({
+      name: displayName,
+      email,
+      username,
+      userId,
+    }).catch(err =>
+      console.error('[EMAIL] Failed to send admin notification on register:', err)
     )
 
     registerAttempts.delete(rateKey)
@@ -96,7 +95,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: 'Verification code sent to your email',
+      message: 'Account created. Your registration is pending admin approval.',
       email,
     })
   } catch (error) {

@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Jellyfish } from '@/components/Jellyfish'
-import { Mail, Lock, Smartphone, ArrowRight, Eye, EyeOff, CheckCircle2, Clock, ShieldCheck, ArrowLeft } from 'lucide-react'
+import { Mail, Lock, Smartphone, ArrowRight, Eye, EyeOff, Clock } from 'lucide-react'
 
-type AuthMode = 'login' | 'register' | 'verify-otp' | 'pending'
+type AuthMode = 'login' | 'register' | 'pending'
 
 function AuthInput({ icon: Icon, type = 'text', placeholder, value, onChange, name, required, right }: {
   icon: React.ElementType; type?: string; placeholder: string; value: string; onChange: (v: string) => void; name: string; required?: boolean; right?: React.ReactNode
@@ -75,7 +75,6 @@ export default function LoginPage() {
   const [mode, setMode] = useState<AuthMode>('login')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
@@ -86,9 +85,6 @@ export default function LoginPage() {
   const [regEmail, setRegEmail] = useState('')
   const [regPassword, setRegPassword] = useState('')
   const [regConfirmPassword, setRegConfirmPassword] = useState('')
-  const [otpEmail, setOtpEmail] = useState('')
-  const [otpCode, setOtpCode] = useState('')
-  const [resendCountdown, setResendCountdown] = useState(0)
 
   useEffect(() => {
     const h = (e: MouseEvent) => {
@@ -100,13 +96,7 @@ export default function LoginPage() {
     return () => window.removeEventListener('mousemove', h)
   }, [])
 
-  useEffect(() => {
-    if (resendCountdown <= 0) return
-    const t = setTimeout(() => setResendCountdown(c => c - 1), 1000)
-    return () => clearTimeout(t)
-  }, [resendCountdown])
-
-  const switchMode = (m: AuthMode) => { setMode(m); setError(''); setSuccess(''); setShowPassword(false); setShowConfirmPassword(false) }
+  const switchMode = (m: AuthMode) => { setMode(m); setError(''); setShowPassword(false); setShowConfirmPassword(false) }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -114,7 +104,6 @@ export default function LoginPage() {
     const res = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: loginEmail, password: loginPassword }) })
     const data = await res.json()
     if (!res.ok) {
-      if (data.code === 'EMAIL_NOT_VERIFIED') { setOtpEmail(loginEmail); setMode('verify-otp'); setResendCountdown(60); setLoading(false); return }
       if (data.code === 'PENDING_APPROVAL') { setMode('pending'); setLoading(false); return }
       setError(data.error || 'Login failed'); setLoading(false); return
     }
@@ -126,31 +115,13 @@ export default function LoginPage() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true); setError(''); setSuccess('')
+    setLoading(true); setError('')
     if (regPassword !== regConfirmPassword) { setError('Passwords do not match'); setLoading(false); return }
     const res = await fetch('/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: regEmail, password: regPassword, confirmPassword: regConfirmPassword }) })
     const data = await res.json()
     if (!res.ok) { setError(data.error || 'Registration failed'); setLoading(false); return }
-    setOtpEmail(regEmail); setMode('verify-otp'); setResendCountdown(60); setLoading(false)
-  }
-
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true); setError('')
-    const res = await fetch('/api/auth/verify-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: otpEmail, otp: otpCode }) })
-    const data = await res.json()
-    if (!res.ok) { setError(data.error || 'Verification failed'); setLoading(false); return }
     setMode('pending'); setLoading(false)
   }
-
-  const handleResendOtp = useCallback(async () => {
-    if (resendCountdown > 0) return
-    setError(''); setSuccess('')
-    const res = await fetch('/api/auth/resend-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: otpEmail }) })
-    const data = await res.json()
-    if (!res.ok) { setError(data.error || 'Failed to resend'); return }
-    setResendCountdown(60); setSuccess('New code sent to your email')
-  }, [resendCountdown, otpEmail])
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden bg-[#070714]">
@@ -233,49 +204,6 @@ export default function LoginPage() {
                 </motion.div>
               )}
 
-              {mode === 'verify-otp' && (
-                <motion.div key="verify-otp" initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }} transition={{ duration: 0.3 }}>
-                  <div className="text-center mb-6">
-                    <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-indigo-500/15 border border-indigo-500/20 flex items-center justify-center">
-                      <ShieldCheck size={26} className="text-indigo-400" />
-                    </div>
-                    <h2 className="text-xl font-bold text-white mb-1">Verify your email</h2>
-                    <p className="text-white/30 text-sm">Enter the 6-digit code sent to</p>
-                    <p className="text-indigo-400 text-sm font-medium mt-1">{otpEmail}</p>
-                  </div>
-                  <form onSubmit={handleVerifyOtp} className="space-y-3">
-                    {error && <AlertMessage type="error">{error}</AlertMessage>}
-                    {success && <AlertMessage type="success">{success}</AlertMessage>}
-                    <div className="relative">
-                      <input type="text" placeholder="000000" maxLength={6} inputMode="numeric" pattern="[0-9]*"
-                        value={otpCode} onChange={e => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                        className="w-full bg-white/[0.04] border border-white/[0.08] rounded-2xl py-4 px-4 text-center text-2xl tracking-[0.4em] font-mono text-white placeholder:text-white/15 outline-none focus:border-indigo-500/50 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(99,102,241,0.12)] transition-all duration-300" required />
-                    </div>
-                    <div className="pt-2">
-                      <SubmitButton loading={loading} disabled={otpCode.length !== 6}>
-                        <span>Verify Email</span>
-                        <CheckCircle2 size={16} />
-                      </SubmitButton>
-                    </div>
-                    <div className="text-center pt-2">
-                      {resendCountdown > 0 ? (
-                        <p className="text-sm text-white/25 flex items-center justify-center gap-1.5">
-                          <Clock size={13} /> Resend in {resendCountdown}s
-                        </p>
-                      ) : (
-                        <button type="button" onClick={handleResendOtp} className="text-sm text-indigo-400 hover:text-indigo-300 font-medium transition-colors">
-                          Resend code
-                        </button>
-                      )}
-                    </div>
-                    <button type="button" onClick={() => { switchMode('login'); setOtpCode('') }}
-                      className="flex items-center justify-center gap-1.5 w-full text-sm text-white/25 hover:text-white/50 transition-colors pt-1">
-                      <ArrowLeft size={14} /> Back to sign in
-                    </button>
-                  </form>
-                </motion.div>
-              )}
-
               {mode === 'pending' && (
                 <motion.div key="pending" initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }} transition={{ duration: 0.3 }}>
                   <div className="text-center py-4">
@@ -284,7 +212,7 @@ export default function LoginPage() {
                     </div>
                     <h2 className="text-xl font-bold text-white mb-2">Account Pending</h2>
                     <p className="text-white/30 text-sm mb-5 leading-relaxed">
-                      Your email is verified. An admin will review and approve your account.
+                      Your account has been created. An admin will review and approve it.
                     </p>
                     <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-4 mb-5">
                       <p className="text-xs text-white/20 leading-relaxed">
