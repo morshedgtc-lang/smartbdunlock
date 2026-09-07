@@ -12,6 +12,7 @@ if ! npx prisma migrate deploy 2>&1; then
   npx prisma migrate resolve --rolled-back 20250720_add_email_verification_fields 2>/dev/null || true
   npx prisma migrate resolve --rolled-back 20250714_create_audit_log 2>/dev/null || true
   npx prisma migrate resolve --rolled-back 20260720_add_totp_mfa 2>/dev/null || true
+  npx prisma migrate resolve --rolled-back 20260907_add_reseller_api 2>/dev/null || true
   # Retry
   npx prisma migrate deploy
 fi

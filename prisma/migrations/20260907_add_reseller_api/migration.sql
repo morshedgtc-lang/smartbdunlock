@@ -1,13 +1,13 @@
 -- AlterTable
-ALTER TABLE "ApiKey" ADD COLUMN     "requestsInWindow" INTEGER NOT NULL DEFAULT 0,
-ADD COLUMN     "windowStartedAt" TIMESTAMP(3);
+ALTER TABLE "ApiKey" ADD COLUMN IF NOT EXISTS "requestsInWindow" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "ApiKey" ADD COLUMN IF NOT EXISTS "windowStartedAt" TIMESTAMP(3);
 
 -- AlterTable
-ALTER TABLE "Order" ADD COLUMN     "externalId" TEXT,
-ADD COLUMN     "source" TEXT DEFAULT 'panel';
+ALTER TABLE "Order" ADD COLUMN IF NOT EXISTS "externalId" TEXT;
+ALTER TABLE "Order" ADD COLUMN IF NOT EXISTS "source" TEXT DEFAULT 'panel';
 
 -- CreateTable
-CREATE TABLE "Webhook" (
+CREATE TABLE IF NOT EXISTS "Webhook" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "url" TEXT NOT NULL,
@@ -21,7 +21,7 @@ CREATE TABLE "Webhook" (
 );
 
 -- CreateTable
-CREATE TABLE "WebhookDelivery" (
+CREATE TABLE IF NOT EXISTS "WebhookDelivery" (
     "id" TEXT NOT NULL,
     "webhookId" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
@@ -42,7 +42,7 @@ CREATE TABLE "WebhookDelivery" (
 );
 
 -- CreateTable
-CREATE TABLE "ResellerService" (
+CREATE TABLE IF NOT EXISTS "ResellerService" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "serviceId" TEXT NOT NULL,
@@ -55,7 +55,7 @@ CREATE TABLE "ResellerService" (
 );
 
 -- CreateTable
-CREATE TABLE "ApiRequestLog" (
+CREATE TABLE IF NOT EXISTS "ApiRequestLog" (
     "id" TEXT NOT NULL,
     "requestId" TEXT NOT NULL,
     "keyId" TEXT,
@@ -73,62 +73,58 @@ CREATE TABLE "ApiRequestLog" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Webhook_userId_key" ON "Webhook"("userId");
+CREATE UNIQUE INDEX IF NOT EXISTS "Webhook_userId_key" ON "Webhook"("userId");
 
 -- CreateIndex
-CREATE INDEX "Webhook_status_idx" ON "Webhook"("status");
+CREATE INDEX IF NOT EXISTS "Webhook_status_idx" ON "Webhook"("status");
 
 -- CreateIndex
-CREATE INDEX "WebhookDelivery_status_nextAttemptAt_idx" ON "WebhookDelivery"("status", "nextAttemptAt");
+CREATE INDEX IF NOT EXISTS "WebhookDelivery_status_nextAttemptAt_idx" ON "WebhookDelivery"("status", "nextAttemptAt");
 
 -- CreateIndex
-CREATE INDEX "WebhookDelivery_webhookId_createdAt_idx" ON "WebhookDelivery"("webhookId", "createdAt");
+CREATE INDEX IF NOT EXISTS "WebhookDelivery_webhookId_createdAt_idx" ON "WebhookDelivery"("webhookId", "createdAt");
 
 -- CreateIndex
-CREATE INDEX "WebhookDelivery_userId_createdAt_idx" ON "WebhookDelivery"("userId", "createdAt");
+CREATE INDEX IF NOT EXISTS "WebhookDelivery_userId_createdAt_idx" ON "WebhookDelivery"("userId", "createdAt");
 
 -- CreateIndex
-CREATE INDEX "ResellerService_serviceId_enabled_idx" ON "ResellerService"("serviceId", "enabled");
+CREATE INDEX IF NOT EXISTS "ResellerService_serviceId_enabled_idx" ON "ResellerService"("serviceId", "enabled");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "ResellerService_userId_serviceId_key" ON "ResellerService"("userId", "serviceId");
+CREATE UNIQUE INDEX IF NOT EXISTS "ResellerService_userId_serviceId_key" ON "ResellerService"("userId", "serviceId");
 
 -- CreateIndex
-CREATE INDEX "ApiRequestLog_keyId_createdAt_idx" ON "ApiRequestLog"("keyId", "createdAt");
+CREATE INDEX IF NOT EXISTS "ApiRequestLog_keyId_createdAt_idx" ON "ApiRequestLog"("keyId", "createdAt");
 
 -- CreateIndex
-CREATE INDEX "ApiRequestLog_userId_createdAt_idx" ON "ApiRequestLog"("userId", "createdAt");
+CREATE INDEX IF NOT EXISTS "ApiRequestLog_userId_createdAt_idx" ON "ApiRequestLog"("userId", "createdAt");
 
 -- CreateIndex
-CREATE INDEX "ApiRequestLog_requestId_idx" ON "ApiRequestLog"("requestId");
+CREATE INDEX IF NOT EXISTS "ApiRequestLog_requestId_idx" ON "ApiRequestLog"("requestId");
 
 -- CreateIndex
-CREATE INDEX "ApiRequestLog_createdAt_idx" ON "ApiRequestLog"("createdAt");
+CREATE INDEX IF NOT EXISTS "ApiRequestLog_createdAt_idx" ON "ApiRequestLog"("createdAt");
 
 -- CreateIndex
-CREATE INDEX "ApiKey_keyHash_idx" ON "ApiKey"("keyHash");
+CREATE INDEX IF NOT EXISTS "Order_externalId_idx" ON "Order"("externalId");
 
 -- CreateIndex
-CREATE INDEX "Order_externalId_idx" ON "Order"("externalId");
+CREATE UNIQUE INDEX IF NOT EXISTS "Order_userId_externalId_key" ON "Order"("userId", "externalId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Order_userId_externalId_key" ON "Order"("userId", "externalId");
-
--- CreateIndex
-CREATE INDEX "User_userId_idx" ON "User"("userId");
+CREATE INDEX IF NOT EXISTS "User_userId_idx" ON "User"("userId");
 
 -- AddForeignKey
-ALTER TABLE "Webhook" ADD CONSTRAINT "Webhook_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='Webhook_userId_fkey') THEN ALTER TABLE "Webhook" ADD CONSTRAINT "Webhook_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE; END IF; END $$;
 
 -- AddForeignKey
-ALTER TABLE "WebhookDelivery" ADD CONSTRAINT "WebhookDelivery_webhookId_fkey" FOREIGN KEY ("webhookId") REFERENCES "Webhook"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='WebhookDelivery_webhookId_fkey') THEN ALTER TABLE "WebhookDelivery" ADD CONSTRAINT "WebhookDelivery_webhookId_fkey" FOREIGN KEY ("webhookId") REFERENCES "Webhook"("id") ON DELETE CASCADE ON UPDATE CASCADE; END IF; END $$;
 
 -- AddForeignKey
-ALTER TABLE "ResellerService" ADD CONSTRAINT "ResellerService_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='ResellerService_userId_fkey') THEN ALTER TABLE "ResellerService" ADD CONSTRAINT "ResellerService_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE; END IF; END $$;
 
 -- AddForeignKey
-ALTER TABLE "ResellerService" ADD CONSTRAINT "ResellerService_serviceId_fkey" FOREIGN KEY ("serviceId") REFERENCES "Service"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='ResellerService_serviceId_fkey') THEN ALTER TABLE "ResellerService" ADD CONSTRAINT "ResellerService_serviceId_fkey" FOREIGN KEY ("serviceId") REFERENCES "Service"("id") ON DELETE CASCADE ON UPDATE CASCADE; END IF; END $$;
 
 -- RenameIndex
-ALTER INDEX "ApiKey_keyHash_idx" RENAME TO "ApiKey_keyHash_key";
-
+ALTER INDEX IF EXISTS "ApiKey_keyHash_idx" RENAME TO "ApiKey_keyHash_key";
