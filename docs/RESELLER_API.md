@@ -9,8 +9,10 @@ The Reseller API lets you create orders, track status, list services, and read y
 Send your key as a Bearer token on every request:
 
 ```
-Authorization: Bearer sb_xxxxxxxxxxxxxxxx
+Authorization: Bearer ABCD-EFGH-JKLM-NPQR-STUV-WXYZ-2345-6789
 ```
+
+Key format: 8 groups of 3 characters, alphabet `A-Z` + `2-9`, excluding `0,O,1,I` to avoid typo confusion. Only the key owner can see the full key — it is stored encrypted and shown once on creation. It can be re-revealed or rotated at any time from the **API Settings** page (dashboard → reseller → API Settings).
 
 Key features:
 
@@ -18,6 +20,8 @@ Key features:
 - **Rate limiting** — per-key request limit applies per minute. The current window counter resets automatically. Exceeding it returns `429 rate_limited`.
 - **Account status** — orders cannot be placed while the account is suspended (`403 forbidden`).
 - **Deterministic pricing** — the price you see in `GET /services` is the price you are charged. If the admin configured per-reseller overrides, only enabled overrides are purchasable.
+- **Key management** — a key can be surfaced (revealed) or invalidated and replaced (rotated) self-service. Key status is admin-controlled.
+- **Self-service webhooks** — manage your endpoint URL, subscribed events, signing secret, and test pings from the API Settings page without contacting admin.
 
 ## Envelope
 

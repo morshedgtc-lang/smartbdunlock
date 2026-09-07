@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { Header } from '@/components/layout/Header'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GlassButton } from '@/components/ui/GlassButton'
@@ -162,6 +163,30 @@ export default function ApiDocsPage() {
               <li>All error responses share one shape: <code className="bg-white/5 px-1.5 py-0.5 rounded">{'{ success: false, error: { code, message } }'}</code></li>
               <li>Order status changes are pushed to your webhook endpoint (HMAC-signed).</li>
             </ul>
+          </div>
+        </GlassCard>
+
+        <GlassCard>
+          <h3 className="font-semibold text-[var(--foreground)] mb-3">Authentication, Key Format & Key Management</h3>
+          <div className="space-y-2 text-sm text-[var(--muted)] leading-relaxed">
+            <p>
+              Keys use the format <code className="bg-white/5 px-1.5 py-0.5 rounded">ABCD-EFGH-JKLM-NPQR-STUV-WXYZ-2345-6789</code> (8 groups
+              of 3 characters, alphabet <code className="bg-white/5 px-1.5 py-0.5 rounded">A-Z</code> + <code className="bg-white/5 px-1.5 py-0.5 rounded">2-9</code>,
+              excluding <code className="bg-white/5 px-1.5 py-0.5 rounded">0,O,1,I</code> to avoid typo confusion). Only <strong className="text-[var(--foreground)]">you</strong> can see the
+              full key &mdash; it is stored encrypted and shown once on creation, and can be re-revealed from{' '}
+              <Link href="/reseller/api-settings" className="text-[var(--accent)] hover:underline">API Settings</Link>.
+            </p>
+            <ul className="list-disc list-inside space-y-1">
+              <li><strong className="text-[var(--foreground)]">Reveal</strong> — re-view any of your active keys at any time (no expiry).</li>
+              <li><strong className="text-[var(--foreground)]">Rotate</strong> — invalidates the current key immediately and issues a fresh one of the same name/permissions. Use it if a key leaks.</li>
+              <li>Key status (active <span className="text-emerald-500">•</span> suspended <span className="text-red-500">•</span> revoked) is set by your platform admin.</li>
+              <li>Suspended or revoked keys return <code className="bg-white/5 px-1.5 py-0.5 rounded">403 forbidden / unauthorized</code> on every endpoint.</li>
+            </ul>
+            <p className="pt-1 border-t border-[var(--card-border)]">
+              Webhooks are now <strong className="text-[var(--foreground)]">self-service</strong>: from{' '}
+              <Link href="/reseller/api-settings" className="text-[var(--accent)] hover:underline">API Settings</Link> you can set the endpoint URL,
+              subscribe to specific events, generate or rotate the signing secret, disable deliveries, and send a test ping &mdash; all without contacting admin.
+            </p>
           </div>
         </GlassCard>
 

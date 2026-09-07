@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { ensureCsrf, readCsrfFromCookie } from '@/lib/csrf-client'
 
 interface UseApiOptions<T> {
   url: string
@@ -58,6 +59,12 @@ export function useApi<T = Record<string, unknown>>({ url, method = 'GET', body,
           method,
           headers: { 'Content-Type': 'application/json' },
           credentials: 'same-origin',
+        }
+        if (method !== 'GET') {
+          const csrf = readCsrfFromCookie() || (await ensureCsrf())
+          if (csrf) {
+            ;(opts.headers as Record<string, string>)['X-CSRF-Token'] = csrf
+          }
         }
         if (bodyKey && method !== 'GET') {
           opts.body = bodyKey

@@ -1,19 +1,9 @@
-import { NextResponse } from 'next/server'
+﻿import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/auth'
 import { auditLog, getClientIp, getClientUserAgent } from '@/lib/audit'
-
-async function hashKey(key: string): Promise<string> {
-  const data = new TextEncoder().encode(key)
-  const hash = await crypto.subtle.digest('SHA-256', data)
-  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('')
-}
-
-function generateKey(): string {
-  const raw = crypto.randomUUID().replace(/-/g, '')
-  const hex = crypto.getRandomValues(new Uint8Array(16)).reduce((s, b) => s + b.toString(16).padStart(2, '0'), '')
-  return `sbdu_${raw}${hex}`
-}
+import { encryptApiKey } from '@/lib/crypto'
+import { generateApiKey, hashApiKey, keyPrefixFor } from '@/lib/api-key'
 
 export async function GET() {
   try {
@@ -89,15 +79,17 @@ export async function POST(request: Request) {
       ownerUserId = owner.id
     }
 
-    const plainKey = generateKey()
-    const keyHash = await hashKey(plainKey)
-    const keyPrefix = `sbdu_${plainKey.slice(5, 9)}****`
+    const plainKey = generateApiKey()
+    const keyHash = hashApiKey(plainKey)
+    const keyPrefix = keyPrefixFor(plainKey)
+    const keyEncrypted = encryptApiKey(plainKey)
 
     const apiKey = await prisma.apiKey.create({
       data: {
         name,
         keyHash,
         keyPrefix,
+        keyEncrypted,
         userId: ownerUserId,
         permissions: permissions || 'read',
         requestLimit: requestLimit || 100,
@@ -157,14 +149,15 @@ export async function PATCH(request: Request) {
       if (!existing) return NextResponse.json({ error: 'API key not found' }, { status: 404 })
       if (existing.status !== 'active') return NextResponse.json({ error: 'Can only regenerate active keys' }, { status: 400 })
 
-      const plainKey = generateKey()
-      const keyHash = await hashKey(plainKey)
-      const keyPrefix = `sbdu_${plainKey.slice(5, 9)}****`
+      const plainKey = generateApiKey()
+      const keyHash = hashApiKey(plainKey)
+      const keyPrefix = keyPrefixFor(plainKey)
+      const keyEncrypted = encryptApiKey(plainKey)
 
       const before = await prisma.apiKey.findUnique({ where: { id }, select: { name: true, keyPrefix: true } })
       const apiKey = await prisma.apiKey.update({
         where: { id },
-        data: { keyHash, keyPrefix, totalRequests: 0 },
+        data: { keyHash, keyPrefix, keyEncrypted, totalRequests: 0 },
       })
 
       await auditLog({

@@ -279,7 +279,8 @@ model ApiKey {
   id               String    @id @default(cuid())
   name             String
   keyHash          String    @unique // SHA-256 hash of the API key
-  keyPrefix        String // first 8 chars for display (e.g., "sbdu_****")
+  keyPrefix        String // masked prefix for display (e.g., "XXXX-XXXX-****")
+  keyEncrypted     String? // AES-256-GCM encrypted copy, enables later reveal
   userId           String // owner (admin or client)
   status           String    @default("active") // active, revoked, disabled
   permissions      String    @default("read") // read, write, admin
