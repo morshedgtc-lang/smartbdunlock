@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
 import { auditLog, getClientIp, getClientUserAgent } from '@/lib/audit'
+import { enqueueWebhookEvent, statusToWebhookEvent } from '@/lib/webhooks'
 
 interface BulkBody {
   ids: string[]
@@ -63,6 +64,11 @@ export async function POST(request: Request) {
               content: `Status changed from "${o.status}" to "${body.status}" (bulk)`,
               visible: true,
             },
+          })
+          await enqueueWebhookEvent({
+            userId: o.userId,
+            event: statusToWebhookEvent(body.status!),
+            orderId: o.id,
           })
           if (body.status === 'completed' && o.status !== 'completed' && o.supplierId) {
             await tx.supplier.update({

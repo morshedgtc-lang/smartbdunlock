@@ -24,6 +24,24 @@ interface ApiKey {
   lastUsedAt: string | null
   expiresAt: string | null
   createdAt: string
+  owner: KeyOwner | null
+}
+
+interface KeyOwner {
+  id: string
+  userId: string
+  email: string
+  name: string
+  role: string
+}
+
+interface Reseller {
+  id: string
+  userId: string
+  email: string
+  name: string
+  role: string
+  status: string
 }
 
 export default function ApiKeysPage() {
@@ -34,11 +52,14 @@ export default function ApiKeysPage() {
   const [selectedKey, setSelectedKey] = useState<ApiKey | null>(null)
   const [newKey, setNewKey] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
-  const [form, setForm] = useState({ name: '', permissions: 'read', requestLimit: 100 })
+  const [form, setForm] = useState({ name: '', permissions: 'read', requestLimit: 100, userId: '' })
   const [saving, setSaving] = useState(false)
   const { toast } = useToast()
   const { data, loading, error, refetch } = useApi<{ apiKeys: ApiKey[] }>({ url: '/api/api-keys' })
   const apiKeys = data?.apiKeys || []
+
+  const { data: resellersData } = useApi<{ users: Reseller[] }>({ url: '/api/users?role=reseller&limit=1000' })
+  const resellers = resellersData?.users || []
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -47,12 +68,12 @@ export default function ApiKeysPage() {
       const res = await fetch('/api/api-keys', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, userId: form.userId || undefined }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setNewKey(data.key)
-      setForm({ name: '', permissions: 'read', requestLimit: 100 })
+      setForm({ name: '', permissions: 'read', requestLimit: 100, userId: '' })
       toast('success', 'API key generated — copy it now, it won\'t be shown again')
       refetch()
     } catch (err: unknown) {
@@ -200,6 +221,16 @@ export default function ApiKeysPage() {
                   value={form.permissions}
                   onChange={(v) => setForm({ ...form, permissions: v })}
                 />
+                <GlassDropdown
+                  options={[
+                    { value: '', label: 'Platform (Admin)' },
+                    ...resellers.map(u => ({ value: u.id, label: `${u.name} ${u.email ? `· ${u.email}` : ''}` })),
+                  ]}
+                  value={form.userId || ''}
+                  onChange={(v) => setForm({ ...form, userId: v })}
+                  disabled={resellers.length === 0}
+                />
+                <p className="text-xs text-[var(--muted)]">Orders placed with this key are charged to the selected reseller&apos;s wallet.</p>
                 <input className="glass-input w-full" type="number" placeholder="Request limit (per minute)" value={form.requestLimit} onChange={e => setForm({ ...form, requestLimit: parseInt(e.target.value) || 100 })} min={1} max={10000} />
                 <div className="flex gap-3 pt-2">
                   <GlassButton type="button" variant="secondary" className="flex-1" onClick={() => setShowModal(false)}>Cancel</GlassButton>
@@ -249,6 +280,7 @@ export default function ApiKeysPage() {
               <thead>
                 <tr className="border-b border-[var(--card-border)]">
                   <th className="text-left py-4 px-4 text-[var(--muted)] font-medium">Name</th>
+                  <th className="text-left py-4 px-4 text-[var(--muted)] font-medium">Owner</th>
                   <th className="text-left py-4 px-4 text-[var(--muted)] font-medium">Key Prefix</th>
                   <th className="text-left py-4 px-4 text-[var(--muted)] font-medium">Status</th>
                   <th className="text-left py-4 px-4 text-[var(--muted)] font-medium">Permissions</th>
@@ -262,7 +294,7 @@ export default function ApiKeysPage() {
               <tbody>
                 {apiKeys.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="py-12 text-center">
+                    <td colSpan={10} className="py-12 text-center">
                       <Key size={40} className="mx-auto text-[var(--muted)] mb-3 opacity-50" />
                       <p className="text-[var(--muted)]">No API keys yet</p>
                     </td>
@@ -272,6 +304,18 @@ export default function ApiKeysPage() {
                     <motion.tr key={key.id} className="border-b border-[var(--card-border)] hover:bg-white/5 dark:hover:bg-white/5 transition-colors" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.03 }}>
                       <td className="py-3 px-4">
                         <p className="font-medium text-[var(--foreground)]">{key.name}</p>
+                      </td>
+                      <td className="py-3 px-4">
+                        {key.owner ? (
+                          <div className="min-w-0">
+                            <p className="text-sm text-[var(--foreground)] truncate font-medium">{key.owner.name}</p>
+                            <p className="text-xs text-[var(--muted)] truncate">
+                              {key.owner.role === 'admin' ? 'Platform Admin' : key.owner.email}
+                            </p>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-[var(--muted)]">Admin (Platform)</span>
+                        )}
                       </td>
                       <td className="py-3 px-4">
                         <code className="text-xs text-[var(--muted)] bg-white/5 px-2 py-1 rounded">{key.keyPrefix}</code>

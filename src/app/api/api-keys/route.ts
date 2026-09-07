@@ -34,7 +34,19 @@ export async function GET() {
         createdAt: true,
       },
     })
-    return NextResponse.json({ apiKeys })
+
+    const ownerIds = [...new Set(apiKeys.map(k => k.userId))]
+    const owners = ownerIds.length
+      ? await prisma.user.findMany({
+          where: { id: { in: ownerIds } },
+          select: { id: true, userId: true, email: true, name: true, role: true },
+        })
+      : []
+    const ownerMap = new Map(owners.map(o => [o.id, o]))
+
+    return NextResponse.json({
+      apiKeys: apiKeys.map(k => ({ ...k, owner: ownerMap.get(k.userId) ?? null })),
+    })
   } catch (error: unknown) {
     if (error instanceof Error && error.message === 'Unauthorized') return NextResponse.json({ error: error.message }, { status: 401 })
     if (error instanceof Error && error.message === 'Forbidden') return NextResponse.json({ error: error.message }, { status: 403 })
@@ -47,15 +59,34 @@ export async function POST(request: Request) {
   try {
     const admin = await requireAdmin()
     const body = await request.json()
-    const { name, permissions, requestLimit, expiresAt } = body as {
+    const { name, permissions, requestLimit, expiresAt, userId: ownerId } = body as {
       name?: string
       permissions?: string
       requestLimit?: number
       expiresAt?: string
+      userId?: string
     }
 
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
+    }
+
+    let ownerUserId = admin.id
+    if (ownerId) {
+      const owner = await prisma.user.findUnique({
+        where: { id: ownerId },
+        select: { id: true, role: true, status: true },
+      })
+      if (!owner) {
+        return NextResponse.json({ error: 'Reseller not found' }, { status: 404 })
+      }
+      if (owner.role !== 'reseller') {
+        return NextResponse.json({ error: 'Key owner must be a reseller' }, { status: 400 })
+      }
+      if (owner.status !== 'active') {
+        return NextResponse.json({ error: 'Reseller account is not active' }, { status: 400 })
+      }
+      ownerUserId = owner.id
     }
 
     const plainKey = generateKey()
@@ -67,7 +98,7 @@ export async function POST(request: Request) {
         name,
         keyHash,
         keyPrefix,
-        userId: admin.id,
+        userId: ownerUserId,
         permissions: permissions || 'read',
         requestLimit: requestLimit || 100,
         expiresAt: expiresAt ? new Date(expiresAt) : null,
@@ -89,7 +120,7 @@ export async function POST(request: Request) {
       action: 'api_key.create',
       entityType: 'api_key',
       entityId: apiKey.id,
-      newValues: { name, permissions: apiKey.permissions, requestLimit: apiKey.requestLimit },
+      newValues: { name, permissions: apiKey.permissions, requestLimit: apiKey.requestLimit, ownerUserId },
       ip: getClientIp(request),
       userAgent: getClientUserAgent(request),
     })

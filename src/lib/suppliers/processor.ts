@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { getAdapter } from './router'
 import { createNotification } from '@/lib/notifications'
 import { auditLog } from '@/lib/audit'
+import { enqueueWebhookEvent } from '@/lib/webhooks'
 
 export async function createSupplierJob(params: {
   orderId: string
@@ -61,6 +62,12 @@ export async function submitToSupplier(jobId: string) {
       await prisma.order.update({
         where: { id: job.orderId },
         data: { status: 'processing' },
+      })
+
+      await enqueueWebhookEvent({
+        userId: job.order.userId,
+        event: 'order.processing',
+        orderId: job.orderId,
       })
 
       await auditLog({
@@ -147,6 +154,12 @@ export async function processJob(jobId: string) {
         entityType: 'supplier_job',
         entityId: jobId,
         newValues: { orderId: job.orderId, externalOrderId: job.externalOrderId },
+      })
+
+      await enqueueWebhookEvent({
+        userId: job.order.userId,
+        event: 'order.completed',
+        orderId: job.orderId,
       })
 
       return status

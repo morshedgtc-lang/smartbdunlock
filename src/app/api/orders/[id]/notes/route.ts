@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
 import { auditLog, getClientIp, getClientUserAgent } from '@/lib/audit'
 import { validateBody } from '@/lib/validations'
+import { enqueueWebhookEvent } from '@/lib/webhooks'
 import { z } from 'zod'
 
 const createNoteSchema = z.object({
@@ -87,6 +88,14 @@ export async function POST(
       ip: getClientIp(request),
       userAgent: getClientUserAgent(request),
     })
+
+    if (user.role === 'admin' && noteVisible) {
+      await enqueueWebhookEvent({
+        userId: order.userId,
+        event: 'order.replied',
+        orderId,
+      })
+    }
 
     return NextResponse.json(note, { status: 201 })
   } catch (error: unknown) {

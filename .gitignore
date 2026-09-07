@@ -54,5 +54,8 @@ deploy.zip
 *.zip
 public_html/
 
+# database backups
+/backups/
+
 /src/generated/prisma
 start-dev.sh

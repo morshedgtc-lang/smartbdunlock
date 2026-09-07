@@ -8,34 +8,36 @@ datasource db {
 }
 
 model User {
-  id              String    @id @default(cuid())
-  userId          String    @unique // public ID, format SBU100001
-  email           String    @unique
-  username        String?   @unique
-  password        String
-  name            String
-  role            String    @default("reseller") // admin, reseller
-  phone           String?
-  status          String    @default("active") // active, suspended, banned, pending_approval
-  walletBalance   Float     @default(0)
-  emailVerified   Boolean   @default(false)
-  emailVerifiedAt DateTime?
-  otpHash         String?
-  otpExpire       DateTime?
-  otpAttempts     Int       @default(0)
-  totpSecret      String?   // encrypted TOTP secret (AES-256-GCM)
-  totpEnabled     Boolean   @default(false)
-  backupCodes     String?   // JSON array of bcrypt-hashed backup codes
-  resellerId      String?
-  reseller        User?     @relation("ResellerAssignment", fields: [resellerId], references: [id])
-  clients         User[]    @relation("ResellerAssignment")
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  orders          Order[]
-  transactions    Transaction[]
-  logs            Log[]
-  depositRequests DepositRequest[]
-  bulkBatches     BulkOrderBatch[]
+  id               String            @id @default(cuid())
+  userId           String            @unique // public ID, format SBU100001
+  email            String            @unique
+  username         String?           @unique
+  password         String
+  name             String
+  role             String            @default("reseller") // admin, reseller
+  phone            String?
+  status           String            @default("active") // active, suspended, banned, pending_approval
+  walletBalance    Float             @default(0)
+  emailVerified    Boolean           @default(false)
+  emailVerifiedAt  DateTime?
+  otpHash          String?
+  otpExpire        DateTime?
+  otpAttempts      Int               @default(0)
+  totpSecret       String? // encrypted TOTP secret (AES-256-GCM)
+  totpEnabled      Boolean           @default(false)
+  backupCodes      String? // JSON array of bcrypt-hashed backup codes
+  resellerId       String?
+  reseller         User?             @relation("ResellerAssignment", fields: [resellerId], references: [id])
+  clients          User[]            @relation("ResellerAssignment")
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  orders           Order[]
+  transactions     Transaction[]
+  logs             Log[]
+  depositRequests  DepositRequest[]
+  bulkBatches      BulkOrderBatch[]
+  webhook          Webhook?
+  resellerServices ResellerService[]
 
   @@index([email])
   @@index([username])
@@ -53,164 +55,169 @@ model ServiceCategory {
 }
 
 model Service {
-  id                String              @id @default(cuid())
-  name              String
-  description       String?
-  type              String              @default("unlock") // unlock, flash, repair, imei (kept for backward compat)
-  cost              Float               @default(0)
-  sellingPrice      Float               @default(0)
-  processingTime    String?
-  status            String              @default("active") // active, inactive
-  clientVisible     Boolean             @default(true)
-  categoryId        String?
-  category          ServiceCategory?    @relation(fields: [categoryId], references: [id])
-  supplierId        String?
-  supplier          Supplier?           @relation(fields: [supplierId], references: [id])
-  supplierService   SupplierService?    // back-ref: set via SupplierService.websiteServiceId
-  profitType        String              @default("fixed") // fixed, percentage
-  profitValue       Float               @default(0)       // fixed amount or percentage value
-  orders            Order[]
-  customFields      ServiceCustomField[]
-  bulkBatches       BulkOrderBatch[]
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
+  id              String               @id @default(cuid())
+  name            String
+  description     String?
+  type            String               @default("unlock") // unlock, flash, repair, imei (kept for backward compat)
+  cost            Float                @default(0)
+  sellingPrice    Float                @default(0)
+  processingTime  String?
+  status          String               @default("active") // active, inactive
+  clientVisible   Boolean              @default(true)
+  categoryId      String?
+  category        ServiceCategory?     @relation(fields: [categoryId], references: [id])
+  supplierId      String?
+  supplier        Supplier?            @relation(fields: [supplierId], references: [id])
+  supplierService SupplierService? // back-ref: set via SupplierService.websiteServiceId
+  profitType      String               @default("fixed") // fixed, percentage
+  profitValue     Float                @default(0) // fixed amount or percentage value
+  orders          Order[]
+  customFields    ServiceCustomField[]
+  bulkBatches     BulkOrderBatch[]
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  resellerServices ResellerService[]
 
   @@index([supplierId, status])
   @@index([status])
 }
 
 model ServiceCustomField {
-  id              String   @id @default(cuid())
+  id              String                  @id @default(cuid())
   serviceId       String
-  service         Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  fieldType       String   // text, textarea, number, select, multiselect, checkbox, file, image, imei_single, imei_multi, serial_single, serial_multi
+  service         Service                 @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  fieldType       String // text, textarea, number, select, multiselect, checkbox, file, image, imei_single, imei_multi, serial_single, serial_multi
   label           String
   placeholder     String?
-  options         String?  // JSON array for select/multiselect: ["Option 1","Option 2"]
-  required        Boolean  @default(false)
-  visibleToClient Boolean  @default(true)
-  previewImage    Boolean  @default(true)  // Show thumbnail preview in order details (file/image types only)
-  order           Int      @default(0)
+  options         String? // JSON array for select/multiselect: ["Option 1","Option 2"]
+  required        Boolean                 @default(false)
+  visibleToClient Boolean                 @default(true)
+  previewImage    Boolean                 @default(true) // Show thumbnail preview in order details (file/image types only)
+  order           Int                     @default(0)
   customValues    OrderCustomFieldValue[]
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
 }
 
 model Supplier {
-  id              String    @id @default(cuid())
-  name            String
-  email           String?
-  phone           String?
-  website         String?
-  type            String    // api, manual, reseller
-  status          String    @default("active") // active, inactive
-  successRate     Float     @default(100)
-  totalOrders     Int       @default(0)
-  priority        Int       @default(1) // 1=highest
-  apiKey          String?
-  apiKeyEncrypted String?   // AES-256-GCM encrypted API key
-  ipAddress       String?   // supplier IP whitelist info
-  syncInterval    Int?      @default(10) // sync interval in minutes
-  lastSyncAt      DateTime?
-  config          String?   // JSON config for supplier
-  services        Service[]
-  orders          Order[]
-  supplierJobs    SupplierJob[]
+  id               String            @id @default(cuid())
+  name             String
+  email            String?
+  phone            String?
+  website          String?
+  type             String // api, manual, reseller
+  status           String            @default("active") // active, inactive
+  successRate      Float             @default(100)
+  totalOrders      Int               @default(0)
+  priority         Int               @default(1) // 1=highest
+  apiKey           String?
+  apiKeyEncrypted  String? // AES-256-GCM encrypted API key
+  ipAddress        String? // supplier IP whitelist info
+  syncInterval     Int?              @default(10) // sync interval in minutes
+  lastSyncAt       DateTime?
+  config           String? // JSON config for supplier
+  services         Service[]
+  orders           Order[]
+  supplierJobs     SupplierJob[]
   supplierServices SupplierService[]
   syncHistories    SyncHistory[]
   apiLogs          SupplierApiLog[]
   pricingRules     PricingRule[]
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 }
 
 model Order {
-  id            String                 @id @default(cuid())
-  orderNumber   String                 @unique
+  id            String                  @id @default(cuid())
+  orderNumber   String                  @unique
   userId        String
   serviceId     String
   supplierId    String?
   imei          String?
   deviceInfo    String?
-  status        String                 @default("pending") // pending, processing, completed, failed, cancelled, rejected, refunded
-  priority      String                 @default("normal")  // low, normal, high, urgent
-  assignedTo    String?                // admin user ID this order is assigned to
+  status        String                  @default("pending") // pending, processing, completed, failed, cancelled, rejected, refunded
+  priority      String                  @default("normal") // low, normal, high, urgent
+  assignedTo    String? // admin user ID this order is assigned to
   cost          Float
   sellingPrice  Float
-  profit        Float                  @default(0)
-  notes         String?                // client-visible notes
-  internalNotes String?                // admin-only internal notes
-  result        String?                // JSON result from supplier
+  profit        Float                   @default(0)
+  notes         String? // client-visible notes
+  internalNotes String? // admin-only internal notes
+  result        String? // JSON result from supplier
   completedAt   DateTime?
-  user          User                   @relation(fields: [userId], references: [id])
-  service       Service                @relation(fields: [serviceId], references: [id])
-  supplier      Supplier?              @relation(fields: [supplierId], references: [id])
+  externalId    String? // reseller's unique order reference (idempotency key)
+  source        String?                 @default("panel") // panel, api
+  user          User                    @relation(fields: [userId], references: [id])
+  service       Service                 @relation(fields: [serviceId], references: [id])
+  supplier      Supplier?               @relation(fields: [supplierId], references: [id])
   transactions  Transaction[]
   customValues  OrderCustomFieldValue[]
   attachments   OrderAttachment[]
   orderNotes    OrderNote[]
   supplierJobs  SupplierJob[]
-  createdAt     DateTime               @default(now())
-  updatedAt     DateTime               @updatedAt
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
 
+  @@unique([userId, externalId])
   @@index([userId, status, createdAt])
   @@index([status])
   @@index([assignedTo])
   @@index([priority])
+  @@index([externalId])
 }
 
 model OrderNote {
-  id        String   @id @default(cuid())
-  orderId   String
-  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  authorId  String
+  id         String   @id @default(cuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  authorId   String
   authorName String
-  content   String
-  visible   Boolean  @default(true) // true = client can see, false = internal only
-  createdAt DateTime @default(now())
+  content    String
+  visible    Boolean  @default(true) // true = client can see, false = internal only
+  createdAt  DateTime @default(now())
 
   @@index([orderId])
   @@index([authorId])
 }
 
 model OrderCustomFieldValue {
-  id             String            @id @default(cuid())
-  orderId        String
-  order          Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  customFieldId  String
-  customField    ServiceCustomField @relation(fields: [customFieldId], references: [id])
-  value          String            // text value, or JSON for multi-select/files
-  createdAt      DateTime          @default(now())
+  id            String             @id @default(cuid())
+  orderId       String
+  order         Order              @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  customFieldId String
+  customField   ServiceCustomField @relation(fields: [customFieldId], references: [id])
+  value         String // text value, or JSON for multi-select/files
+  createdAt     DateTime           @default(now())
 }
 
 model OrderAttachment {
-  id        String   @id @default(cuid())
-  orderId   String
-  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  fileName  String
-  fileUrl   String
-  fileType  String?  // mime type, e.g. image/png
-  fileSize  Int?     // bytes
+  id             String   @id @default(cuid())
+  orderId        String
+  order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  fileName       String
+  fileUrl        String
+  fileType       String? // mime type, e.g. image/png
+  fileSize       Int? // bytes
   uploadedById   String?
   uploadedByName String?
-  createdAt DateTime @default(now())
+  createdAt      DateTime @default(now())
 
   @@index([orderId])
 }
 
 model Transaction {
-  id            String   @id @default(cuid())
-  userId        String
-  orderId       String?
-  type          String   // deposit, withdraw, transfer, order_payment, order_refund
-  amount        Float
-  balanceAfter  Float
-  description   String?
-  status        String   @default("completed") // pending, completed, failed
-  reference     String?  // external reference
-  user          User     @relation(fields: [userId], references: [id])
-  order         Order?   @relation(fields: [orderId], references: [id])
-  createdAt     DateTime @default(now())
+  id           String   @id @default(cuid())
+  userId       String
+  orderId      String?
+  type         String // deposit, withdraw, transfer, order_payment, order_refund
+  amount       Float
+  balanceAfter Float
+  description  String?
+  status       String   @default("completed") // pending, completed, failed
+  reference    String? // external reference
+  user         User     @relation(fields: [userId], references: [id])
+  order        Order?   @relation(fields: [orderId], references: [id])
+  createdAt    DateTime @default(now())
 
   @@index([userId, type, createdAt])
   @@index([createdAt])
@@ -218,10 +225,10 @@ model Transaction {
 
 model Log {
   id        String   @id @default(cuid())
-  level     String   // info, warn, error, debug
+  level     String // info, warn, error, debug
   message   String
-  source    String?  // e.g., "auth", "order", "system"
-  details   String?  // JSON stringified extra data
+  source    String? // e.g., "auth", "order", "system"
+  details   String? // JSON stringified extra data
   userId    String?
   user      User?    @relation(fields: [userId], references: [id])
   ip        String?
@@ -236,13 +243,13 @@ model AuditLog {
   id          String   @id @default(cuid())
   userId      String?
   userEmail   String?
-  action      String   // e.g., "user.create", "order.update", "login.success"
-  entityType  String   // e.g., "user", "order", "service"
+  action      String // e.g., "user.create", "order.update", "login.success"
+  entityType  String // e.g., "user", "order", "service"
   entityId    String?
-  description String?  // human-readable description
-  module      String?  // e.g., "auth", "users", "services", "orders", "wallet", "security"
-  oldValues   String?  // JSON stringified
-  newValues   String?  // JSON stringified
+  description String? // human-readable description
+  module      String? // e.g., "auth", "users", "services", "orders", "wallet", "security"
+  oldValues   String? // JSON stringified
+  newValues   String? // JSON stringified
   ip          String?
   userAgent   String?
   createdAt   DateTime @default(now())
@@ -261,7 +268,7 @@ model Notification {
   message   String
   type      String   @default("info") // info, success, warning, error
   read      Boolean  @default(false)
-  link      String?  // optional link to navigate to
+  link      String? // optional link to navigate to
   createdAt DateTime @default(now())
 
   @@index([userId, read])
@@ -269,38 +276,40 @@ model Notification {
 }
 
 model ApiKey {
-  id            String    @id @default(cuid())
-  name          String
-  keyHash       String    @unique // SHA-256 hash of the API key
-  keyPrefix     String    // first 8 chars for display (e.g., "sbdu_****")
-  userId        String    // owner (admin or client)
-  status        String    @default("active") // active, revoked, disabled
-  permissions   String    @default("read")   // read, write, admin
-  requestLimit  Int       @default(100)     // requests per minute
-  totalRequests Int       @default(0)       // total requests made
-  lastUsedAt    DateTime?
-  expiresAt     DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id               String    @id @default(cuid())
+  name             String
+  keyHash          String    @unique // SHA-256 hash of the API key
+  keyPrefix        String // first 8 chars for display (e.g., "sbdu_****")
+  userId           String // owner (admin or client)
+  status           String    @default("active") // active, revoked, disabled
+  permissions      String    @default("read") // read, write, admin
+  requestLimit     Int       @default(100) // requests per minute
+  totalRequests    Int       @default(0) // total requests made
+  requestsInWindow Int       @default(0) // requests in the current minute window
+  windowStartedAt  DateTime? // start of the current rate-limit window
+  lastUsedAt       DateTime?
+  expiresAt        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   @@index([keyHash])
   @@index([userId])
 }
 
 model DepositRequest {
-  id           String    @id @default(cuid())
-  userId       String
-  user         User      @relation(fields: [userId], references: [id])
-  amount       Float
-  method       String    // bkash, nagad, usdt, bank
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
+  amount        Float
+  method        String // bkash, nagad, usdt, bank
   transactionId String?
-  screenshot   String?   // base64 data URL
-  status       String    @default("pending") // pending, approved, rejected
-  adminNote    String?
-  approvedBy   String?
-  approvedAt   DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  screenshot    String? // base64 data URL
+  status        String    @default("pending") // pending, approved, rejected
+  adminNote     String?
+  approvedBy    String?
+  approvedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   @@index([userId, status])
   @@index([status])
@@ -308,20 +317,20 @@ model DepositRequest {
 }
 
 model SupplierJob {
-  id               String    @id @default(cuid())
-  orderId          String
-  order            Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  supplierId       String
-  supplier         Supplier  @relation(fields: [supplierId], references: [id])
-  externalOrderId  String?
-  status           String    @default("queued") // queued, sent, processing, completed, failed
-  requestPayload   String?   // JSON request sent to supplier
-  responsePayload  String?   // JSON response from supplier
-  attempts         Int       @default(0)
-  lastAttemptAt    DateTime?
-  completedAt      DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  id              String    @id @default(cuid())
+  orderId         String
+  order           Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  supplierId      String
+  supplier        Supplier  @relation(fields: [supplierId], references: [id])
+  externalOrderId String?
+  status          String    @default("queued") // queued, sent, processing, completed, failed
+  requestPayload  String? // JSON request sent to supplier
+  responsePayload String? // JSON response from supplier
+  attempts        Int       @default(0)
+  lastAttemptAt   DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   @@index([orderId])
   @@index([supplierId])
@@ -330,17 +339,17 @@ model SupplierJob {
 }
 
 model BulkOrderBatch {
-  id                String   @id @default(cuid())
+  id                String    @id @default(cuid())
   userId            String
-  user              User     @relation(fields: [userId], references: [id])
+  user              User      @relation(fields: [userId], references: [id])
   serviceId         String
-  service           Service  @relation(fields: [serviceId], references: [id])
+  service           Service   @relation(fields: [serviceId], references: [id])
   fileName          String
   totalRecords      Int
-  successfulRecords Int      @default(0)
-  failedRecords     Int      @default(0)
-  status            String   @default("processing") // processing, completed, failed
-  createdAt         DateTime @default(now())
+  successfulRecords Int       @default(0)
+  failedRecords     Int       @default(0)
+  status            String    @default("processing") // processing, completed, failed
+  createdAt         DateTime  @default(now())
   completedAt       DateTime?
 
   @@index([userId])
@@ -349,34 +358,34 @@ model BulkOrderBatch {
 }
 
 model SupplierService {
-  id                String    @id @default(cuid())
+  id                String   @id @default(cuid())
   providerId        String
-  provider          Supplier  @relation(fields: [providerId], references: [id])
-  supplierServiceId String    // supplier's own service ID
+  provider          Supplier @relation(fields: [providerId], references: [id])
+  supplierServiceId String // supplier's own service ID
   name              String
   category          String?
-  supplierCost      Float     @default(0)
-  currency          String    @default("USD")
+  supplierCost      Float    @default(0)
+  currency          String   @default("USD")
   deliveryTime      String?
-  requiredInputs    String?   // JSON: ["imei","email","username",...]
-  rawData           String?   // full supplier response JSON
-  status            String    @default("pending") // pending, approved, ignored, disabled
-  websiteServiceId  String?   @unique // link to published service (set when approved)
-  websiteService    Service?  @relation(fields: [websiteServiceId], references: [id])
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  requiredInputs    String? // JSON: ["imei","email","username",...]
+  rawData           String? // full supplier response JSON
+  status            String   @default("pending") // pending, approved, ignored, disabled
+  websiteServiceId  String?  @unique // link to published service (set when approved)
+  websiteService    Service? @relation(fields: [websiteServiceId], references: [id])
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
+  @@unique([providerId, supplierServiceId])
   @@index([providerId, status])
   @@index([supplierServiceId])
-  @@unique([providerId, supplierServiceId])
 }
 
 model PricingRule {
   id         String    @id @default(cuid())
-  type       String    // fixed, percentage, category, supplier
+  type       String // fixed, percentage, category, supplier
   value      Float     @default(0)
-  category   String?   // for category type rules
-  providerId String?   // for supplier type rules
+  category   String? // for category type rules
+  providerId String? // for supplier type rules
   provider   Supplier? @relation(fields: [providerId], references: [id])
   currency   String    @default("USD")
   active     Boolean   @default(true)
@@ -389,17 +398,17 @@ model PricingRule {
 }
 
 model SyncHistory {
-  id              String    @id @default(cuid())
+  id              String   @id @default(cuid())
   providerId      String
-  provider        Supplier  @relation(fields: [providerId], references: [id])
-  totalImported   Int       @default(0)
-  newServices     Int       @default(0)
-  updatedServices Int       @default(0)
-  failedServices  Int       @default(0)
-  status          String    @default("success") // success, partial, failed
+  provider        Supplier @relation(fields: [providerId], references: [id])
+  totalImported   Int      @default(0)
+  newServices     Int      @default(0)
+  updatedServices Int      @default(0)
+  failedServices  Int      @default(0)
+  status          String   @default("success") // success, partial, failed
   error           String?
-  duration        Int?      // milliseconds
-  createdAt       DateTime  @default(now())
+  duration        Int? // milliseconds
+  createdAt       DateTime @default(now())
 
   @@index([providerId, createdAt])
 }
@@ -408,7 +417,7 @@ model SupplierApiLog {
   id           String    @id @default(cuid())
   providerId   String
   provider     Supplier  @relation(fields: [providerId], references: [id])
-  endpoint     String    // API endpoint called
+  endpoint     String // API endpoint called
   method       String    @default("GET") // GET, POST, PUT, DELETE
   requestTime  DateTime  @default(now())
   responseTime DateTime?
@@ -427,4 +436,77 @@ model SystemSetting {
   updatedAt DateTime @default(now()) @updatedAt
 
   @@map("system_settings")
+}
+
+model Webhook {
+  id              String            @id @default(cuid())
+  userId          String            @unique
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  url             String
+  secretEncrypted String? // AES-256-GCM encrypted signing secret
+  events          String            @default("[\"order.created\",\"order.updated\",\"order.completed\",\"order.failed\",\"order.replied\",\"order.processing\",\"order.cancelled\",\"order.rejected\",\"order.refunded\"]") // JSON array of subscribed events
+  status          String            @default("active") // active, disabled
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  deliveries      WebhookDelivery[]
+
+  @@index([status])
+}
+
+model WebhookDelivery {
+  id            String    @id @default(cuid())
+  webhookId     String
+  webhook       Webhook   @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  userId        String
+  event         String
+  orderId       String?
+  payload       String? // JSON payload, never contains secrets
+  status        String    @default("pending") // pending, success, failed
+  attempts      Int       @default(0)
+  maxAttempts   Int       @default(8)
+  responseCode  Int?
+  error         String?
+  lastAttemptAt DateTime?
+  nextAttemptAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([status, nextAttemptAt])
+  @@index([webhookId, createdAt])
+  @@index([userId, createdAt])
+}
+
+model ResellerService {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  serviceId String
+  service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  price     Float? // reseller-specific price override; null = Service.sellingPrice
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, serviceId])
+  @@index([serviceId, enabled])
+}
+
+model ApiRequestLog {
+  id         String   @id @default(cuid())
+  requestId  String
+  keyId      String?
+  userId     String?
+  endpoint   String
+  method     String
+  statusCode Int?
+  durationMs Int?
+  errorCode  String?
+  externalId String?
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  @@index([keyId, createdAt])
+  @@index([userId, createdAt])
+  @@index([requestId])
+  @@index([createdAt])
 }

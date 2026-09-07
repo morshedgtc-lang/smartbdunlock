@@ -3,6 +3,7 @@ import { getFailoverChain } from './router'
 import { createSupplierJob, submitToSupplier } from './processor'
 import { createNotification } from '@/lib/notifications'
 import { auditLog } from '@/lib/audit'
+import { enqueueWebhookEvent } from '@/lib/webhooks'
 
 export async function triggerFailover(orderId: string, failedSupplierId: string) {
   const order = await prisma.order.findUnique({ where: { id: orderId } })
@@ -13,6 +14,12 @@ export async function triggerFailover(orderId: string, failedSupplierId: string)
     await prisma.order.update({
       where: { id: orderId },
       data: { status: 'failed', result: JSON.stringify({ error: 'All suppliers failed' }) },
+    })
+
+    await enqueueWebhookEvent({
+      userId: order.userId,
+      event: 'order.failed',
+      orderId,
     })
 
     await createNotification({

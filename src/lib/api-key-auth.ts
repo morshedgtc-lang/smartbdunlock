@@ -2,6 +2,8 @@ import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
 import { auditLog, getClientIp, getClientUserAgent } from '@/lib/audit'
 
+const RATE_LIMIT_WINDOW_MS = 60 * 1000
+
 interface ApiKeyUser {
   keyId: string
   userId: string
@@ -47,6 +49,8 @@ export async function authenticateApiKey(
       status: true,
       requestLimit: true,
       totalRequests: true,
+      requestsInWindow: true,
+      windowStartedAt: true,
       expiresAt: true,
     },
   })
@@ -75,7 +79,26 @@ export async function authenticateApiKey(
     }
   }
 
-  if (apiKey.totalRequests >= apiKey.requestLimit) {
+  const owner = await prisma.user.findUnique({
+    where: { id: apiKey.userId },
+    select: { status: true },
+  })
+  if (owner && owner.status === 'suspended') {
+    return {
+      error: NextResponse.json(
+        { error: 'Account is suspended' },
+        { status: 403 },
+      ),
+    }
+  }
+
+  const now = new Date()
+  const windowExpired =
+    !apiKey.windowStartedAt ||
+    now.getTime() - apiKey.windowStartedAt.getTime() > RATE_LIMIT_WINDOW_MS
+  const requestsInWindow = windowExpired ? 0 : apiKey.requestsInWindow
+
+  if (requestsInWindow >= apiKey.requestLimit) {
     return {
       error: NextResponse.json(
         { error: 'Request limit exceeded' },
@@ -88,7 +111,9 @@ export async function authenticateApiKey(
     where: { id: apiKey.id },
     data: {
       totalRequests: { increment: 1 },
-      lastUsedAt: new Date(),
+      requestsInWindow: requestsInWindow + 1,
+      windowStartedAt: windowExpired ? now : apiKey.windowStartedAt,
+      lastUsedAt: now,
     },
   })
 

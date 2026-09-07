@@ -33,6 +33,9 @@ import {
   Download,
   DollarSign,
   History,
+  Webhook,
+  Network,
+  Activity,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '@/lib/api'
@@ -54,6 +57,9 @@ const adminLinks = [
   { href: '/admin/logs', label: 'Logs', icon: FileText },
   { href: '/admin/audit', label: 'Audit Trail', icon: Shield },
   { href: '/admin/api-keys', label: 'API Keys', icon: Key },
+  { href: '/admin/webhooks', label: 'Webhooks', icon: Webhook },
+  { href: '/admin/reseller-services', label: 'Reseller Services', icon: Network },
+  { href: '/admin/api-logs', label: 'API Logs', icon: Activity },
 ]
 
 interface SidebarLink {
@@ -103,7 +109,8 @@ const clientSections: SidebarSection[] = [
   {
     label: 'Account',
     links: [
-      { href: '/reseller/services', label: 'API Docs', icon: Globe },
+      { href: '/reseller/api-settings', label: 'API Settings', icon: Key },
+      { href: '/reseller/api-docs', label: 'API Docs', icon: Globe },
     ],
   },
 ]

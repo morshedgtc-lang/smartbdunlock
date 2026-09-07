@@ -2,10 +2,11 @@ import { NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
-import { ordersQuerySchema, createOrderSchema, updateOrderSchema, validateBody, validateQuery } from '@/lib/validations'
+import { validateBody, validateQuery, createOrderSchema, ordersQuerySchema, updateOrderSchema } from '@/lib/validations'
 import { auditLog, getClientIp, getClientUserAgent } from '@/lib/audit'
 import { createOrderNotification, createWalletNotification } from '@/lib/notifications'
 import { createSupplierJob, submitToSupplier } from '@/lib/suppliers'
+import { enqueueWebhookEvent, statusToWebhookEvent } from '@/lib/webhooks'
 
 export async function GET(request: Request) {
   try {
@@ -378,6 +379,12 @@ export async function PATCH(request: Request) {
         status: status as string,
         serviceName: updated?.service?.name,
         userId: order.userId,
+      })
+
+      await enqueueWebhookEvent({
+        userId: order.userId,
+        event: statusToWebhookEvent(status as string),
+        orderId: id,
       })
     }
 
