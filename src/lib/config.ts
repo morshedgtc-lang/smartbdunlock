@@ -6,6 +6,13 @@ const env = (key: string, fallback?: string): string => {
   return val ?? fallback!
 }
 
+function intFromEnv(key: string, fallback: number): number {
+  const val = process.env[key]
+  if (!val) return fallback
+  const n = parseInt(val, 10)
+  return Number.isFinite(n) && n > 0 ? n : fallback
+}
+
 export const config = {
   env: process.env.NODE_ENV || 'development',
   isProd: process.env.NODE_ENV === 'production',
@@ -29,8 +36,8 @@ export const config = {
   },
 
   rateLimit: {
-    globalMax: 100,
-    globalWindowMs: 60 * 1000,
+    globalMax: intFromEnv('RATE_LIMIT_GLOBAL_MAX', 300),
+    globalWindowMs: intFromEnv('RATE_LIMIT_GLOBAL_WINDOW_MS', 60 * 1000),
     loginMax: 5,
     loginWindowMs: 15 * 60 * 1000,
     registerMax: 3,

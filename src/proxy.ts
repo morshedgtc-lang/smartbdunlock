@@ -41,23 +41,31 @@ export function proxy(request: NextRequest) {
       }
     }
 
+    // API v1 has its own per-key limiter; uploads/health are asset/ops endpoints —
+    // only rate-limit general web traffic by IP.
+    const pathname = request.nextUrl.pathname
+    const shouldRateLimit =
+      !pathname.startsWith('/api/v1/') &&
+      !pathname.startsWith('/uploads/') &&
+      pathname !== '/api/health'
+
     const key = getRateLimitKey(request)
     const now = Date.now()
     const entry = rateLimitMap.get(key)
 
-    if (!entry || now > entry.resetTime) {
+    if (shouldRateLimit && (!entry || now > entry.resetTime)) {
       rateLimitMap.set(key, { count: 1, resetTime: now + cfg.rateLimit.globalWindowMs })
       response.headers.set('X-RateLimit-Limit', String(cfg.rateLimit.globalMax))
       response.headers.set('X-RateLimit-Remaining', String(cfg.rateLimit.globalMax - 1))
       response.headers.set('X-RateLimit-Reset', String(Math.ceil((now + cfg.rateLimit.globalWindowMs) / 1000)))
-    } else {
-      entry.count++
-      const remaining = Math.max(0, cfg.rateLimit.globalMax - entry.count)
+    } else if (shouldRateLimit) {
+      entry!.count++
+      const remaining = Math.max(0, cfg.rateLimit.globalMax - entry!.count)
       response.headers.set('X-RateLimit-Limit', String(cfg.rateLimit.globalMax))
       response.headers.set('X-RateLimit-Remaining', String(remaining))
-      response.headers.set('X-RateLimit-Reset', String(Math.ceil(entry.resetTime / 1000)))
-      if (entry.count > cfg.rateLimit.globalMax) {
-        const retryAfter = Math.ceil((entry.resetTime - now) / 1000)
+      response.headers.set('X-RateLimit-Reset', String(Math.ceil(entry!.resetTime / 1000)))
+      if (entry!.count > cfg.rateLimit.globalMax) {
+        const retryAfter = Math.ceil((entry!.resetTime - now) / 1000)
         const tooMany = NextResponse.json({ error: 'Too many requests' }, { status: 429 })
         tooMany.headers.set('Retry-After', String(retryAfter))
         tooMany.headers.set('X-RateLimit-Limit', String(cfg.rateLimit.globalMax))
