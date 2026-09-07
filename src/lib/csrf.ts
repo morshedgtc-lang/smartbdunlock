@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers'
-import { createHmac, randomBytes } from 'crypto'
+import { randomBytes, timingSafeEqual } from 'crypto'
 
 export const CSRF_COOKIE_NAME = 'sbdu_csrf'
 const TOKEN_LENGTH = 32
@@ -32,7 +32,9 @@ export async function csrfOk(request: Request): Promise<boolean> {
   const header = request.headers.get('x-csrf-token')
   const cookie = await readCsrfCookie()
   if (!header || !cookie || header.length !== cookie.length) return false
-  return createHmac('sha256', cookie).update(header).digest() === createHmac('sha256', cookie).update(cookie).digest()
+  const a = Buffer.from(header, 'utf8')
+  const b = Buffer.from(cookie, 'utf8')
+  return a.length === b.length && timingSafeEqual(a, b)
 }
 
 export function csrfError() {
