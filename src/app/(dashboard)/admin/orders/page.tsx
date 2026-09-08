@@ -62,6 +62,7 @@ interface OrderItem {
   createdAt: string
   service?: { name: string; type?: string }
   user?: { name: string; email: string }
+  customValues?: { value?: string | null; label?: string; fieldType?: string }[]
 }
 
 interface Summary {
@@ -80,6 +81,14 @@ function timeAgo(dateStr: string): string {
   if (hr < 24) return `${hr} hr ago`
   const day = Math.floor(hr / 24)
   return `${day} day${day > 1 ? 's' : ''} ago`
+}
+
+function resolveImei(o: OrderItem): string {
+  if (o.imei || o.deviceInfo) return o.imei || o.deviceInfo || ''
+  const cv = (o.customValues || []).find(
+    (v) => v.fieldType === 'imei_single' || (v.label || '').toLowerCase().includes('imei'),
+  )
+  return cv?.value || '—'
 }
 
 export default function OrdersPage() {
@@ -334,7 +343,7 @@ export default function OrdersPage() {
                         <td className="py-3 px-4 font-mono font-medium text-[var(--foreground)]">{order.orderNumber}</td>
                         <td className="py-3 px-4 text-[var(--foreground)]">{order.user?.name || 'N/A'}</td>
                         <td className="py-3 px-4 text-[var(--foreground)]">{order.service?.name || 'N/A'}</td>
-                        <td className="py-3 px-4 font-mono text-xs text-[var(--muted)]">{order.imei || order.deviceInfo || '—'}</td>
+                        <td className="py-3 px-4 font-mono text-xs text-[var(--muted)]">{resolveImei(order)}</td>
                         <td className="py-3 px-4"><StatusBadge status={order.status} /></td>
                         <td className="py-3 px-4 text-right font-medium text-[var(--foreground)]">${(order.sellingPrice || 0).toFixed(2)}</td>
                         <td className="py-3 px-4 text-xs text-[var(--muted)]">{timeAgo(order.createdAt)}</td>

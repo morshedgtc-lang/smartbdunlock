@@ -56,6 +56,7 @@ interface DashboardOrder {
   serviceName?: string
   serviceType?: string
   userName?: string
+  customValues?: { value?: string | null; label?: string; fieldType?: string }[]
 }
 
 interface ReportingData {
@@ -127,6 +128,14 @@ interface AuditLog {
 }
 
 const fadeUp = { initial: { opacity: 0, y: 16 }, animate: { opacity: 1, y: 0 } }
+
+function resolveOrderImei(order: { imei?: string | null; deviceInfo?: string | null; customValues?: { value?: string | null; label?: string; fieldType?: string }[] }): string {
+  if (order.imei || order.deviceInfo) return order.imei || order.deviceInfo || ''
+  const cv = (order.customValues || []).find(
+    (v) => v.fieldType === 'imei_single' || (v.label || '').toLowerCase().includes('imei'),
+  )
+  return cv?.value || '—'
+}
 
 function auditActionLabel(action: string): { label: string; color: string } {
   if (action.includes('order.create') || action.includes('order.place')) return { label: 'New Order', color: 'text-blue-500 bg-blue-500/10' }
@@ -406,7 +415,7 @@ export default function AdminDashboard() {
                       <td className="py-2.5 px-4 font-mono font-medium text-[var(--foreground)] text-xs">{order.orderNumber}</td>
                       <td className="py-2.5 px-2 text-xs text-[var(--foreground)] truncate max-w-[100px]">{order.userName || 'N/A'}</td>
                       <td className="py-2.5 px-2 text-xs text-[var(--foreground)] truncate max-w-[120px]">{order.serviceName || 'N/A'}</td>
-                      <td className="py-2.5 px-2 font-mono text-[10px] text-[var(--muted)] truncate max-w-[100px]">{order.imei || order.deviceInfo || '—'}</td>
+                      <td className="py-2.5 px-2 font-mono text-[10px] text-[var(--muted)] truncate max-w-[100px]">{resolveOrderImei(order)}</td>
                       <td className="py-2.5 px-2 text-xs text-[var(--muted)] truncate max-w-[80px]">{order.supplierName || '—'}</td>
                       <td className="py-2.5 px-2"><StatusBadge status={order.status} /></td>
                       <td className="py-2.5 px-2 text-right font-medium text-xs text-[var(--foreground)]">${(order.sellingPrice || 0).toFixed(2)}</td>

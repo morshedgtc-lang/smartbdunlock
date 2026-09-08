@@ -76,6 +76,7 @@ export async function GET() {
         include: {
           service: { select: { name: true, type: true, processingTime: true } },
           user: { select: { name: true } },
+          customValues: { include: { customField: { select: { label: true, fieldType: true } } } },
         },
       }),
       !isAdmin ? prisma.serviceCategory.findMany({
@@ -143,6 +144,11 @@ export async function GET() {
         serviceName: o.service?.name,
         serviceType: o.service?.type,
         userName: o.user?.name,
+        customValues: o.customValues.map((cv) => ({
+          value: cv.value,
+          label: cv.customField?.label,
+          fieldType: cv.customField?.fieldType,
+        })),
       })),
       serviceCategories,
       userProfile: userRecord,

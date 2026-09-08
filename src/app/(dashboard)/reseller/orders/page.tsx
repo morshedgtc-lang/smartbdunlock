@@ -58,10 +58,19 @@ interface OrderItem {
   processingTime?: string
   completedAt?: string
   service?: { name: string }
+  customValues?: { value?: string | null; label?: string; fieldType?: string }[]
 }
 
 interface WalletData {
   balance: number
+}
+
+function resolveImei(o: OrderItem): string {
+  if (o.imei || o.deviceInfo) return o.imei || o.deviceInfo || ''
+  const cv = (o.customValues || []).find(
+    (v) => v.fieldType === 'imei_single' || (v.label || '').toLowerCase().includes('imei'),
+  )
+  return cv?.value || ''
 }
 
 export default function ClientOrdersPage() {
@@ -383,7 +392,7 @@ export default function ClientOrdersPage() {
 
                             {/* Order Details */}
                             <div className="grid grid-cols-2 gap-3 text-sm">
-                              {order.imei && <div className="p-3 rounded-xl bg-white/5"><p className="text-xs text-[var(--muted)]">IMEI</p><p className="font-mono font-medium text-[var(--foreground)]">{order.imei}</p></div>}
+                              {resolveImei(order) && <div className="p-3 rounded-xl bg-white/5"><p className="text-xs text-[var(--muted)]">IMEI</p><p className="font-mono font-medium text-[var(--foreground)]">{resolveImei(order)}</p></div>}
                               {order.deviceInfo && <div className="p-3 rounded-xl bg-white/5"><p className="text-xs text-[var(--muted)]">Device</p><p className="text-[var(--foreground)]">{order.deviceInfo}</p></div>}
                               {order.processingTime && <div className="p-3 rounded-xl bg-white/5"><p className="text-xs text-[var(--muted)]">Processing</p><p className="text-[var(--foreground)]">{order.processingTime}</p></div>}
                               {order.completedAt && <div className="p-3 rounded-xl bg-white/5"><p className="text-xs text-[var(--muted)]">Completed</p><p className="text-[var(--foreground)]">{new Date(order.completedAt).toLocaleDateString()}</p></div>}

@@ -46,6 +46,7 @@ interface DashboardData {
     processingTime?: string
     serviceName?: string
     serviceType?: string
+    customValues?: { value?: string | null; label?: string; fieldType?: string }[]
   }[]
   serviceCategories: {
     id: string
@@ -311,7 +312,7 @@ export default function ResellerDashboard() {
                         >
                           <td className="py-3 px-5 font-mono font-medium text-[var(--foreground)]">{order.orderNumber}</td>
                           <td className="py-3 px-2 text-[var(--foreground)] truncate max-w-[140px]">{order.serviceName || 'N/A'}</td>
-                          <td className="py-3 px-2 font-mono text-xs text-[var(--muted)] truncate max-w-[120px]">{order.imei || order.deviceInfo || '—'}</td>
+                          <td className="py-3 px-2 font-mono text-xs text-[var(--muted)] truncate max-w-[120px]">{resolveOrderImei(order)}</td>
                           <td className="py-3 px-2"><StatusBadge status={order.status} /></td>
                           <td className="py-3 px-2 text-right font-medium text-[var(--foreground)]">${(order.sellingPrice || 0).toFixed(2)}</td>
                           <td className="py-3 px-2 text-xs text-[var(--muted)]">{timeAgo(order.createdAt)} ago</td>
@@ -606,6 +607,14 @@ export default function ResellerDashboard() {
       />
     </div>
   )
+}
+
+function resolveOrderImei(order: { imei?: string; deviceInfo?: string; customValues?: { value?: string | null; label?: string; fieldType?: string }[] }): string {
+  if (order.imei || order.deviceInfo) return order.imei || order.deviceInfo || ''
+  const cv = (order.customValues || []).find(
+    (v) => v.fieldType === 'imei_single' || (v.label || '').toLowerCase().includes('imei'),
+  )
+  return cv?.value || '—'
 }
 
 function StatCardLink({ href, title, value, icon: Icon, color }: {
