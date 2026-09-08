@@ -27,6 +27,7 @@ export async function GET(request: Request) {
         { orderNumber: { contains: search, mode: 'insensitive' } },
         { imei: { contains: search, mode: 'insensitive' } },
         { deviceInfo: { contains: search, mode: 'insensitive' } },
+        { customValues: { some: { value: { contains: search, mode: 'insensitive' } } } },
       ]
     }
 

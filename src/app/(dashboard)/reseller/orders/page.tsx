@@ -106,7 +106,9 @@ export default function ClientOrdersPage() {
   }, [])
 
   const filtered = allOrders.filter((o: OrderItem) => {
-    const matchSearch = o.orderNumber.toLowerCase().includes(search.toLowerCase()) || o.imei?.toLowerCase().includes(search.toLowerCase()) || o.service?.name?.toLowerCase().includes(search.toLowerCase())
+    const s = search.toLowerCase()
+    const customText = (o.customValues || []).map((cv) => cv.value || '').join(' ').toLowerCase()
+    const matchSearch = o.orderNumber.toLowerCase().includes(s) || resolveImei(o).toLowerCase().includes(s) || o.imei?.toLowerCase().includes(s) || customText.includes(s) || o.service?.name?.toLowerCase().includes(s)
     const matchStatus = statusFilter === 'ALL' || o.status.toUpperCase() === statusFilter
     return matchSearch && matchStatus
   })

@@ -161,10 +161,13 @@ export default function OrdersPage() {
     if (!matchesSidebar(o)) return false
     const s = search.toLowerCase()
     if (!s) return true
+    const customText = (o.customValues || []).map((cv) => cv.value || '').join(' ').toLowerCase()
     return (
       o.orderNumber.toLowerCase().includes(s) ||
+      resolveImei(o).toLowerCase().includes(s) ||
       o.imei?.toLowerCase().includes(s) ||
       o.deviceInfo?.toLowerCase().includes(s) ||
+      customText.includes(s) ||
       o.user?.name?.toLowerCase().includes(s) ||
       o.user?.email?.toLowerCase().includes(s) ||
       o.service?.name?.toLowerCase().includes(s)
